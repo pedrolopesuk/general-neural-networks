@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { MetaBrainBackendClient } from './api/backendClient.js';
 import { BrainViewport } from './scene/BrainViewport.js';
 import { getTheme, lerpRgb } from './theme.js';
@@ -114,6 +113,15 @@ const viewport = new BrainViewport(document.getElementById('viewport-root'), {
     document.getElementById('btn-z-macro').classList.toggle('active', tier === 'macro');
     document.getElementById('btn-z-cluster').classList.toggle('active', tier === 'cluster');
     document.getElementById('btn-z-micro').classList.toggle('active', tier === 'micro');
+  },
+  onAutoThreshold: (val, maxW) => {
+    const sl = document.getElementById('sl-edge-thresh');
+    if (sl) {
+      sl.max = Math.max(1.0, maxW).toFixed(2);
+      sl.value = val.toFixed(2);
+    }
+    const lbl = document.getElementById('lbl-edge-thresh');
+    if (lbl) lbl.textContent = val.toFixed(2);
   }
 });
 
@@ -365,31 +373,18 @@ document.getElementById('btn-reset').onclick = async () => {
   closeInspector();
   const state = await api.resetBrain({ roots: 8, cortical: 20, terminals: 4 });
   applyIncomingState(state);
-  if (viewport.zoomToMacro) viewport.zoomToMacro();
-  else viewport.flyToTarget(new THREE.Vector3(0, 0, 0), 395);
+  viewport.zoomToMacro();
 };
 
 document.getElementById('btn-z-macro').onclick = () => {
-  if (viewport.zoomToMacro) viewport.zoomToMacro();
-  else viewport.flyToTarget(new THREE.Vector3(0, 0, 0), 395);
+  viewport.zoomToMacro();
   updateBreadcrumbs(null);
 };
 document.getElementById('btn-z-cluster').onclick = () => {
-  if (viewport.zoomToClusterDefault) {
-    viewport.zoomToClusterDefault();
-  } else {
-    const col = latestState?.flat_nodes?.find(n => n.is_composite && n.depth === 0);
-    if (col) viewport.selectAndFlyTo(col.id);
-  }
+  viewport.zoomToClusterDefault();
 };
 document.getElementById('btn-z-micro').onclick = () => {
-  if (viewport.zoomToMicroDefault) {
-    viewport.zoomToMicroDefault();
-  } else {
-    const sub = latestState?.flat_nodes?.find(n => n.is_composite && n.depth >= 1) ||
-                latestState?.flat_nodes?.find(n => n.depth >= 2);
-    if (sub) viewport.selectAndFlyTo(sub.id);
-  }
+  viewport.zoomToMicroDefault();
 };
 
 function updateBreadcrumbs(id) {
@@ -412,8 +407,7 @@ function updateBreadcrumbs(id) {
   bc.querySelectorAll('[data-fly="macro"]').forEach(el => {
     el.onclick = () => {
       closeInspector();
-      if (viewport.zoomToMacro) viewport.zoomToMacro();
-      else viewport.flyToTarget(new THREE.Vector3(0, 0, 0), 395);
+      viewport.zoomToMacro();
       updateBreadcrumbs(null);
     };
   });

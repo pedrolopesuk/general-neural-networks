@@ -1,302 +1,454 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { getTheme } from '../theme.js';
+import { getTheme, lerpRgb, rgba } from '../theme.js';
 
 export class BrainViewport {
-  constructor(container, { onSelectNeuron, onHoverNeuron, onZoomTierChange }) {
+  constructor(container, { onSelectNeuron, onHoverNeuron, onZoomTierChange, onAutoThreshold }) {
     this.container = container;
     this.onSelectNeuron = onSelectNeuron;
     this.onHoverNeuron = onHoverNeuron;
     this.onZoomTierChange = onZoomTierChange;
+    this.onAutoThreshold = onAutoThreshold;
 
     this.lens = 'activity';
+    this.is3D = false;
     this.selectedId = null;
-    this.topologySignature = '';
-    this.nodeDataMap = new Map();
-    this.neuronVisuals = new Map();
-    this.holonShells = new Map();
-    this.synapsesData = [];
-    this.cameraFlight = null;
+    this.hoveredId = null;
+    this.weightThreshold = null; // Auto-initialized to 80th percentile (~20% visible)
 
-    this._initScene();
+    this.nodes = [];
+    this.nodeMap = new Map();
+    this.synapses = [];
+    this.flashState = new Map(); // id -> { prevAct, emaAct, flashMs }
+
+    // Camera state (2D pan/zoom + 3D orbit angles)
+    this.cam = { x: 0, y: 0, zoom: 1.0 };
+    this.camAnim = null;
+    this.rot3D = { yaw: 0.35, pitch: 0.25 };
+
+    this._initCanvas();
     this._bindEvents();
   }
 
-  _initScene() {
-    const theme = getTheme();
-    const w = this.container.clientWidth || window.innerWidth;
-    const h = this.container.clientHeight || window.innerHeight;
+  _initCanvas() {
+    this.canvas = document.createElement('canvas');
+    this.canvas.style.display = 'block';
+    this.canvas.style.width = '100%';
+    this.canvas.style.height = '100%';
+    this.container.innerHTML = '';
+    this.container.appendChild(this.canvas);
+    this.ctx = this.canvas.getContext('2d');
+    this._resize();
+  }
 
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(theme.bg);
-
-    this.camera = new THREE.PerspectiveCamera(50, w / h, 0.35, 3600);
-    this.camera.position.set(0, 130, 395);
-
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setSize(w, h);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.container.appendChild(this.renderer.domElement);
-
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.08;
-    this.controls.minDistance = 4.5;
-    this.controls.maxDistance = 980.0;
-
-    this.somaGeo = new THREE.SphereGeometry(1, 16, 16);
-    this.shellGeo = new THREE.RingGeometry(0.98, 1.0, 48);
-
-    const ringGeo = new THREE.RingGeometry(1.35, 1.55, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(theme.signal),
-      side: THREE.DoubleSide
-    });
-    this.selectionRing = new THREE.Mesh(ringGeo, ringMat);
-    this.selectionRing.visible = false;
-    this.scene.add(this.selectionRing);
-
-    this.graphGroup = new THREE.Group();
-    this.scene.add(this.graphGroup);
-
-    this.raycaster = new THREE.Raycaster();
-    this.pointer = new THREE.Vector2(-99, -99);
-
-    this.cDim = new THREE.Color(theme.textDim);
-    this.cLine = new THREE.Color(theme.line);
-    this.cSignal = new THREE.Color(theme.signal);
-    this.cYoung = new THREE.Color(theme.young);
-    this.cOld = new THREE.Color(theme.old);
-    this.tmpColor = new THREE.Color();
+  _resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = this.container.clientWidth || (window.innerWidth - 260);
+    const h = this.container.clientHeight || (window.innerHeight - 32);
+    this.width = w;
+    this.height = h;
+    this.dpr = dpr;
+    this.canvas.width = Math.round(w * dpr);
+    this.canvas.height = Math.round(h * dpr);
   }
 
   _bindEvents() {
-    const dom = this.renderer.domElement;
+    window.addEventListener('resize', () => this._resize());
 
-    dom.addEventListener('pointermove', (e) => {
-      const rect = dom.getBoundingClientRect();
-      this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    let dragging = false;
+    let moved = false;
+    let startX = 0, startY = 0;
+    let lastX = 0, lastY = 0;
 
-      this.raycaster.setFromCamera(this.pointer, this.camera);
-      const meshes = Array.from(this.neuronVisuals.values()).map(v => v.mesh);
-      const hits = this.raycaster.intersectObjects(meshes, false);
-      if (hits.length > 0) {
-        const id = hits[0].object.userData.id;
-        const n = this.nodeDataMap.get(id);
-        dom.style.cursor = 'pointer';
-        if (this.onHoverNeuron) this.onHoverNeuron(n, e.clientX, e.clientY);
-      } else {
-        dom.style.cursor = 'default';
-        if (this.onHoverNeuron) this.onHoverNeuron(null, 0, 0);
+    this.canvas.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      moved = false;
+      startX = lastX = e.clientX;
+      startY = lastY = e.clientY;
+    });
+
+    window.addEventListener('pointerup', (e) => {
+      if (!dragging) return;
+      dragging = false;
+      if (e.target !== this.canvas) return;
+
+      if (!moved) {
+        const hit = this._hitTestNode(e.clientX, e.clientY);
+        if (hit) {
+          this.selectedId = hit.id;
+          if (this.onSelectNeuron) this.onSelectNeuron(hit.id, e.clientX, e.clientY);
+        } else {
+          this.selectedId = null;
+          if (this.onSelectNeuron) this.onSelectNeuron(null, 0, 0);
+        }
       }
     });
 
-    let downPos = { x: 0, y: 0 };
-    dom.addEventListener('pointerdown', (e) => {
-      downPos = { x: e.clientX, y: e.clientY };
-    });
+    this.canvas.addEventListener('pointermove', (e) => {
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
 
-    dom.addEventListener('pointerup', (e) => {
-      if (Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 5) return;
-      this.raycaster.setFromCamera(this.pointer, this.camera);
-      const meshes = Array.from(this.neuronVisuals.values()).map(v => v.mesh);
-      const hits = this.raycaster.intersectObjects(meshes, false);
-      if (hits.length > 0) {
-        const id = hits[0].object.userData.id;
-        this.selectedId = id;
-        if (this.onSelectNeuron) this.onSelectNeuron(id, e.clientX, e.clientY);
-      } else {
-        this.selectedId = null;
-        if (this.onSelectNeuron) this.onSelectNeuron(null, 0, 0);
+      if (dragging) {
+        if (Math.hypot(e.clientX - startX, e.clientY - startY) > 4) moved = true;
+        if (this.is3D) {
+          this.rot3D.yaw += dx * 0.006;
+          this.rot3D.pitch = Math.max(-1.2, Math.min(1.2, this.rot3D.pitch + dy * 0.006));
+        } else {
+          this.cam.x -= dx / this.cam.zoom;
+          this.cam.y -= dy / this.cam.zoom;
+        }
+        return;
+      }
+
+      const hit = this._hitTestNode(e.clientX, e.clientY);
+      this.hoveredId = hit ? hit.id : null;
+      this.canvas.style.cursor = hit ? 'pointer' : 'default';
+      if (this.onHoverNeuron) {
+        this.onHoverNeuron(hit || null, e.clientX, e.clientY);
       }
     });
 
-    window.addEventListener('resize', () => {
-      const w = this.container.clientWidth || window.innerWidth;
-      const h = this.container.clientHeight || window.innerHeight;
-      this.camera.aspect = w / h;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setSize(w, h);
+    this.canvas.addEventListener('pointerleave', () => {
+      this.hoveredId = null;
+      if (this.onHoverNeuron) this.onHoverNeuron(null, 0, 0);
     });
+
+    this.canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.14 : 1 / 1.14;
+      const nextZoom = Math.max(0.45, Math.min(14.0, this.cam.zoom * factor));
+      const rect = this.canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left - this.width * 0.5;
+      const sy = e.clientY - rect.top - this.height * 0.5;
+
+      if (!this.is3D) {
+        const wx = this.cam.x + sx / this.cam.zoom;
+        const wy = this.cam.y + sy / this.cam.zoom;
+        this.cam.zoom = nextZoom;
+        this.cam.x = wx - sx / nextZoom;
+        this.cam.y = wy - sy / nextZoom;
+      } else {
+        this.cam.zoom = nextZoom;
+      }
+      this._emitZoomTier();
+    }, { passive: false });
+  }
+
+  _emitZoomTier() {
+    const tier = this.cam.zoom < 1.55 ? 'macro' : (this.cam.zoom < 3.6 ? 'cluster' : 'micro');
+    if (tier !== this._lastTier) {
+      this._lastTier = tier;
+      if (this.onZoomTierChange) this.onZoomTierChange(tier);
+    }
   }
 
   setLens(mode) {
     this.lens = mode;
   }
 
+  set3DMode(flag) {
+    this.is3D = Boolean(flag);
+    this.animateCameraTo(0, 0, 1.0, 280);
+  }
+
+  setWeightThreshold(val) {
+    this.weightThreshold = val;
+  }
+
+  clearSelection() {
+    this.selectedId = null;
+  }
+
+  animateCameraTo(x, y, zoom, durationMs = 320) {
+    this.camAnim = {
+      fromX: this.cam.x,
+      fromY: this.cam.y,
+      fromZ: this.cam.zoom,
+      toX: x,
+      toY: y,
+      toZ: zoom,
+      startMs: performance.now(),
+      durationMs
+    };
+  }
+
+  zoomToMacro() {
+    this.animateCameraTo(0, 0, 1.0, 320);
+  }
+
+  zoomToClusterDefault() {
+    const n = this.nodes.find(d => d.is_composite && d.depth === 0);
+    if (n) this.selectAndFlyTo(n.id);
+  }
+
+  zoomToMicroDefault() {
+    const n = this.nodes.find(d => d.is_composite && d.depth >= 1) ||
+              this.nodes.find(d => d.depth >= 2);
+    if (n) this.selectAndFlyTo(n.id);
+  }
+
+  stepZoomOut() {
+    if (this.cam.zoom > 3.2) {
+      this.animateCameraTo(this.cam.x * 0.5, this.cam.y * 0.5, 2.0, 280);
+    } else {
+      this.zoomToMacro();
+    }
+  }
+
   selectAndFlyTo(id) {
     this.selectedId = id;
-    this.flyToNeuron(id);
-  }
-
-  flyToNeuron(id) {
-    const n = this.nodeDataMap.get(id);
-    if (!n) return;
-    const target = new THREE.Vector3(n.x, n.y, n.z);
-    const dist = n.depth === 0 ? (n.is_composite ? 62 : 110) : (n.depth === 1 ? 26 : 14);
-    this.flyToTarget(target, dist);
-  }
-
-  flyToTarget(targetVec, distance) {
-    const dir = this.camera.position.clone().sub(this.controls.target);
-    if (dir.lengthSq() < 1e-4) dir.set(0, 0.3, 1);
-    dir.normalize();
-    this.cameraFlight = {
-      lookAt: targetVec.clone(),
-      pos: targetVec.clone().add(dir.multiplyScalar(distance))
-    };
+    const n = this.nodeMap.get(id);
+    if (!n || n._wx === undefined) return;
+    const targetZoom = n.depth === 0 ? 2.4 : (n.depth === 1 ? 4.8 : 7.5);
+    this.animateCameraTo(n._wx, n._wy, targetZoom, 320);
   }
 
   ingestState(state) {
     if (!state || !state.flat_nodes) return;
+    const nowMs = performance.now();
 
-    this.nodeDataMap.clear();
-    for (const n of state.flat_nodes) {
-      this.nodeDataMap.set(n.id, n);
+    this.nodes = state.flat_nodes;
+    this.synapses = state.synapses || [];
+    this.nodeMap.clear();
+
+    for (const n of this.nodes) {
+      this.nodeMap.set(n.id, n);
+      const act = n.activation || 0;
+      let st = this.flashState.get(n.id);
+      if (!st) {
+        st = { prevAct: act, emaAct: act, flashMs: -9999 };
+        this.flashState.set(n.id, st);
+      } else {
+        const delta = act - st.prevAct;
+        const sinceLast = nowMs - st.flashMs;
+        // Detect genuine spike / rising burst above running baseline
+        if ((delta > 0.055 && act > 0.35) || (act > st.emaAct + 0.08 && sinceLast > 420)) {
+          st.flashMs = nowMs;
+        }
+        st.emaAct = st.emaAct * 0.92 + act * 0.08;
+        st.prevAct = act;
+      }
     }
-    this.synapsesData = state.synapses || [];
 
-    const sig = `${state.flat_nodes.length}:${this.synapsesData.length}:${state.flat_nodes.filter(n => n.is_composite).length}`;
-    if (sig !== this.topologySignature) {
-      this.topologySignature = sig;
-      this._rebuildTopology(state.flat_nodes, this.synapsesData);
+    // Auto-compute 80th-percentile |weight| threshold on first ingest (~20% visible edges)
+    if (this.weightThreshold === null && this.synapses.length > 0) {
+      const absWeights = this.synapses.map(s => Math.abs(s.weight)).sort((a, b) => a - b);
+      const idx80 = Math.min(absWeights.length - 1, Math.floor(absWeights.length * 0.80));
+      const maxW = Math.max(1.0, absWeights[absWeights.length - 1]);
+      this.weightThreshold = absWeights[idx80];
+      if (this.onAutoThreshold) {
+        this.onAutoThreshold(this.weightThreshold, maxW);
+      }
     }
   }
 
-  _rebuildTopology(nodes, synapses) {
-    const theme = getTheme();
-    while (this.graphGroup.children.length > 0) {
-      const child = this.graphGroup.children.pop();
-      if (child.geometry && child.geometry !== this.somaGeo && child.geometry !== this.shellGeo) {
-        child.geometry.dispose();
-      }
-    }
-    this.neuronVisuals.clear();
-    this.holonShells.clear();
+  _projectNode(n) {
+    const cx = this.width * 0.5;
+    const cy = this.height * 0.5;
 
-    for (const n of nodes) {
-      const baseR = n.depth === 0 ? 3.2 : (n.depth === 1 ? 1.8 : 1.1);
-      const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(theme.textDim) });
-      const mesh = new THREE.Mesh(this.somaGeo, mat);
-      mesh.position.set(n.x, n.y, n.z);
-      mesh.scale.setScalar(baseR);
-      mesh.userData = { id: n.id, baseR };
+    if (this.is3D) {
+      const cosY = Math.cos(this.rot3D.yaw);
+      const sinY = Math.sin(this.rot3D.yaw);
+      const cosP = Math.cos(this.rot3D.pitch);
+      const sinP = Math.sin(this.rot3D.pitch);
 
-      this.graphGroup.add(mesh);
-      this.neuronVisuals.set(n.id, { mesh, baseR });
+      const x1 = n.x * cosY - n.z * sinY;
+      const z1 = n.x * sinY + n.z * cosY;
+      const y2 = n.y * cosP - z1 * sinP;
+      const z2 = n.y * sinP + z1 * cosP;
 
-      if (n.is_composite) {
-        const shellRadius = n.depth === 0 ? 28.0 : 10.0;
-        const sMat = new THREE.MeshBasicMaterial({
-          color: new THREE.Color(theme.line),
-          side: THREE.DoubleSide
-        });
-        const sMesh = new THREE.Mesh(this.shellGeo, sMat);
-        sMesh.position.set(n.x, n.y, n.z);
-        sMesh.scale.setScalar(shellRadius);
-        this.graphGroup.add(sMesh);
-        this.holonShells.set(n.id, { mesh: sMesh, shellRadius });
-      }
+      const fov = 520 * this.cam.zoom;
+      const scale = fov / Math.max(120, 520 + z2);
+      n._wx = x1 * 1.4;
+      n._wy = -y2 * 1.4;
+      n._sx = cx + x1 * 1.4 * scale;
+      n._sy = cy - y2 * 1.4 * scale;
+      n._depthSort = z2;
+      return;
     }
 
-    const synCount = synapses.length;
-    const linePos = new Float32Array(synCount * 6);
-    const lineCol = new Float32Array(synCount * 6);
-    this.synLineGeo = new THREE.BufferGeometry();
-    this.synLineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
-    this.synLineGeo.setAttribute('color', new THREE.BufferAttribute(lineCol, 3));
-
-    const lineMat = new THREE.LineBasicMaterial({
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.45
-    });
-    this.synLineMesh = new THREE.LineSegments(this.synLineGeo, lineMat);
-    this.graphGroup.add(this.synLineMesh);
+    // 2D Planar Projection (replaced by full nested Circle Packing in Task 6)
+    const wx = n.x * 1.55;
+    const wy = n.z * 1.35;
+    n._wx = wx;
+    n._wy = wy;
+    n._sx = cx + (wx - this.cam.x) * this.cam.zoom;
+    n._sy = cy + (wy - this.cam.y) * this.cam.zoom;
+    n._depthSort = n.depth;
   }
 
-  _computeColor(node) {
-    const act = Math.max(0, Math.min(1, node.activation || 0));
-    if (this.lens === 'activity') {
-      if (act > 0.62) {
-        return this.tmpColor.copy(this.cDim).lerp(this.cSignal, (act - 0.62) / 0.38);
+  _hitTestNode(clientX, clientY) {
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = clientX - rect.left;
+    const my = clientY - rect.top;
+
+    let best = null;
+    let bestDist = 11;
+    for (const n of this.nodes) {
+      if (n._sx === undefined) continue;
+      const d = Math.hypot(mx - n._sx, my - n._sy);
+      if (d < bestDist) {
+        bestDist = d;
+        best = n;
       }
-      return this.tmpColor.copy(this.cDim);
     }
-    const mat = Math.max(0, Math.min(1, node.maturity ?? 0));
-    return this.tmpColor.copy(this.cYoung).lerp(this.cOld, mat);
+    return best;
+  }
+
+  _computeDotRadius(n) {
+    const childBoost = Math.min(3.5, (n.child_count || 0) * 0.85);
+    const actBoost = (n.activation || 0) * 1.5;
+    return Math.max(3.0, Math.min(8.0, 3.0 + childBoost + actBoost));
   }
 
   renderFrame() {
-    if (this.cameraFlight) {
-      this.controls.target.lerp(this.cameraFlight.lookAt, 0.12);
-      this.camera.position.lerp(this.cameraFlight.pos, 0.12);
-      if (this.camera.position.distanceTo(this.cameraFlight.pos) < 0.75) {
-        this.cameraFlight = null;
+    const nowMs = performance.now();
+    const theme = getTheme();
+    const ctx = this.ctx;
+
+    // Step smooth ease-out camera transition (250-400ms)
+    if (this.camAnim) {
+      const t = Math.min(1, (nowMs - this.camAnim.startMs) / this.camAnim.durationMs);
+      const ease = 1 - Math.pow(1 - t, 3);
+      this.cam.x = this.camAnim.fromX + (this.camAnim.toX - this.camAnim.fromX) * ease;
+      this.cam.y = this.camAnim.fromY + (this.camAnim.toY - this.camAnim.fromY) * ease;
+      this.cam.zoom = this.camAnim.fromZ + (this.camAnim.toZ - this.camAnim.fromZ) * ease;
+      if (t >= 1) this.camAnim = null;
+      this._emitZoomTier();
+    }
+
+    ctx.save();
+    ctx.scale(this.dpr, this.dpr);
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, this.width, this.height);
+
+    for (const n of this.nodes) {
+      this._projectNode(n);
+    }
+
+    // Build focus neighbor set for hover/selection isolation
+    const focusId = this.hoveredId !== null ? this.hoveredId : this.selectedId;
+    const focusNeighbors = new Set();
+    if (focusId !== null) {
+      focusNeighbors.add(focusId);
+      for (const s of this.synapses) {
+        if (s.source === focusId) focusNeighbors.add(s.target);
+        if (s.target === focusId) focusNeighbors.add(s.source);
       }
     }
 
-    this.controls.update();
+    const thresh = this.weightThreshold ?? 0.45;
 
-    const camDist = this.camera.position.distanceTo(this.controls.target);
-    const tier = camDist > 235 ? 'macro' : (camDist > 75 ? 'cluster' : 'micro');
-    if (tier !== this._lastTier) {
-      this._lastTier = tier;
-      if (this.onZoomTierChange) this.onZoomTierChange(tier, camDist);
-    }
-
-    for (const [id, vis] of this.neuronVisuals.entries()) {
-      const n = this.nodeDataMap.get(id);
-      if (!n) continue;
-      vis.mesh.position.set(n.x, n.y, n.z);
-      vis.mesh.material.color.copy(this._computeColor(n));
-
-      const shell = this.holonShells.get(id);
-      if (shell) {
-        shell.mesh.position.copy(vis.mesh.position);
-        shell.mesh.lookAt(this.camera.position);
+    // Compute holon / region centroids so root sensory edges bundle cleanly instead of fanning out
+    const regionCentroids = new Map();
+    for (const n of this.nodes) {
+      if (n.role === 'CorticalComposite' && n.depth === 0) {
+        const reg = n.label.split('.')[0];
+        let acc = regionCentroids.get(reg);
+        if (!acc) {
+          acc = { sx: 0, sy: 0, count: 0 };
+          regionCentroids.set(reg, acc);
+        }
+        acc.sx += n._sx;
+        acc.sy += n._sy;
+        acc.count += 1;
       }
     }
 
-    if (this.selectedId !== null && this.neuronVisuals.has(this.selectedId)) {
-      const selVis = this.neuronVisuals.get(this.selectedId);
-      this.selectionRing.visible = true;
-      this.selectionRing.position.copy(selVis.mesh.position);
-      this.selectionRing.lookAt(this.camera.position);
-      this.selectionRing.scale.setScalar(selVis.baseR * 1.4);
-    } else {
-      this.selectionRing.visible = false;
-    }
+    const drawnRootBundles = new Set();
 
-    if (this.synLineGeo) {
-      const posArr = this.synLineGeo.attributes.position.array;
-      const colArr = this.synLineGeo.attributes.color.array;
-      const syns = this.synapsesData;
+    // 1. Draw Filtered & Bundled Edges
+    ctx.lineWidth = 1;
+    for (const s of this.synapses) {
+      const absW = Math.abs(s.weight);
+      const isFocusedEdge = focusId !== null && (s.source === focusId || s.target === focusId);
 
-      for (let i = 0; i < syns.length; i++) {
-        const s = syns[i];
-        const srcVis = this.neuronVisuals.get(s.source);
-        const dstVis = this.neuronVisuals.get(s.target);
-        const srcNode = this.nodeDataMap.get(s.source);
-        if (!srcVis || !dstVis || !srcNode) continue;
+      if (!isFocusedEdge && absW < thresh) continue;
 
-        const sp = srcVis.mesh.position;
-        const dp = dstVis.mesh.position;
+      const src = this.nodeMap.get(s.source);
+      const dst = this.nodeMap.get(s.target);
+      if (!src || !dst) continue;
 
-        const i6 = i * 6;
-        posArr[i6]     = sp.x; posArr[i6 + 1] = sp.y; posArr[i6 + 2] = sp.z;
-        posArr[i6 + 3] = dp.x; posArr[i6 + 4] = dp.y; posArr[i6 + 5] = dp.z;
+      const srcFlash = this.flashState.get(src.id);
+      const flashAge = srcFlash ? (nowMs - srcFlash.flashMs) : 9999;
+      const isCarryingSignal = flashAge >= 0 && flashAge < 260 && (src.activation || 0) > 0.3;
 
-        const active = (srcNode.activation || 0) * Math.abs(s.weight) > 0.55;
-        const c = active ? this.cSignal : this.cLine;
-        colArr[i6]     = c.r; colArr[i6 + 1] = c.g; colArr[i6 + 2] = c.b;
-        colArr[i6 + 3] = c.r; colArr[i6 + 4] = c.g; colArr[i6 + 5] = c.b;
+      let strokeStyle;
+      if (focusId !== null && !isFocusedEdge) {
+        strokeStyle = rgba(theme.rgb.line, 0.12);
+      } else if (isCarryingSignal) {
+        const fAlpha = Math.max(0.25, 1 - flashAge / 260);
+        strokeStyle = rgba(theme.rgb.signal, 0.85 * fAlpha);
+      } else {
+        const normW = Math.min(1, (absW - thresh) / Math.max(0.2, 1.5 - thresh));
+        const rgb = lerpRgb(theme.rgb.line, theme.rgb.textDim, normW);
+        const alpha = isFocusedEdge ? 0.88 : (0.28 + 0.55 * normW);
+        strokeStyle = rgba(rgb, alpha);
       }
-      this.synLineGeo.attributes.position.needsUpdate = true;
-      this.synLineGeo.attributes.color.needsUpdate = true;
+
+      // Bundle root sensory edges to region holon boundary rather than fanning to every node
+      if (src.role === 'RootSensory' && dst.role === 'CorticalComposite' && focusId === null) {
+        const reg = dst.label.split('.')[0];
+        const bundleKey = `${src.id}:${reg}`;
+        if (drawnRootBundles.has(bundleKey)) continue;
+        drawnRootBundles.add(bundleKey);
+
+        const c = regionCentroids.get(reg);
+        if (c && c.count > 0) {
+          const tx = c.sx / c.count;
+          const ty = c.sy / c.count;
+          const midX = src._sx + (tx - src._sx) * 0.55;
+          ctx.strokeStyle = strokeStyle;
+          ctx.beginPath();
+          ctx.moveTo(src._sx, src._sy);
+          ctx.quadraticCurveTo(midX, src._sy, tx, ty);
+          ctx.stroke();
+          continue;
+        }
+      }
+
+      ctx.strokeStyle = strokeStyle;
+      ctx.beginPath();
+      ctx.moveTo(src._sx, src._sy);
+      ctx.lineTo(dst._sx, dst._sy);
+      ctx.stroke();
     }
 
-    this.renderer.render(this.scene, this.camera);
+    // 2. Draw Solid Neuron Dots (3-8px) + 300ms Firing Flash Decay + 1px Selection Ring
+    for (const n of this.nodes) {
+      const r = this._computeDotRadius(n);
+      const dimmed = focusId !== null && !focusNeighbors.has(n.id);
+
+      let rgb;
+      if (this.lens === 'age') {
+        const mat = Math.max(0, Math.min(1, n.maturity ?? 0));
+        rgb = lerpRgb(theme.rgb.young, theme.rgb.old, mat);
+      } else {
+        const st = this.flashState.get(n.id);
+        const elapsed = st ? (nowMs - st.flashMs) : 9999;
+        if (elapsed >= 0 && elapsed < 320) {
+          // Exponential decay over ~300ms from --signal back to --text-dim
+          const flashT = Math.exp(-elapsed / 120);
+          rgb = lerpRgb(theme.rgb.textDim, theme.rgb.signal, flashT);
+        } else {
+          rgb = theme.rgb.textDim;
+        }
+      }
+
+      ctx.fillStyle = rgba(rgb, dimmed ? 0.2 : 1.0);
+      ctx.beginPath();
+      ctx.arc(n._sx, n._sy, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (n.id === this.selectedId || n.id === this.hoveredId) {
+        ctx.strokeStyle = theme.signal;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(n._sx, n._sy, r + 3.5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
   }
 }
