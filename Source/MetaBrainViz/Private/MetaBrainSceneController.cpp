@@ -40,6 +40,18 @@ AMetaBrainSceneController::AMetaBrainSceneController()
 	NeuronHISM->SetCollisionResponseToAllChannels(ECR_Ignore);
 	NeuronHISM->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
+	DendriteArborHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("DendriteArborHISM"));
+	DendriteArborHISM->SetupAttachment(Root);
+	DendriteArborHISM->NumCustomDataFloats = 4;
+	DendriteArborHISM->SetCastShadow(false);
+	DendriteArborHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	SynapticBoutonHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("SynapticBoutonHISM"));
+	SynapticBoutonHISM->SetupAttachment(Root);
+	SynapticBoutonHISM->NumCustomDataFloats = 4;
+	SynapticBoutonHISM->SetCastShadow(false);
+	SynapticBoutonHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
 	HolonShellHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("HolonShellHISM"));
 	HolonShellHISM->SetupAttachment(Root);
 	HolonShellHISM->NumCustomDataFloats = 1;
@@ -73,6 +85,7 @@ AMetaBrainSceneController::AMetaBrainSceneController()
 	{
 		SphereMesh = SphereFinder.Object;
 		NeuronHISM->SetStaticMesh(SphereMesh);
+		SynapticBoutonHISM->SetStaticMesh(SphereMesh);
 		HolonShellHISM->SetStaticMesh(SphereMesh);
 		SignalPulseHISM->SetStaticMesh(SphereMesh);
 	}
@@ -81,7 +94,14 @@ AMetaBrainSceneController::AMetaBrainSceneController()
 	if (CylFinder.Succeeded())
 	{
 		CylinderMesh = CylFinder.Object;
+		DendriteArborHISM->SetStaticMesh(CylinderMesh);
 		EdgeFilamentHISM->SetStaticMesh(CylinderMesh);
+	}
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> ConeFinder(TEXT("/Engine/BasicShapes/Cone.Cone"));
+	if (ConeFinder.Succeeded())
+	{
+		ConeMesh = ConeFinder.Object;
 	}
 }
 
@@ -92,7 +112,12 @@ void AMetaBrainSceneController::BeginPlay()
 	MetaBrainMPC = LoadObject<UMaterialParameterCollection>(nullptr, TEXT("/Game/MetaBrain/Materials/MPC_MetaBrain.MPC_MetaBrain"));
 
 	NeuronMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_Neuron.M_Neuron"));
-	if (NeuronMaterial) NeuronHISM->SetMaterial(0, NeuronMaterial);
+	if (NeuronMaterial)
+	{
+		NeuronHISM->SetMaterial(0, NeuronMaterial);
+		DendriteArborHISM->SetMaterial(0, NeuronMaterial);
+		SynapticBoutonHISM->SetMaterial(0, NeuronMaterial);
+	}
 
 	HolonShellMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_HolonShell.M_HolonShell"));
 	if (HolonShellMaterial) HolonShellHISM->SetMaterial(0, HolonShellMaterial);
@@ -130,7 +155,6 @@ void AMetaBrainSceneController::BeginPlay()
 		HolonLabelPool.Add(WC);
 	}
 
-	// Pooled dynamic Lumen & Volumetric Fog #FFB000 point lights (0 intensity at rest; ignite ONLY while neurons fire)
 	constexpr int32 MaxFiringLights = 10;
 	FiringLightPool.Reserve(MaxFiringLights);
 	const FColor SignalAmberSRGB(255, 176, 0, 255);
@@ -188,6 +212,7 @@ void AMetaBrainSceneController::BeginPlay()
 	SyncNeuronHISM(NowSec, CamLoc);
 	SyncHolonShellsAndLabels(CamLoc);
 	SyncEdgesAndPulses(0.016f, NowSec);
+	SyncFiringPointLights(NowSec);
 	UpdatePostProcessFocus(1.0f, CamLoc);
 }
 
@@ -230,7 +255,8 @@ float AMetaBrainSceneController::GetEffectiveWeightThreshold() const
 {
 	if (bUseAutoTop20Filter && CurrentSnapshot.IsValid())
 	{
-		return CurrentSnapshot->DefaultTop20WeightCutoff;
+		// In interactive cortical graphs (< 400 neurons), show ~70% of biological synapses (|w| >= 0.18); in 1k-10k benchmarks use Top 20%
+		return (CurrentSnapshot->TotalNeurons > 400) ? CurrentSnapshot->DefaultTop20WeightCutoff : 0.18f;
 	}
 	return ManualWeightThreshold;
 }
@@ -290,31 +316,30 @@ void AMetaBrainSceneController::ZoomIntoHolon(const FString& HolonKey)
 	if (!TargetH) return;
 
 	Breadcrumbs.Reset();
-	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -52.0, 2.0), 1260.0f });
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -46.0, 4.0), 1140.0f });
 
 	if (TargetH->Level == 1)
 	{
 		CurrentZoomLevel = EMetaBrainZoomLevel::Cluster;
 		FocusedHolonKey = TargetH->Key;
-		const float ViewDist = FMath::Max(165.0f, TargetH->RadiusCm * 2.35f);
+		const float ViewDist = FMath::Max(165.0f, TargetH->RadiusCm * 2.25f);
 		Breadcrumbs.Add({ TargetH->Label, TargetH->Key, TargetH->NeuronId, EMetaBrainZoomLevel::Cluster, FVector(TargetH->CenterCm), ViewDist });
 		NotifyCameraFlyTo(FVector(TargetH->CenterCm), ViewDist);
 	}
 	else
 	{
-		// Rebuild parent region breadcrumb first if available
 		for (const FMetaBrainHolonSnap& ParentH : CurrentSnapshot->Holons)
 		{
 			if (ParentH.Key == TargetH->ParentKey)
 			{
-				const float ParentDist = FMath::Max(165.0f, ParentH.RadiusCm * 2.35f);
+				const float ParentDist = FMath::Max(165.0f, ParentH.RadiusCm * 2.25f);
 				Breadcrumbs.Add({ ParentH.Label, ParentH.Key, ParentH.NeuronId, EMetaBrainZoomLevel::Cluster, FVector(ParentH.CenterCm), ParentDist });
 				break;
 			}
 		}
 		CurrentZoomLevel = EMetaBrainZoomLevel::Micro;
 		FocusedHolonKey = TargetH->Key;
-		const float ViewDist = FMath::Max(68.0f, TargetH->RadiusCm * 2.65f);
+		const float ViewDist = FMath::Max(72.0f, TargetH->RadiusCm * 2.55f);
 		Breadcrumbs.Add({ TargetH->Label, TargetH->Key, TargetH->NeuronId, EMetaBrainZoomLevel::Micro, FVector(TargetH->CenterCm), ViewDist });
 		NotifyCameraFlyTo(FVector(TargetH->CenterCm), ViewDist);
 	}
@@ -324,7 +349,6 @@ void AMetaBrainSceneController::ZoomIntoNeuron(int64 NeuronId)
 {
 	if (!CurrentSnapshot.IsValid() || NeuronId < 0) return;
 
-	// First check if this composite neuron has its own Holon shell
 	for (const FMetaBrainHolonSnap& H : CurrentSnapshot->Holons)
 	{
 		if (H.NeuronId == NeuronId)
@@ -334,16 +358,15 @@ void AMetaBrainSceneController::ZoomIntoNeuron(int64 NeuronId)
 		}
 	}
 
-	// Otherwise fly closely to the neuron itself in Micro mode
 	for (const FMetaBrainNeuronSnap& N : CurrentSnapshot->Neurons)
 	{
 		if (static_cast<int64>(N.Id) == NeuronId)
 		{
 			CurrentZoomLevel = EMetaBrainZoomLevel::Micro;
-			const float ViewDist = FMath::Max(52.0f, N.RadiusCm * 8.5f);
+			const float ViewDist = FMath::Max(58.0f, N.RadiusCm * 12.0f);
 			if (Breadcrumbs.Num() == 0)
 			{
-				Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector::ZeroVector, 680.0f });
+				Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -46.0, 4.0), 1140.0f });
 			}
 			Breadcrumbs.Add({ N.Label, FocusedHolonKey, NeuronId, EMetaBrainZoomLevel::Micro, FVector(N.PositionCm), ViewDist });
 			NotifyCameraFlyTo(FVector(N.PositionCm), ViewDist);
@@ -379,13 +402,11 @@ void AMetaBrainSceneController::ZoomToLevelSegmented(EMetaBrainZoomLevel Request
 
 	if (RequestedLevel == EMetaBrainZoomLevel::Cluster)
 	{
-		// If currently in Micro, step up to parent Cluster breadcrumb
 		if (Breadcrumbs.Num() >= 2 && Breadcrumbs[1].Level == EMetaBrainZoomLevel::Cluster)
 		{
 			ZoomToBreadcrumbIndex(1);
 			return;
 		}
-		// Pick first Level-1 Region Holon (Hippocampus or highest activity)
 		for (const FMetaBrainHolonSnap& H : CurrentSnapshot->Holons)
 		{
 			if (H.Level == 1)
@@ -402,7 +423,6 @@ void AMetaBrainSceneController::ZoomToLevelSegmented(EMetaBrainZoomLevel Request
 			ZoomIntoNeuron(SelectedNeuronId);
 			return;
 		}
-		// Pick a Level-2 sub-holon inside focused Cluster (or first Level-2 holon)
 		for (const FMetaBrainHolonSnap& H : CurrentSnapshot->Holons)
 		{
 			if (H.Level >= 2 && (FocusedHolonKey.IsEmpty() || H.ParentKey == FocusedHolonKey))
@@ -440,38 +460,158 @@ FVector AMetaBrainSceneController::GetActiveCameraLocation() const
 	{
 		return CamMgr->GetCameraLocation();
 	}
-	return FVector(-680.0, 0.0, 26.0);
+	return FVector(-980.0, 420.0, 300.0);
+}
+
+static FTransform MakeCylinderSegmentTransform(const FVector& A, const FVector& B, double RadiusCm)
+{
+	const FVector Delta = B - A;
+	const double Len = FMath::Max(0.1, Delta.Size());
+	const FQuat Rot = FRotationMatrix::MakeFromZ(Delta).ToQuat();
+	const FVector Mid = (A + B) * 0.5;
+	return FTransform(Rot, Mid, FVector(RadiusCm / 50.0, RadiusCm / 50.0, (Len * 1.03) / 100.0));
 }
 
 void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector& CamLoc)
 {
-	if (!CurrentSnapshot.IsValid() || !NeuronHISM) return;
+	if (!CurrentSnapshot.IsValid() || !NeuronHISM || !DendriteArborHISM) return;
 
 	const TArray<FMetaBrainNeuronSnap>& Neurons = CurrentSnapshot->Neurons;
+	const TArray<FMetaBrainEdgeSnap>& Edges = CurrentSnapshot->Edges;
 	const int32 Count = Neurons.Num();
 
+	// 1. Rebuild Multipolar Somas + Branching 3D Dendritic Arbors + Axon Hillocks when topology changes
 	if (RenderedNeuronTopoRev != CurrentSnapshot->TopologyRevision || NeuronHISM->GetInstanceCount() != Count)
 	{
 		RenderedNeuronTopoRev = CurrentSnapshot->TopologyRevision;
+		bEdgeFilterDirty = true;
+
 		NeuronHISM->ClearInstances();
+		DendriteArborHISM->ClearInstances();
+		NeuronArborSpans.Reset();
+		NeuronArborSpans.SetNum(Count);
 
 		if (Count > 0)
 		{
-			TArray<FTransform> Transforms;
-			Transforms.SetNumUninitialized(Count);
+			// Compute mean outgoing direction for each neuron's axon hillock & incoming hints for dendritic orientation
+			TArray<FVector> OutDirAccum;
+			TArray<int32> OutCounts;
+			OutDirAccum.SetNumZeroed(Count);
+			OutCounts.SetNumZeroed(Count);
+
+			for (const FMetaBrainEdgeSnap& E : Edges)
+			{
+				if (Neurons.IsValidIndex(E.SourceIndex) && Neurons.IsValidIndex(E.TargetIndex))
+				{
+					const FVector Dir = (FVector(Neurons[E.TargetIndex].PositionCm) - FVector(Neurons[E.SourceIndex].PositionCm)).GetSafeNormal();
+					OutDirAccum[E.SourceIndex] += Dir;
+					OutCounts[E.SourceIndex]++;
+				}
+			}
+
+			TArray<FTransform> SomaTransforms;
+			SomaTransforms.SetNumUninitialized(Count);
+
+			TArray<FTransform> ArborTransforms;
+			const bool bBuildDetailedArbors = (Count <= 600);
+			if (bBuildDetailedArbors)
+			{
+				ArborTransforms.Reserve(Count * 16);
+			}
+
+			constexpr double GoldenAngle = 2.3999632297;
+
 			for (int32 i = 0; i < Count; ++i)
 			{
-				const float UniformScale = FMath::Max(0.02f, Neurons[i].RadiusCm / 50.0f);
-				Transforms[i] = FTransform(FRotator::ZeroRotator, FVector(Neurons[i].PositionCm), FVector(UniformScale));
+				const FMetaBrainNeuronSnap& N = Neurons[i];
+				const FVector SomaCenter(N.PositionCm);
+				const double SomaR = FMath::Max(1.6, static_cast<double>(N.RadiusCm));
+
+				// Slightly elongated organic soma ellipsoid aligned toward axon hillock
+				FVector HillockDir = (OutCounts[i] > 0) ? OutDirAccum[i].GetSafeNormal() : FVector(0.0, 1.0, 0.0);
+				if (HillockDir.IsNearlyZero())
+				{
+					HillockDir = FVector(FMath::Cos(i * 1.7), FMath::Sin(i * 1.7), 0.25).GetSafeNormal();
+				}
+				const FQuat SomaRot = FRotationMatrix::MakeFromZ(HillockDir).ToQuat();
+				const double BaseScale = SomaR / 50.0;
+				SomaTransforms[i] = FTransform(SomaRot, SomaCenter, FVector(BaseScale * 0.94, BaseScale * 0.94, BaseScale * 1.16));
+
+				FDendriteNeuronSpan& Span = NeuronArborSpans[i];
+				Span.FirstArborIdx = ArborTransforms.Num();
+
+				if (!bBuildDetailedArbors)
+				{
+					Span.AxonHillockTipCm = SomaCenter + HillockDir * SomaR;
+					Span.DistalSpineTipsCm.Add(SomaCenter - HillockDir * SomaR);
+					Span.NumArborSegs = 0;
+					continue;
+				}
+
+				// A) Tapering 2-stage Axon Hillock initial segment emerging from soma toward outgoing targets
+				const FVector HillBase = SomaCenter + HillockDir * (SomaR * 0.72);
+				const FVector HillMid  = SomaCenter + HillockDir * (SomaR * 1.85);
+				const FVector HillTip  = SomaCenter + HillockDir * (SomaR * 3.10);
+				ArborTransforms.Add(MakeCylinderSegmentTransform(HillBase, HillMid, SomaR * 0.28));
+				ArborTransforms.Add(MakeCylinderSegmentTransform(HillMid, HillTip, SomaR * 0.14));
+				Span.AxonHillockTipCm = HillTip;
+
+				// B) 5 Multipolar Primary Dendrites + Bifurcating Secondary Y-Branches
+				const int32 NumDendrites = (N.Role == 0 || N.Role == 3) ? 4 : 5;
+				const double SeedRot = static_cast<double>(N.Id % 97) * 0.417;
+
+				for (int32 d = 0; d < NumDendrites; ++d)
+				{
+					const double u = (static_cast<double>(d) + 0.5) / static_cast<double>(NumDendrites);
+					const double z = 1.0 - 2.0 * u;
+					const double rXY = FMath::Sqrt(FMath::Max(0.0, 1.0 - z * z));
+					const double theta = GoldenAngle * static_cast<double>(d) + SeedRot;
+
+					FVector DendDir(FMath::Cos(theta) * rXY, FMath::Sin(theta) * rXY, z);
+					// Bias dendrites away from the outgoing axon hillock pole (classic pyramidal/multipolar polarity)
+					if (FVector::DotProduct(DendDir, HillockDir) > 0.55)
+					{
+						DendDir = (DendDir - HillockDir * 0.85).GetSafeNormal();
+					}
+
+					const double PrimaryLen = SomaR * (2.65 + 0.55 * FMath::Sin(SeedRot + d * 1.9));
+					const FVector TrunkStart = SomaCenter + DendDir * (SomaR * 0.68);
+					const FVector ForkPt     = SomaCenter + DendDir * (SomaR * 0.68 + PrimaryLen);
+
+					ArborTransforms.Add(MakeCylinderSegmentTransform(TrunkStart, ForkPt, SomaR * 0.22));
+
+					// Bifurcate into 2 fine distal secondary dendritic branches with synaptic spine tips
+					FVector OrthoA = FVector::CrossProduct(DendDir, FVector::UpVector).GetSafeNormal();
+					if (OrthoA.IsNearlyZero()) OrthoA = FVector::RightVector;
+					const FVector OrthoB = FVector::CrossProduct(DendDir, OrthoA).GetSafeNormal();
+					const FVector SpreadAxis = (OrthoA * FMath::Cos(SeedRot + d) + OrthoB * FMath::Sin(SeedRot + d)).GetSafeNormal();
+
+					for (int32 branchSign = -1; branchSign <= 1; branchSign += 2)
+					{
+						const FVector TwigDir = (DendDir * 0.80 + SpreadAxis * (0.54 * branchSign)).GetSafeNormal();
+						const double TwigLen = PrimaryLen * (0.78 + 0.14 * branchSign);
+						const FVector TipPt = ForkPt + TwigDir * TwigLen;
+						ArborTransforms.Add(MakeCylinderSegmentTransform(ForkPt, TipPt, SomaR * 0.115));
+						Span.DistalSpineTipsCm.Add(TipPt);
+					}
+				}
+
+				Span.NumArborSegs = ArborTransforms.Num() - Span.FirstArborIdx;
 			}
-			NeuronHISM->AddInstances(Transforms, false, true);
+
+			NeuronHISM->AddInstances(SomaTransforms, false, true);
 			NeuronHISM->BuildTreeIfOutdated(false, true);
+
+			if (ArborTransforms.Num() > 0)
+			{
+				DendriteArborHISM->AddInstances(ArborTransforms, false, true);
+				DendriteArborHISM->BuildTreeIfOutdated(false, true);
+			}
 		}
 	}
 
 	if (Count == 0) return;
 
-	const bool bIsMacro = (CurrentZoomLevel == EMetaBrainZoomLevel::Macro) && (CamLoc.Size() > 420.0);
 	const int64 FocusId = (HoveredNeuronId >= 0) ? HoveredNeuronId : SelectedNeuronId;
 
 	TSet<int32> FocusedHolonMemberSet;
@@ -491,15 +631,17 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 	if (FocusId >= 0)
 	{
 		IsolatedSet.Add(static_cast<uint64>(FocusId));
-		for (const FMetaBrainEdgeSnap& E : CurrentSnapshot->Edges)
+		for (const FMetaBrainEdgeSnap& E : Edges)
 		{
 			if (static_cast<int64>(E.SourceId) == FocusId) IsolatedSet.Add(E.TargetId);
 			if (static_cast<int64>(E.TargetId) == FocusId) IsolatedSet.Add(E.SourceId);
 		}
 	}
 
-	TArray<float> CustomFloats;
-	CustomFloats.SetNumUninitialized(4);
+	TArray<float> SomaCustom;
+	SomaCustom.SetNumUninitialized(4);
+	TArray<float> ArborCustom;
+	ArborCustom.SetNumUninitialized(4);
 
 	const bool bNeedFullPass = (Count <= 1500) ||
 		(CurrentSnapshot->Tick != LastNeuronFullSyncTick) ||
@@ -512,7 +654,9 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 	LastNeuronSyncZoom = CurrentZoomLevel;
 	bLastNeuronSyncAge = bAgeLensActive;
 
-	bool bAnyDirty = false;
+	bool bAnySomaDirty = false;
+	bool bAnyArborDirty = false;
+
 	for (int32 i = 0; i < Count; ++i)
 	{
 		const FMetaBrainNeuronSnap& N = Neurons[i];
@@ -530,34 +674,44 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 		}
 
 		float BaseBrightness = 1.0f;
-		if (bIsMacro && N.Role != 0 && N.Role != 3)
+		if (CurrentZoomLevel == EMetaBrainZoomLevel::Macro && N.Role != 0 && N.Role != 3)
 		{
-			// Macro: top-level holons dominate in Activity lens; in Age lens keep full ramp legibility
-			BaseBrightness = bAgeLensActive ? 0.92f : ((N.Depth == 0) ? 0.44f : 0.28f);
+			BaseBrightness = bAgeLensActive ? 0.94f : ((N.Depth == 0) ? 0.72f : 0.54f);
 		}
 		else if (FocusedHolonMemberSet.Num() > 0)
 		{
-			// Cluster / Micro: inner neurons of focused holon fade in to 100%, external clusters dim
 			BaseBrightness = FocusedHolonMemberSet.Contains(i) ? 1.0f : 0.24f;
 		}
 
 		if (FocusId >= 0)
 		{
-			// Hover / select isolates neuron & incident neighbors, dimming everything else to 20%
 			BaseBrightness = IsolatedSet.Contains(N.Id) ? 1.0f : 0.20f;
 		}
 
-		CustomFloats[0] = N.Activation;
-		CustomFloats[1] = N.Maturity;
-		CustomFloats[2] = BaseBrightness;
-		CustomFloats[3] = Flash;
-		NeuronHISM->SetCustomData(i, CustomFloats, false);
-		bAnyDirty = true;
+		SomaCustom[0] = N.Activation;
+		SomaCustom[1] = N.Maturity;
+		SomaCustom[2] = BaseBrightness;
+		SomaCustom[3] = Flash;
+		NeuronHISM->SetCustomData(i, SomaCustom, false);
+		bAnySomaDirty = true;
+
+		if (NeuronArborSpans.IsValidIndex(i) && NeuronArborSpans[i].NumArborSegs > 0)
+		{
+			ArborCustom[0] = N.Activation;
+			ArborCustom[1] = N.Maturity;
+			ArborCustom[2] = BaseBrightness * 0.88f;
+			ArborCustom[3] = Flash * 0.68f; // Backpropagating dendritic action potential glow
+			const FDendriteNeuronSpan& Span = NeuronArborSpans[i];
+			for (int32 s = 0; s < Span.NumArborSegs; ++s)
+			{
+				DendriteArborHISM->SetCustomData(Span.FirstArborIdx + s, ArborCustom, false);
+			}
+			bAnyArborDirty = true;
+		}
 	}
-	if (bAnyDirty)
-	{
-		NeuronHISM->MarkRenderStateDirty();
-	}
+
+	if (bAnySomaDirty) NeuronHISM->MarkRenderStateDirty();
+	if (bAnyArborDirty) DendriteArborHISM->MarkRenderStateDirty();
 }
 
 void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)
@@ -604,7 +758,6 @@ void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)
 		const FMetaBrainHolonSnap& H = Holons[i];
 		const float DistToShellCenter = FVector::Distance(CamLoc, FVector(H.CenterCm));
 
-		// Outer shell fades out completely when entered (Cluster / Micro)
 		float ShellFade = FMath::Clamp((DistToShellCenter - H.RadiusCm * 0.92f) / FMath::Max(14.0f, H.RadiusCm * 0.55f), 0.0f, 1.0f);
 		if (FadedAncestorKeys.Contains(H.Key))
 		{
@@ -647,36 +800,55 @@ void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)
 
 void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double NowWallSec)
 {
-	if (!CurrentSnapshot.IsValid() || !EdgeFilamentHISM || !SignalPulseHISM) return;
+	if (!CurrentSnapshot.IsValid() || !EdgeFilamentHISM || !SignalPulseHISM || !SynapticBoutonHISM) return;
 
 	const int64 FocusId = (HoveredNeuronId >= 0) ? HoveredNeuronId : SelectedNeuronId;
 	const TArray<FMetaBrainNeuronSnap>& Neurons = CurrentSnapshot->Neurons;
 	const TArray<FMetaBrainEdgeSnap>& Edges = CurrentSnapshot->Edges;
-	const TArray<FMetaBrainHolonSnap>& Holons = CurrentSnapshot->Holons;
 
-	if (RenderedEdgeTopoRev != CurrentSnapshot->TopologyRevision || bEdgeFilterDirty || LastRenderedFocusId != FocusId)
+	// Track newly formed synapses for live 3D Axonal Growth-Cone docking animation
+	bool bHasGrowingSynapses = false;
+	for (const FRenderedEdgeMap& Existing : ActiveEdgeInstances)
 	{
+		if ((NowWallSec - Existing.BirthWallSec) < 0.95)
+		{
+			bHasGrowingSynapses = true;
+			break;
+		}
+	}
+
+	if (RenderedEdgeTopoRev != CurrentSnapshot->TopologyRevision || bEdgeFilterDirty || LastRenderedFocusId != FocusId || bHasGrowingSynapses)
+	{
+		const bool bFirstSeed = !bInitialSynapsesSeeded;
+		bInitialSynapsesSeeded = true;
+
+		// Preserve active bouton flash timestamps across geometry rebuilds
+		TMap<int32, double> PrevBoutonFlashes;
+		for (const FRenderedEdgeMap& M : ActiveEdgeInstances)
+		{
+			if (M.BoutonFlashWallSec > 0.0)
+			{
+				PrevBoutonFlashes.Add(M.SnapshotEdgeIdx, M.BoutonFlashWallSec);
+			}
+		}
+
 		RenderedEdgeTopoRev = CurrentSnapshot->TopologyRevision;
 		LastRenderedFocusId = FocusId;
 		bEdgeFilterDirty = false;
 
 		ActiveEdgeInstances.Reset();
 		EdgeFilamentHISM->ClearInstances();
-
-		TMap<FString, const FMetaBrainHolonSnap*> RegionHolonMap;
-		for (const FMetaBrainHolonSnap& H : Holons)
-		{
-			if (H.Level == 1) RegionHolonMap.Add(H.Label, &H);
-		}
-		TSet<FString> BundledRootPairs;
+		SynapticBoutonHISM->ClearInstances();
 
 		TArray<FTransform> FilamentTransforms;
+		TArray<FTransform> BoutonTransforms;
 		TArray<FVector> NiagaraStarts;
 		TArray<FVector> NiagaraEnds;
 		TArray<float> NiagaraWeights;
 
-		constexpr int32 MaxRenderedEdges = 4000;
-		const float FilamentRadiusCm = (Neurons.Num() > 800) ? 0.25f : 0.36f;
+		const bool bMassiveScale = (Neurons.Num() > 800);
+		const int32 MaxRenderedEdges = bMassiveScale ? 3200 : 1200;
+		const float EffectiveCutoff = GetEffectiveWeightThreshold();
 
 		for (int32 Idx = 0; Idx < Edges.Num() && ActiveEdgeInstances.Num() < MaxRenderedEdges; ++Idx)
 		{
@@ -684,91 +856,141 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 			const bool bIsIncident = (FocusId >= 0) &&
 				(static_cast<int64>(E.SourceId) == FocusId || static_cast<int64>(E.TargetId) == FocusId);
 
-			bool bPassThreshold = bUseAutoTop20Filter ? E.bInDefaultTop20Pct : (E.AbsWeight >= ManualWeightThreshold);
-			if (!bPassThreshold && !bIsIncident)
-			{
-				continue;
-			}
-
 			if (!Neurons.IsValidIndex(E.SourceIndex) || !Neurons.IsValidIndex(E.TargetIndex))
 			{
 				continue;
 			}
 
-			const FMetaBrainNeuronSnap& Src = Neurons[E.SourceIndex];
-			const FMetaBrainNeuronSnap& Dst = Neurons[E.TargetIndex];
-
-			FVector StartPos(Src.PositionCm);
-			FVector EndPos(Dst.PositionCm);
-
-			if (CurrentZoomLevel == EMetaBrainZoomLevel::Macro && Src.Role == 0 && Dst.Role == 1 && FocusId < 0)
+			bool bPassThreshold = false;
+			if (bUseAutoTop20Filter)
 			{
-				int32 DotPos = INDEX_NONE;
-				FString RegName = Dst.Label;
-				if (Dst.Label.FindChar(TEXT('.'), DotPos) && DotPos > 0)
+				if (Neurons.Num() > 400)
 				{
-					RegName = Dst.Label.Left(DotPos);
+					bPassThreshold = E.bInDefaultTop20Pct;
 				}
-				const FString BundleKey = FString::Printf(TEXT("%llu:%s"), Src.Id, *RegName);
-				if (BundledRootPairs.Contains(BundleKey))
+				else
 				{
-					continue;
+					// Show rich intra-cortical & micro-circuit neuron-to-neuron synapses (|w| >= 0.16), while keeping long-range sensory afferents clean (|w| >= 0.62)
+					const bool bIsRootAfferent = (Neurons[E.SourceIndex].Role == 0);
+					bPassThreshold = bIsRootAfferent ? (E.AbsWeight >= 0.62f) : (E.AbsWeight >= 0.16f);
 				}
-				BundledRootPairs.Add(BundleKey);
+			}
+			else
+			{
+				bPassThreshold = (E.AbsWeight >= ManualWeightThreshold);
+			}
 
-				if (const FMetaBrainHolonSnap* const* FoundH = RegionHolonMap.Find(RegName))
+			if (!bPassThreshold && !bIsIncident)
+			{
+				continue;
+			}
+
+			const uint64 SynKey = (E.SourceId * 1099511628211ULL) ^ E.TargetId;
+			double* FoundBirth = KnownSynapseBirthSec.Find(SynKey);
+			double BirthSec = -100.0;
+			if (!FoundBirth)
+			{
+				BirthSec = bFirstSeed ? -100.0 : NowWallSec;
+				KnownSynapseBirthSec.Add(SynKey, BirthSec);
+			}
+			else
+			{
+				BirthSec = *FoundBirth;
+			}
+
+			// Exact biological start (presynaptic axon hillock) and end (postsynaptic distal dendritic spine tip!)
+			FVector StartPos(Neurons[E.SourceIndex].PositionCm);
+			FVector EndPos(Neurons[E.TargetIndex].PositionCm);
+
+			if (NeuronArborSpans.IsValidIndex(E.SourceIndex) && !NeuronArborSpans[E.SourceIndex].AxonHillockTipCm.IsZero())
+			{
+				StartPos = NeuronArborSpans[E.SourceIndex].AxonHillockTipCm;
+			}
+
+			if (NeuronArborSpans.IsValidIndex(E.TargetIndex) && NeuronArborSpans[E.TargetIndex].DistalSpineTipsCm.Num() > 0)
+			{
+				const TArray<FVector>& Tips = NeuronArborSpans[E.TargetIndex].DistalSpineTipsCm;
+				// Pick a deterministic spine among the 2 closest tips facing the presynaptic neuron so multiple synapses fan across spines
+				int32 BestTipA = 0;
+				int32 BestTipB = 0;
+				double BestDistA = 1e18;
+				double BestDistB = 1e18;
+				for (int32 tIdx = 0; tIdx < Tips.Num(); ++tIdx)
 				{
-					const FVector Center((*FoundH)->CenterCm);
-					const FVector ToSrc = (StartPos - Center).GetSafeNormal();
-					EndPos = Center + ToSrc * (*FoundH)->RadiusCm;
+					const double D2 = FVector::DistSquared(StartPos, Tips[tIdx]);
+					if (D2 < BestDistA)
+					{
+						BestDistB = BestDistA; BestTipB = BestTipA;
+						BestDistA = D2; BestTipA = tIdx;
+					}
+					else if (D2 < BestDistB)
+					{
+						BestDistB = D2; BestTipB = tIdx;
+					}
 				}
+				EndPos = ((E.SourceId + E.TargetId) & 1ULL) ? Tips[BestTipA] : Tips[BestTipB];
 			}
 
 			const FVector Delta = EndPos - StartPos;
 			const float Len = static_cast<float>(Delta.Size());
 			if (Len < 1.0f) continue;
 
-			// Compute organic 3D curved Bezier control point bowed gently outward/across 3D volume
+			// Build Tortuous 3D Biological Axon Curve
+			FMetaBrainAxonCurve Curve;
+			Curve.StartPos = StartPos;
+			Curve.EndPos = EndPos;
+
 			const FVector MidLinear = (StartPos + EndPos) * 0.5;
-			FVector RadialOut = MidLinear.GetSafeNormal();
-			if (RadialOut.IsNearlyZero()) RadialOut = FVector::UpVector;
 			const FVector ChordDir = Delta / Len;
-			FVector SideTangent = FVector::CrossProduct(ChordDir, RadialOut).GetSafeNormal();
-			if (SideTangent.IsNearlyZero()) SideTangent = FVector::UpVector;
-			const float HashSign = ((E.SourceId * 1315423911ULL + E.TargetId) & 1ULL) ? 1.0f : -1.0f;
-			const FVector BowDir = (RadialOut * 0.68 + SideTangent * (0.45 * HashSign)).GetSafeNormal();
-			const FVector CtrlPos = MidLinear + BowDir * FMath::Min(68.0, Len * 0.16);
+			FVector PerpA = FVector::CrossProduct(ChordDir, FVector::UpVector).GetSafeNormal();
+			if (PerpA.IsNearlyZero()) PerpA = FVector::RightVector;
+			const FVector PerpB = FVector::CrossProduct(ChordDir, PerpA).GetSafeNormal();
 
-			const int32 SubSegs = (Neurons.Num() > 1200) ? 1 : 5;
+			const uint64 Hash = E.SourceId * 2654435761ULL + E.TargetId * 40503ULL;
+			const double BowAngle = static_cast<double>(Hash % 360ULL) * (PI / 180.0);
+			const FVector BowDir = (PerpA * FMath::Cos(BowAngle) + PerpB * FMath::Sin(BowAngle)).GetSafeNormal();
+
+			Curve.CtrlPos = MidLinear + BowDir * FMath::Clamp(Len * 0.19, 4.0, 58.0);
+			Curve.PerpA = PerpA;
+			Curve.PerpB = PerpB;
+			Curve.WaveAmpCm = bMassiveScale ? 0.0f : FMath::Clamp(Len * 0.042f, 1.2f, 9.5f);
+			Curve.PhaseA = static_cast<float>((Hash % 628ULL) * 0.01);
+			Curve.PhaseB = static_cast<float>(((Hash >> 8) % 628ULL) * 0.01);
+
+			// Live Axonal Growth-Cone extension fraction (0 -> 1 over 0.85s for newly formed synapses)
+			const double AgeSec = NowWallSec - BirthSec;
+			const double GrowthFrac = (AgeSec >= 0.85) ? 1.0 : FMath::Clamp(AgeSec / 0.85, 0.06, 1.0);
+
+			const int32 SubSegs = bMassiveScale ? 1 : 7;
 			const int32 FirstSegIdx = FilamentTransforms.Num();
-
-			auto EvalBez = [&](double T) -> FVector
-			{
-				const double U = 1.0 - T;
-				return (U * U) * StartPos + (2.0 * U * T) * CtrlPos + (T * T) * EndPos;
-			};
+			const float WeightNorm = FMath::Clamp(E.AbsWeight / 2.2f, 0.10f, 1.0f);
+			const double BaseAxonR = bMassiveScale ? 0.26 : (0.36 + 0.34 * WeightNorm);
 
 			FVector PrevPt = StartPos;
 			for (int32 s = 1; s <= SubSegs; ++s)
 			{
-				const double T = static_cast<double>(s) / static_cast<double>(SubSegs);
-				const FVector NextPt = (SubSegs == 1) ? EndPos : EvalBez(T);
-				const FVector SegDelta = NextPt - PrevPt;
-				const double SegLen = SegDelta.Size();
-				if (SegLen > 0.05)
-				{
-					const FQuat SegRot = FRotationMatrix::MakeFromZ(SegDelta).ToQuat();
-					const FVector SegMid = (PrevPt + NextPt) * 0.5;
-					const FVector SegScale(FilamentRadiusCm / 50.0, FilamentRadiusCm / 50.0, (SegLen * 1.03) / 100.0);
-					FilamentTransforms.Add(FTransform(SegRot, SegMid, SegScale));
-				}
+				const double T = (static_cast<double>(s) / static_cast<double>(SubSegs)) * GrowthFrac;
+				const FVector NextPt = (SubSegs == 1 && GrowthFrac >= 0.999) ? EndPos : Curve.Eval(T);
+				const double Taper = 1.15 - 0.32 * T; // Tapers gently from axon hillock to terminal bouton
+				FilamentTransforms.Add(MakeCylinderSegmentTransform(PrevPt, NextPt, BaseAxonR * Taper));
 				PrevPt = NextPt;
+			}
+
+			// Place Synaptic Bouton varicosity right at the axon tip / postsynaptic spine junction
+			int32 BoutonIdx = -1;
+			if (!bMassiveScale)
+			{
+				const FVector BoutonPos = (GrowthFrac >= 0.999) ? EndPos : Curve.Eval(GrowthFrac);
+				const double BoutonRadiusCm = (GrowthFrac < 0.999) ? 2.15 : (1.15 + 0.85 * WeightNorm);
+				BoutonIdx = BoutonTransforms.Num();
+				BoutonTransforms.Add(FTransform(FRotator::ZeroRotator, BoutonPos, FVector(BoutonRadiusCm / 50.0)));
 			}
 
 			const int32 AddedSegs = FilamentTransforms.Num() - FirstSegIdx;
 			if (AddedSegs > 0)
 			{
-				ActiveEdgeInstances.Add({ Idx, FirstSegIdx, AddedSegs, StartPos, CtrlPos, EndPos });
+				const double* PrevFlash = PrevBoutonFlashes.Find(Idx);
+				ActiveEdgeInstances.Add({ Idx, FirstSegIdx, AddedSegs, BoutonIdx, Curve, PrevFlash ? *PrevFlash : -100.0, BirthSec });
 			}
 
 			NiagaraStarts.Add(StartPos);
@@ -780,6 +1002,12 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		{
 			EdgeFilamentHISM->AddInstances(FilamentTransforms, false, true);
 			EdgeFilamentHISM->BuildTreeIfOutdated(false, true);
+		}
+
+		if (BoutonTransforms.Num() > 0)
+		{
+			SynapticBoutonHISM->AddInstances(BoutonTransforms, false, true);
+			SynapticBoutonHISM->BuildTreeIfOutdated(false, true);
 		}
 
 		if (EdgeNiagaraComp && EdgeNiagaraComp->GetAsset() && EdgeNiagaraComp->GetOverrideParameters().GetDataInterfaces().Num() > 0)
@@ -796,8 +1024,54 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		LastProcessedSimTick = CurrentSnapshot->Tick;
 	}
 
+	// Advance traveling action-potential waves FIRST so arriving spikes trigger postsynaptic bouton flashes on this frame!
+	TArray<FTransform> PulseTransforms;
+	TArray<float> PulseEnvelopes;
+	TArray<FVector> NiagaraPulsePositions;
+
+	const int32 BeadsPerPulse = (Neurons.Num() > 800) ? 1 : 4;
+
+	for (int32 i = TravelingPulses.Num() - 1; i >= 0; --i)
+	{
+		FMetaBrainTravelingPulse& P = TravelingPulses[i];
+		P.Progress += (P.SpeedCmPerSec / FMath::Max(12.0f, P.LengthCm)) * DeltaSeconds;
+
+		if (!P.bTriggeredBouton && P.Progress >= 0.86f)
+		{
+			P.bTriggeredBouton = true;
+			if (ActiveEdgeInstances.IsValidIndex(P.ActiveEdgeInstIdx))
+			{
+				ActiveEdgeInstances[P.ActiveEdgeInstIdx].BoutonFlashWallSec = NowWallSec;
+			}
+		}
+
+		if (P.Progress >= 1.08f)
+		{
+			TravelingPulses.RemoveAtSwap(i);
+			continue;
+		}
+
+		for (int32 b = 0; b < BeadsPerPulse; ++b)
+		{
+			const float BeadT = P.Progress - static_cast<float>(b) * 0.030f;
+			if (BeadT < 0.0f || BeadT > 1.0f) continue;
+
+			const FVector Pos = P.Curve.Eval(BeadT);
+			const float TailFalloff = FMath::Pow(0.62f, static_cast<float>(b));
+			const float Envelope = FMath::Sin(BeadT * PI) * TailFalloff;
+			const float RadiusCm = (1.75f * TailFalloff) * (0.65f + 0.35f * FMath::Sin(BeadT * PI));
+
+			PulseTransforms.Add(FTransform(FRotator::ZeroRotator, Pos, FVector(RadiusCm / 50.0f)));
+			PulseEnvelopes.Add(Envelope);
+			if (b == 0) NiagaraPulsePositions.Add(Pos);
+		}
+	}
+
+	// Update per-axon visibility, voltage wave flash, synaptic bouton cleft flashes & spawn new spikes
 	TArray<float> EdgeCustom;
 	EdgeCustom.SetNumUninitialized(2);
+	TArray<float> BoutonCustom;
+	BoutonCustom.SetNumUninitialized(4);
 
 	for (int32 InstIdx = 0; InstIdx < ActiveEdgeInstances.Num(); ++InstIdx)
 	{
@@ -806,25 +1080,33 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 
 		const FMetaBrainEdgeSnap& E = Edges[Map.SnapshotEdgeIdx];
 		const FMetaBrainNeuronSnap& Src = Neurons[E.SourceIndex];
+		const FMetaBrainNeuronSnap& Dst = Neurons[E.TargetIndex];
 
 		const bool bIsIncident = (FocusId >= 0) &&
 			(static_cast<int64>(E.SourceId) == FocusId || static_cast<int64>(E.TargetId) == FocusId);
 
-		const float WeightNorm = FMath::Clamp(E.AbsWeight / 3.5f, 0.08f, 1.0f);
-		float Opacity = 0.08f + 0.34f * WeightNorm;
+		const float WeightNorm = FMath::Clamp(E.AbsWeight / 2.2f, 0.10f, 1.0f);
+		float Opacity = 0.22f + 0.46f * WeightNorm;
 		if (FocusId >= 0)
 		{
-			Opacity = bIsIncident ? FMath::Max(0.55f, Opacity * 1.6f) : (Opacity * 0.20f);
+			Opacity = bIsIncident ? FMath::Max(0.75f, Opacity * 1.45f) : (Opacity * 0.16f);
 		}
 
 		float SignalFlash = 0.0f;
 		const double SinceSrcFire = NowWallSec - Src.LastFireWallSec;
-		if (SinceSrcFire >= 0.0 && SinceSrcFire < 0.22 && Src.Activation > 0.28f)
+		const double AgeSinceBirth = NowWallSec - Map.BirthWallSec;
+		if (AgeSinceBirth >= 0.0 && AgeSinceBirth < 0.90)
 		{
-			SignalFlash = static_cast<float>(FMath::Exp(-SinceSrcFire / 0.08));
+			// Newly forming synapse glows warm amber while its growth cone extends and docks!
+			SignalFlash = 0.95f;
+			Opacity = FMath::Max(Opacity, 0.85f);
+		}
+		else if (SinceSrcFire >= 0.0 && SinceSrcFire < 0.24 && Src.Activation > 0.25f)
+		{
+			SignalFlash = static_cast<float>(FMath::Exp(-SinceSrcFire / 0.09));
 			if (FocusId < 0 || bIsIncident)
 			{
-				Opacity = FMath::Max(Opacity, 0.52f * SignalFlash);
+				Opacity = FMath::Max(Opacity, 0.68f * SignalFlash);
 			}
 		}
 
@@ -835,56 +1117,47 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 			EdgeFilamentHISM->SetCustomData(Map.FirstHismIdx + SegOffset, EdgeCustom, false);
 		}
 
-		if (bNewSimTick && Src.bFiredThisTick && TravelingPulses.Num() < 256 && (FocusId < 0 || bIsIncident))
+		// Update Synaptic Bouton varicosity (flares bright #FFB000 right on the postsynaptic dendrite upon neurotransmitter release!)
+		if (Map.BoutonHismIdx >= 0)
 		{
-			const float Len = static_cast<float>((Map.EndPos - Map.StartPos).Size());
+			float BoutonFlash = 0.0f;
+			const double SinceArrival = NowWallSec - Map.BoutonFlashWallSec;
+			if (AgeSinceBirth >= 0.0 && AgeSinceBirth < 0.95)
+			{
+				BoutonFlash = 1.0f;
+			}
+			else if (SinceArrival >= 0.0 && SinceArrival < 0.28)
+			{
+				BoutonFlash = static_cast<float>(FMath::Exp(-SinceArrival / 0.095));
+			}
+
+			BoutonCustom[0] = Dst.Activation;
+			BoutonCustom[1] = Dst.Maturity;
+			BoutonCustom[2] = (FocusId >= 0 && !bIsIncident) ? 0.18f : 0.95f;
+			BoutonCustom[3] = (FocusId >= 0 && !bIsIncident) ? 0.0f : BoutonFlash;
+			SynapticBoutonHISM->SetCustomData(Map.BoutonHismIdx, BoutonCustom, false);
+		}
+
+		if (bNewSimTick && Src.bFiredThisTick && TravelingPulses.Num() < 320 && (FocusId < 0 || bIsIncident))
+		{
+			const float Len = static_cast<float>((Map.Curve.EndPos - Map.Curve.StartPos).Size());
 			if (Len > 4.0f)
 			{
 				FMetaBrainTravelingPulse P;
-				P.StartPos = Map.StartPos;
-				P.CtrlPos = Map.CtrlPos;
-				P.EndPos = Map.EndPos;
-				P.LengthCm = Len * 1.06f;
-				P.SpeedCmPerSec = 250.0f + 230.0f * E.AbsWeight;
+				P.Curve = Map.Curve;
+				P.ActiveEdgeInstIdx = InstIdx;
+				P.LengthCm = Len * 1.12f;
+				P.SpeedCmPerSec = 220.0f + 210.0f * E.AbsWeight;
 				P.Progress = 0.0f;
+				P.bTriggeredBouton = false;
 				TravelingPulses.Add(P);
 			}
 		}
 	}
 	EdgeFilamentHISM->MarkRenderStateDirty();
-
-	// Evaluate 4-bead tapered comet-tail #FFB000 pulses gliding along each 3D Quadratic Bezier tract
-	TArray<FTransform> PulseTransforms;
-	TArray<float> PulseEnvelopes;
-	TArray<FVector> NiagaraPulsePositions;
-
-	const int32 BeadsPerPulse = (Neurons.Num() > 1200) ? 1 : 4;
-
-	for (int32 i = TravelingPulses.Num() - 1; i >= 0; --i)
+	if (SynapticBoutonHISM->GetInstanceCount() > 0)
 	{
-		FMetaBrainTravelingPulse& P = TravelingPulses[i];
-		P.Progress += (P.SpeedCmPerSec / FMath::Max(10.0f, P.LengthCm)) * DeltaSeconds;
-		if (P.Progress >= 1.08f)
-		{
-			TravelingPulses.RemoveAtSwap(i);
-			continue;
-		}
-
-		for (int32 b = 0; b < BeadsPerPulse; ++b)
-		{
-			const float BeadT = P.Progress - static_cast<float>(b) * 0.032f;
-			if (BeadT < 0.0f || BeadT > 1.0f) continue;
-
-			const double U = 1.0 - BeadT;
-			const FVector Pos = (U * U) * P.StartPos + (2.0 * U * BeadT) * P.CtrlPos + (BeadT * BeadT) * P.EndPos;
-			const float TailFalloff = FMath::Pow(0.62f, static_cast<float>(b));
-			const float Envelope = FMath::Sin(BeadT * PI) * TailFalloff;
-			const float RadiusCm = (2.15f * TailFalloff) * (0.65f + 0.35f * FMath::Sin(BeadT * PI));
-
-			PulseTransforms.Add(FTransform(FRotator::ZeroRotator, Pos, FVector(RadiusCm / 50.0f)));
-			PulseEnvelopes.Add(Envelope);
-			if (b == 0) NiagaraPulsePositions.Add(Pos);
-		}
+		SynapticBoutonHISM->MarkRenderStateDirty();
 	}
 
 	SignalPulseHISM->ClearInstances();
@@ -960,7 +1233,7 @@ void AMetaBrainSceneController::UpdatePostProcessFocus(float DeltaSeconds, const
 	}
 
 	FVector FocusPoint = FocusedHolonTargetCm;
-	float TargetFStop = (CurrentZoomLevel == EMetaBrainZoomLevel::Macro) ? 4.0f : 2.8f;
+	float TargetFStop = (CurrentZoomLevel == EMetaBrainZoomLevel::Macro) ? 4.2f : 2.8f;
 
 	if (SelectedNeuronId >= 0 && CurrentSnapshot.IsValid())
 	{
@@ -989,10 +1262,8 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	++FrameCounter;
 
-	// Automated CLI fly-in & selection triggers at Frame 8 so 400 ms ease-out settles smoothly before Frame 75 screenshot
 	if (FrameCounter == 5 && bAgeLensActive && SimBridge)
 	{
-		// Spawn fresh child sub-networks so both new (#8FD3A8) and established (#5A6B8C) neurons are visible in Age Lens
 		for (int32 k = 0; k < 3; ++k)
 		{
 			FMetaBrainCommand GrowCmd;
@@ -1007,7 +1278,7 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 	{
 		if (CurrentSnapshot->TotalNeurons >= 900 && AutoShotMode.IsEmpty())
 		{
-			NotifyCameraFlyTo(FVector(0.0, -52.0, 2.0), CurrentSnapshot->TotalNeurons >= 5000 ? 1680.0f : 1420.0f);
+			NotifyCameraFlyTo(FVector(0.0, -46.0, 4.0), CurrentSnapshot->TotalNeurons >= 5000 ? 1680.0f : 1420.0f);
 		}
 		if (AutoShotMode.Equals(TEXT("Cluster"), ESearchCase::IgnoreCase))
 		{
@@ -1021,7 +1292,6 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 
 		if (bAutoSelectNeuron)
 		{
-			// Select an active cortical composite neuron inside the focused cluster for inspector & isolation demo
 			int64 PickedId = -1;
 			for (const FMetaBrainHolonSnap& H : CurrentSnapshot->Holons)
 			{

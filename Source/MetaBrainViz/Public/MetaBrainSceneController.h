@@ -30,17 +30,39 @@ struct FMetaBrainBreadcrumbNode
 	int64 NeuronId = -1;
 	EMetaBrainZoomLevel Level = EMetaBrainZoomLevel::Macro;
 	FVector FocusCenterCm = FVector::ZeroVector;
-	float ViewDistanceCm = 680.0f;
+	float ViewDistanceCm = 1140.0f;
 };
 
-struct FMetaBrainTravelingPulse
+struct FMetaBrainAxonCurve
 {
 	FVector StartPos = FVector::ZeroVector;
 	FVector CtrlPos = FVector::ZeroVector;
 	FVector EndPos = FVector::ZeroVector;
+	FVector PerpA = FVector::UpVector;
+	FVector PerpB = FVector::RightVector;
+	float WaveAmpCm = 4.0f;
+	float PhaseA = 0.0f;
+	float PhaseB = 1.5f;
+
+	FVector Eval(double T) const
+	{
+		const double U = 1.0 - T;
+		const FVector Base = (U * U) * StartPos + (2.0 * U * T) * CtrlPos + (T * T) * EndPos;
+		const double Env = FMath::Sin(PI * T);
+		const double W1 = FMath::Sin(T * 6.2831853 + PhaseA) * WaveAmpCm;
+		const double W2 = FMath::Cos(T * 11.5 + PhaseB) * (WaveAmpCm * 0.42);
+		return Base + Env * (PerpA * W1 + PerpB * W2);
+	}
+};
+
+struct FMetaBrainTravelingPulse
+{
+	FMetaBrainAxonCurve Curve;
+	int32 ActiveEdgeInstIdx = -1;
 	float LengthCm = 100.0f;
-	float SpeedCmPerSec = 350.0f;
+	float SpeedCmPerSec = 340.0f;
 	float Progress = 0.0f;
+	bool bTriggeredBouton = false;
 };
 
 UCLASS()
@@ -71,7 +93,6 @@ public:
 	void SetManualWeightThreshold(float InThreshold);
 	float GetEffectiveWeightThreshold() const;
 
-	// Zoom & Breadcrumb Navigation (400 ms ease-out fly-in)
 	EMetaBrainZoomLevel GetZoomLevel() const { return CurrentZoomLevel; }
 	const TArray<FMetaBrainBreadcrumbNode>& GetBreadcrumbs() const { return Breadcrumbs; }
 	const FString& GetFocusedHolonKey() const { return FocusedHolonKey; }
@@ -83,7 +104,6 @@ public:
 	void ZoomToLevelSegmented(EMetaBrainZoomLevel RequestedLevel);
 	void StepUpOrClearSelection();
 
-	// Lens Mode: false = Activity, true = Age (#8FD3A8 -> #5A6B8C)
 	void SetAgeLensActive(bool bInAgeLens);
 	bool IsAgeLensActive() const { return bAgeLensActive; }
 
@@ -93,6 +113,12 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> NeuronHISM;
+
+	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
+	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> DendriteArborHISM;
+
+	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
+	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> SynapticBoutonHISM;
 
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> HolonShellHISM;
@@ -120,6 +146,9 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UStaticMesh> CylinderMesh;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> ConeMesh;
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> NeuronMaterial;
@@ -157,23 +186,37 @@ protected:
 	TArray<FMetaBrainBreadcrumbNode> Breadcrumbs;
 
 	FVector FocusedHolonTargetCm = FVector::ZeroVector;
-	float CurrentFocalDistanceCm = 680.0f;
+	float CurrentFocalDistanceCm = 1140.0f;
 	bool bAgeLensActive = false;
 
 	bool bUseAutoTop20Filter = true;
-	float ManualWeightThreshold = 0.45f;
+	float ManualWeightThreshold = 0.22f;
 	bool bEdgeFilterDirty = true;
+
+	// Per-neuron procedural dendritic arbors so incoming axons dock onto real dendritic spines
+	struct FDendriteNeuronSpan
+	{
+		int32 FirstArborIdx = 0;
+		int32 NumArborSegs = 0;
+		FVector AxonHillockTipCm = FVector::ZeroVector;
+		TArray<FVector> DistalSpineTipsCm;
+	};
+	TArray<FDendriteNeuronSpan> NeuronArborSpans;
 
 	struct FRenderedEdgeMap
 	{
 		int32 SnapshotEdgeIdx = 0;
 		int32 FirstHismIdx = 0;
 		int32 NumSegments = 1;
-		FVector StartPos = FVector::ZeroVector;
-		FVector CtrlPos = FVector::ZeroVector;
-		FVector EndPos = FVector::ZeroVector;
+		int32 BoutonHismIdx = -1;
+		FMetaBrainAxonCurve Curve;
+		double BoutonFlashWallSec = -100.0;
+		double BirthWallSec = -100.0;
 	};
 	TArray<FRenderedEdgeMap> ActiveEdgeInstances;
+	TMap<uint64, double> KnownSynapseBirthSec;
+	bool bInitialSynapsesSeeded = false;
+
 	TArray<FMetaBrainTravelingPulse> TravelingPulses;
 
 	FString AutoShotPath;

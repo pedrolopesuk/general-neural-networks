@@ -56,23 +56,24 @@ namespace
 			}
 		}
 
-		// Estimate enclosing sphere radius from sum of child volumes / packing density (~0.24)
+		// Estimate enclosing sphere radius with balanced neuropil volume around somas for 3D dendritic arbors & synapses
 		double VolumeSum = 0.0;
 		float MaxChildR = 4.0f;
+		const float EffectivePad = (N <= 16 && !Parent.Children[0]->bIsHolon) ? 0.62f : PaddingFraction;
 		for (const TSharedPtr<FPackNode>& Ch : Parent.Children)
 		{
-			const double RPad = static_cast<double>(Ch->RadiusCm) * (1.0 + PaddingFraction);
+			const double RPad = static_cast<double>(Ch->RadiusCm) * (1.0 + EffectivePad);
 			VolumeSum += RPad * RPad * RPad;
 			MaxChildR = FMath::Max(MaxChildR, Ch->RadiusCm);
 		}
 
-		const float Density = (N <= 4) ? 0.22f : 0.26f;
+		const float Density = (N <= 5) ? 0.21f : 0.25f;
 		const float EstR = static_cast<float>(FMath::Pow(VolumeSum / Density, 1.0 / 3.0));
-		Parent.RadiusCm = FMath::Max(EstR, MaxChildR * 1.95f);
+		Parent.RadiusCm = FMath::Max(EstR, MaxChildR * 2.05f);
 
 		// Seed deterministic 3D Fibonacci ball coordinates inside Parent.RadiusCm
 		constexpr float GoldenAngle = 2.39996323f;
-		const float UsableR = FMath::Max(2.0f, Parent.RadiusCm * 0.62f);
+		const float UsableR = FMath::Max(3.0f, Parent.RadiusCm * 0.66f);
 
 		for (int32 i = 0; i < N; ++i)
 		{
@@ -120,7 +121,10 @@ namespace
 							Delta = FVector3f(0.1f * (i + 1), 0.2f * (j + 1), 0.15f);
 							Dist = Delta.Size();
 						}
-						const float MinSep = (Parent.Children[i]->RadiusCm + Parent.Children[j]->RadiusCm) * (1.0f + PaddingFraction);
+						const float PairPad = (N <= 16 && !Parent.Children[i]->bIsHolon && !Parent.Children[j]->bIsHolon)
+							? 0.68f
+							: PaddingFraction;
+						const float MinSep = (Parent.Children[i]->RadiusCm + Parent.Children[j]->RadiusCm) * (1.0f + PairPad);
 						if (Dist < MinSep)
 						{
 							const FVector3f Push = (Delta / Dist) * ((MinSep - Dist) * 0.52f);
@@ -286,8 +290,8 @@ FMetaBrainPackedLayout FMetaBrainSpherePacker::ComputeLayout(const metabrain::Br
 		return Out;
 	}
 
-	// Scale leaf sphere radius smoothly for massive 1k-10k neuron scenes vs interactive ~100 neuron scenes
-	const float BaseLeafRadiusCm = (All.size() > 2500) ? 2.4f : ((All.size() > 400) ? 4.0f : 7.8f);
+	// Biological soma radius balanced for clear multipolar dendrites & synaptic boutons
+	const float BaseLeafRadiusCm = (All.size() > 2500) ? 2.2f : ((All.size() > 400) ? 3.4f : 5.4f);
 
 	TMap<uint64, int32> IdToIndex;
 	TMap<uint64, TSet<uint64>> Adjacency;
@@ -405,8 +409,35 @@ FMetaBrainPackedLayout FMetaBrainSpherePacker::ComputeLayout(const metabrain::Br
 
 	PropagateWorldPositions(VirtualBrainRoot, FVector3f::ZeroVector, Out, IdToIndex);
 
+	// Normalize total cortical extent into a consistent 310 cm stereotactic envelope so Macro camera ALWAYS frames 100% of the brain
+	float RawMaxExtent = 180.0f;
+	for (const FMetaBrainHolonSnap& H : Out.Holons)
+	{
+		if (H.Level == 1)
+		{
+			RawMaxExtent = FMath::Max(RawMaxExtent, H.CenterCm.Size() + H.RadiusCm);
+		}
+	}
+	if (RawMaxExtent > 325.0f)
+	{
+		const float NormScale = 325.0f / RawMaxExtent;
+		for (FMetaBrainHolonSnap& H : Out.Holons)
+		{
+			H.CenterCm *= NormScale;
+			H.RadiusCm *= NormScale;
+		}
+		for (auto& KVP : Out.NeuronPositionsCm)
+		{
+			KVP.Value *= NormScale;
+		}
+		for (auto& KVP : Out.NeuronRadiiCm)
+		{
+			KVP.Value *= NormScale;
+		}
+	}
+
 	// Compute overall cortical horizontal span so Left Sensory Rail & Right Output Rail sit cleanly outside
-	float MaxExtentY = 260.0f;
+	float MaxExtentY = 240.0f;
 	for (const FMetaBrainHolonSnap& H : Out.Holons)
 	{
 		if (H.Level == 1)
