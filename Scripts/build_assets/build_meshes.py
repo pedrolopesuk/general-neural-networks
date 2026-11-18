@@ -109,6 +109,17 @@ def build_neuron_meshes():
                 mesh.set_material(0, m_neuron)
             unreal.EditorAssetLibrary.save_loaded_asset(mesh)
 
+    # Translucent human brain shell (prepare_brain_mesh.py). No Nanite: translucent.
+    shell = _import_glb("SM_BrainShell")
+    m_shell = unreal.load_asset(f"{MAT_DIR}/M_BrainShell")
+    if shell:
+        for idx in range(len(shell.static_materials)):
+            if m_shell:
+                shell.set_material(idx, m_shell)
+        box = shell.get_bounding_box()
+        unreal.log_warning(f"[MetaBrain] SM_BrainShell bounds min {box.min} max {box.max}")
+        unreal.EditorAssetLibrary.save_loaded_asset(shell)
+
     # The glTF placeholder materials in the staging folder are no longer referenced.
     if unreal.EditorAssetLibrary.does_directory_exist(f"{MESH_DIR}/_Import"):
         unreal.EditorAssetLibrary.delete_directory(f"{MESH_DIR}/_Import")

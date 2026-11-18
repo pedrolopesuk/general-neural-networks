@@ -31,3 +31,7 @@ Copy `include/metabrain/`, `src/` (excluding `main.cpp`), and `ue5_integration/*
 - Neuron mesh: "Neuron" by Versal (https://sketchfab.com/versal), CC-BY-4.0 —
   https://sketchfab.com/3d-models/neuron-d40557a1e4154267b78117433bc51296.
   Re-framed and split by `Scripts/build_assets/prepare_neuron_mesh.py`.
+- Human brain shell (Brain view): BodyParts3D, © The Database Center for Life Science, licensed
+  CC-BY-SA 2.1 Japan — https://dbarchive.biosciencedbc.jp/en/bodyparts3d/. Derived mesh
+  `Scripts/build_assets/meshes/SM_BrainShell.glb` is shared under the same license.
+- Neuron cell types (Brain view): NeuroMorpho.org reconstructions, see `Scripts/build_assets/swc/SOURCES.md`.

@@ -26,6 +26,8 @@
 #include "Engine/Engine.h"
 #include "MetaBrainNeuronMorphologyData.h"
 #include "MetaBrainNeuronVariantsData.h"
+#include "MetaBrainBrainAtlasData.h"
+#include "Components/StaticMeshComponent.h"
 
 AMetaBrainSceneController::AMetaBrainSceneController()
 {
@@ -56,6 +58,12 @@ AMetaBrainSceneController::AMetaBrainSceneController()
 	MyelinHISM->SetupAttachment(Root);
 	MyelinHISM->SetCastShadow(false);
 	MyelinHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	BrainShellComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BrainShellComp"));
+	BrainShellComp->SetupAttachment(Root);
+	BrainShellComp->SetCastShadow(false);
+	BrainShellComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	BrainShellComp->SetTranslucentSortPriority(-5);
 
 	DendriteArborHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("DendriteArborHISM"));
 	DendriteArborHISM->SetupAttachment(Root);
@@ -155,6 +163,11 @@ void AMetaBrainSceneController::BeginPlay()
 	{
 		if (NeuronVariantMeshes[v]) NeuronMorphHISMs[v]->SetStaticMesh(NeuronVariantMeshes[v]);
 	}
+	if (UStaticMesh* Shell = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/MetaBrain/Meshes/SM_BrainShell.SM_BrainShell")))
+	{
+		BrainShellComp->SetStaticMesh(Shell);
+	}
+
 	MyelinMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_Myelin.M_Myelin"));
 	if (MyelinMaterial) MyelinHISM->SetMaterial(0, MyelinMaterial);
 
@@ -240,7 +253,7 @@ void AMetaBrainSceneController::BeginPlay()
 
 	SimBridge = MakeUnique<FMetaBrainSimBridge>(MacroOverride, EdgesOverride);
 	SimBridge->StartWorker(18);
-	CurrentSnapshot = SimBridge->GetLatestSnapshot();
+	CurrentSnapshot = MapSnapshotForView(SimBridge->GetLatestSnapshot());
 
 	if (AutoShotLens.Equals(TEXT("Age"), ESearchCase::IgnoreCase))
 	{
@@ -342,6 +355,11 @@ void AMetaBrainSceneController::ZoomToMacro()
 		{
 			CamPawn->ResetTo3DMacroView();
 		}
+	}
+	if (ViewMode == EMetaBrainViewMode::Brain)
+	{
+		// Whole human brain (~9 m in scene) needs a wider framing than the graph layout
+		NotifyCameraFlyTo(FVector::ZeroVector, 2050.0f);
 	}
 	bEdgeFilterDirty = true;
 }
@@ -853,11 +871,186 @@ uint8 AMetaBrainSceneController::PickNeuronVariant(const FMetaBrainNeuronSnap& N
 	return bLocalInterneuron ? 2 : 0;              // Prefrontal / Association neocortex
 }
 
+TSharedPtr<const FMetaBrainSnapshot, ESPMode::ThreadSafe> AMetaBrainSceneController::MapSnapshotForView(const TSharedPtr<const FMetaBrainSnapshot, ESPMode::ThreadSafe>& Src)
+{
+	if (!Src.IsValid() || ViewMode != EMetaBrainViewMode::Brain || !BrainShellComp || !BrainShellComp->GetStaticMesh())
+	{
+		return Src;
+	}
+	if (Src == LastSourceSnapshot && CurrentSnapshot.IsValid())
+	{
+		return CurrentSnapshot; // same sim tick: reuse the mapped copy
+	}
+	LastSourceSnapshot = Src;
+
+	if (AtlasTopoRev != Src->TopologyRevision || NeuronAtlasGroup.Num() != Src->Neurons.Num() || HolonAtlasGroup.Num() != Src->Holons.Num())
+	{
+		RebuildAtlasMapping(*Src);
+		AtlasTopoRev = Src->TopologyRevision;
+	}
+
+	TSharedPtr<FMetaBrainSnapshot, ESPMode::ThreadSafe> Out = MakeShared<FMetaBrainSnapshot, ESPMode::ThreadSafe>(*Src);
+	for (int32 i = 0; i < Out->Neurons.Num(); ++i)
+	{
+		const int32 G = NeuronAtlasGroup[i];
+		if (!AtlasGroups.IsValidIndex(G)) continue;
+		const FAtlasGroup& AG = AtlasGroups[G];
+		FMetaBrainNeuronSnap& N = Out->Neurons[i];
+		N.PositionCm = FVector3f(AG.Anchor + (FVector(N.PositionCm) - AG.SrcCenter) * AG.Scale);
+		N.RadiusCm = FMath::Max(0.9f, N.RadiusCm * static_cast<float>(FMath::Sqrt(AG.Scale)));
+	}
+	for (int32 h = 0; h < Out->Holons.Num(); ++h)
+	{
+		const int32 G = HolonAtlasGroup[h];
+		if (!AtlasGroups.IsValidIndex(G)) continue;
+		const FAtlasGroup& AG = AtlasGroups[G];
+		FMetaBrainHolonSnap& Hol = Out->Holons[h];
+		Hol.CenterCm = FVector3f(AG.Anchor + (FVector(Hol.CenterCm) - AG.SrcCenter) * AG.Scale);
+		// Region shells would hide the anatomy (the brain mesh is the region boundary now);
+		// keep a tiny radius so the label still anchors to the structure.
+		Hol.RadiusCm = (Hol.Level == 1) ? 1.0f : Hol.RadiusCm * static_cast<float>(AG.Scale);
+	}
+	return Out;
+}
+
+void AMetaBrainSceneController::RebuildAtlasMapping(const FMetaBrainSnapshot& Src)
+{
+	using namespace MetaBrainBrainAtlas;
+	const int32 NumN = Src.Neurons.Num();
+	NeuronAtlasGroup.Init(INDEX_NONE, NumN);
+	HolonAtlasGroup.Init(INDEX_NONE, Src.Holons.Num());
+
+	// Group index = anchor * 2 + side (0 = left hemisphere, 1 = right)
+	auto AnchorIndexFor = [](const FString& Region) -> int32
+	{
+		for (int32 a = 0; a < NumAnchors; ++a)
+		{
+			if (Region.Contains(Anchors[a].Region)) return a;
+		}
+		return 3; // unknown cortical region -> Association (parietal)
+	};
+	auto AnchorByName = [](const TCHAR* Name) -> int32
+	{
+		for (int32 a = 0; a < NumAnchors; ++a)
+		{
+			if (FCString::Strcmp(Anchors[a].Region, Name) == 0) return a;
+		}
+		return 0;
+	};
+
+	// 1) Regions: columns (level-2 holons) alternate hemispheres, like bilateral structures
+	TMap<FString, int32> RegionAnchor;
+	TMap<FString, int32> ColumnGroup;
+	TMap<FString, int32> ColumnCounter;
+	for (const FMetaBrainHolonSnap& Hol : Src.Holons)
+	{
+		if (Hol.Level == 1) RegionAnchor.Add(Hol.Key, AnchorIndexFor(Hol.Label));
+	}
+	for (int32 h = 0; h < Src.Holons.Num(); ++h)
+	{
+		const FMetaBrainHolonSnap& Hol = Src.Holons[h];
+		if (Hol.Level == 1)
+		{
+			HolonAtlasGroup[h] = RegionAnchor[Hol.Key] * 2; // region label sits on the left structure
+		}
+		else if (Hol.Level == 2 && RegionAnchor.Contains(Hol.ParentKey))
+		{
+			int32& Cnt = ColumnCounter.FindOrAdd(Hol.ParentKey);
+			const int32 G = RegionAnchor[Hol.ParentKey] * 2 + (Cnt++ & 1);
+			ColumnGroup.Add(Hol.Key, G);
+			HolonAtlasGroup[h] = G;
+			for (int32 Mi : Hol.MemberNeuronIndices)
+			{
+				if (NeuronAtlasGroup.IsValidIndex(Mi)) NeuronAtlasGroup[Mi] = G;
+			}
+		}
+	}
+	// Deeper sub-holons inherit their column's group (keys are path-prefixed)
+	for (int32 h = 0; h < Src.Holons.Num(); ++h)
+	{
+		const FMetaBrainHolonSnap& Hol = Src.Holons[h];
+		if (Hol.Level < 3) continue;
+		for (const auto& KVP : ColumnGroup)
+		{
+			if (Hol.Key.StartsWith(KVP.Key) || Hol.ParentKey.StartsWith(KVP.Key))
+			{
+				HolonAtlasGroup[h] = KVP.Value;
+				for (int32 Mi : Hol.MemberNeuronIndices)
+				{
+					if (NeuronAtlasGroup.IsValidIndex(Mi) && NeuronAtlasGroup[Mi] == INDEX_NONE) NeuronAtlasGroup[Mi] = KVP.Value;
+				}
+				break;
+			}
+		}
+	}
+	// Level-1 members not covered by a column
+	for (const FMetaBrainHolonSnap& Hol : Src.Holons)
+	{
+		if (Hol.Level != 1) continue;
+		for (int32 Mi : Hol.MemberNeuronIndices)
+		{
+			if (NeuronAtlasGroup.IsValidIndex(Mi) && NeuronAtlasGroup[Mi] == INDEX_NONE) NeuronAtlasGroup[Mi] = RegionAnchor[Hol.Key] * 2;
+		}
+	}
+
+	// 2) Children inherit their parent's group; leftovers by role:
+	//    sensory relays -> thalamus, readouts -> cerebellum (Purkinje output layer)
+	TMap<uint64, int32> IdToIdx;
+	for (int32 i = 0; i < NumN; ++i) IdToIdx.Add(Src.Neurons[i].Id, i);
+	const int32 ThalG = AnchorByName(TEXT("Thalamus")) * 2;
+	const int32 CbG = AnchorByName(TEXT("Cerebellum")) * 2;
+	for (int32 i = 0; i < NumN; ++i)
+	{
+		if (NeuronAtlasGroup[i] != INDEX_NONE) continue;
+		int64 P = Src.Neurons[i].ParentId;
+		for (int32 Guard = 0; P >= 0 && Guard < 32; ++Guard)
+		{
+			const int32* ParentIdx = IdToIdx.Find(static_cast<uint64>(P));
+			if (!ParentIdx) break;
+			if (NeuronAtlasGroup[*ParentIdx] != INDEX_NONE) { NeuronAtlasGroup[i] = NeuronAtlasGroup[*ParentIdx]; break; }
+			P = Src.Neurons[*ParentIdx].ParentId;
+		}
+		if (NeuronAtlasGroup[i] == INDEX_NONE)
+		{
+			NeuronAtlasGroup[i] = (Src.Neurons[i].Role == 0) ? ThalG : CbG;
+		}
+	}
+
+	// 3) Per group: fit the source cloud into the anatomical anchor sphere
+	const int32 NumG = NumAnchors * 2;
+	AtlasGroups.SetNum(NumG);
+	TArray<FVector> Sum; Sum.Init(FVector::ZeroVector, NumG);
+	TArray<int32> Cnt; Cnt.Init(0, NumG);
+	for (int32 i = 0; i < NumN; ++i)
+	{
+		Sum[NeuronAtlasGroup[i]] += FVector(Src.Neurons[i].PositionCm);
+		Cnt[NeuronAtlasGroup[i]]++;
+	}
+	TArray<double> MaxR; MaxR.Init(1.0, NumG);
+	for (int32 g = 0; g < NumG; ++g)
+	{
+		AtlasGroups[g].SrcCenter = Cnt[g] > 0 ? Sum[g] / Cnt[g] : FVector::ZeroVector;
+	}
+	for (int32 i = 0; i < NumN; ++i)
+	{
+		const int32 g = NeuronAtlasGroup[i];
+		MaxR[g] = FMath::Max(MaxR[g], FVector::Dist(FVector(Src.Neurons[i].PositionCm), AtlasGroups[g].SrcCenter));
+	}
+	for (int32 g = 0; g < NumG; ++g)
+	{
+		const FAnchor& A = Anchors[g / 2];
+		const double* P = (g & 1) ? A.Right : A.Left;
+		AtlasGroups[g].Anchor = FVector(P[0], P[1], P[2]);
+		AtlasGroups[g].Scale = FMath::Clamp(A.RadiusCm / MaxR[g], 0.05, 1.5);
+	}
+}
+
 void AMetaBrainSceneController::SetViewMode(EMetaBrainViewMode InMode)
 {
 	if (ViewMode == InMode) return;
 	ViewMode = InMode;
 	ApplyViewMode();
+	ZoomToMacro(); // positions differ completely between views -> reframe
 }
 
 void AMetaBrainSceneController::ApplyViewMode()
@@ -870,6 +1063,10 @@ void AMetaBrainSceneController::ApplyViewMode()
 	for (UHierarchicalInstancedStaticMeshComponent* H : NeuronMorphHISMs) H->SetVisibility(bUseMorphMesh);
 	DendriteArborHISM->SetVisibility(bBrain && !bUseMorphMesh); // procedural fallback arbor
 	MyelinHISM->SetVisibility(bBrain);
+	BrainShellComp->SetVisibility(bBrain && BrainShellComp->GetStaticMesh() != nullptr);
+	LastSourceSnapshot.Reset(); // re-map positions for the new view on the next tick
+	AtlasTopoRev = MAX_uint64;
+	if (SimBridge) CurrentSnapshot = MapSnapshotForView(SimBridge->GetLatestSnapshot());
 
 	// Force a full rebuild of neurons + axons in the new style
 	RenderedNeuronTopoRev = 0;
@@ -1474,7 +1671,11 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 
 	if (FrameCounter == 8 && CurrentSnapshot.IsValid())
 	{
-		if (CurrentSnapshot->TotalNeurons >= 900 && AutoShotMode.IsEmpty())
+		if (ViewMode == EMetaBrainViewMode::Brain && AutoShotMode.IsEmpty())
+		{
+			NotifyCameraFlyTo(FVector::ZeroVector, 2050.0f);
+		}
+		else if (CurrentSnapshot->TotalNeurons >= 900 && AutoShotMode.IsEmpty())
 		{
 			NotifyCameraFlyTo(FVector(0.0, -46.0, 4.0), CurrentSnapshot->TotalNeurons >= 5000 ? 1680.0f : 1420.0f);
 		}
@@ -1523,7 +1724,7 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 
 	if (SimBridge)
 	{
-		CurrentSnapshot = SimBridge->GetLatestSnapshot();
+		CurrentSnapshot = MapSnapshotForView(SimBridge->GetLatestSnapshot());
 		const FVector CamLoc = GetActiveCameraLocation();
 		const double NowSec = FPlatformTime::Seconds();
 		SyncNeuronHISM(NowSec, CamLoc);

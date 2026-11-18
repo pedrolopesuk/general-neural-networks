@@ -14,6 +14,7 @@ class UMaterialParameterCollection;
 class UStaticMesh;
 class APostProcessVolume;
 class UPointLightComponent;
+class UStaticMeshComponent;
 
 UENUM(BlueprintType)
 // Net = abstract graph (spheres + straight synapse lines).
@@ -135,6 +136,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MyelinHISM;
 
+	// Brain view: translucent human brain (BodyParts3D) that the regions sit inside.
+	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
+	TObjectPtr<UStaticMeshComponent> BrainShellComp;
+
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> DendriteArborHISM;
 
@@ -188,6 +193,22 @@ protected:
 	TArray<int32> NeuronVariantLocalIdx;
 	uint8 PickNeuronVariant(const struct FMetaBrainNeuronSnap& N, const FString& Region) const;
 	void ApplyViewMode();
+
+	// Brain view relocates every region to its anatomical site (MetaBrainBrainAtlasData.h).
+	// The sim layout is untouched; only the snapshot the renderer reads is re-mapped.
+	struct FAtlasGroup
+	{
+		FVector SrcCenter = FVector::ZeroVector;
+		FVector Anchor = FVector::ZeroVector;
+		double Scale = 1.0;
+	};
+	TArray<FAtlasGroup> AtlasGroups;
+	TArray<int32> NeuronAtlasGroup;
+	TArray<int32> HolonAtlasGroup;
+	uint64 AtlasTopoRev = MAX_uint64;
+	TSharedPtr<const FMetaBrainSnapshot, ESPMode::ThreadSafe> LastSourceSnapshot;
+	TSharedPtr<const FMetaBrainSnapshot, ESPMode::ThreadSafe> MapSnapshotForView(const TSharedPtr<const FMetaBrainSnapshot, ESPMode::ThreadSafe>& Src);
+	void RebuildAtlasMapping(const FMetaBrainSnapshot& Src);
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> NeuronMaterial;

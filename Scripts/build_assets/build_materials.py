@@ -350,3 +350,50 @@ if __name__ == "__main__":
     build_holon_shell_material()
     build_edge_and_pulse_materials()
     build_backdrop_material()
+
+
+def build_brain_shell_material():
+    """Glass-brain look (like a 3D MRI render): unlit translucent, edges glow via Fresnel,
+    faces toward the camera stay nearly clear so the neurons inside remain visible."""
+    mat_dir = "/Game/MetaBrain/Materials"
+    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+    mel = unreal.MaterialEditingLibrary
+    path = f"{mat_dir}/M_BrainShell"
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        unreal.EditorAssetLibrary.delete_asset(path)
+    mat = asset_tools.create_asset("M_BrainShell", mat_dir, unreal.Material, unreal.MaterialFactoryNew())
+    mat.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
+    mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    mat.set_editor_property("two_sided", False)
+
+    fres = mel.create_material_expression(mat, unreal.MaterialExpressionFresnel, -600, 0)
+    fres.set_editor_property("exponent", 3.4)
+    fres.set_editor_property("base_reflect_fraction", 0.0)
+
+    tint = mel.create_material_expression(mat, unreal.MaterialExpressionConstant3Vector, -600, -160)
+    tint.set_editor_property("constant", srgb_to_linear("#C9A9A6"))  # fixed-tissue pinkish gray
+    gain = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -600, 160)
+    gain.set_editor_property("r", 0.55)
+    mul_a = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -380, -80)
+    mel.connect_material_expressions(tint, "", mul_a, "A")
+    mel.connect_material_expressions(fres, "", mul_a, "B")
+    mul_b = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -200, -80)
+    mel.connect_material_expressions(mul_a, "", mul_b, "A")
+    mel.connect_material_expressions(gain, "", mul_b, "B")
+    mel.connect_material_property(mul_b, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+
+    # Opacity = 0.012 + 0.2 * fresnel  (silhouette visible, interior readable)
+    k = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -600, 300)
+    k.set_editor_property("r", 0.2)
+    mul_o = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -380, 260)
+    mel.connect_material_expressions(fres, "", mul_o, "A")
+    mel.connect_material_expressions(k, "", mul_o, "B")
+    base = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -380, 380)
+    base.set_editor_property("r", 0.012)
+    add = mel.create_material_expression(mat, unreal.MaterialExpressionAdd, -200, 300)
+    mel.connect_material_expressions(mul_o, "", add, "A")
+    mel.connect_material_expressions(base, "", add, "B")
+    mel.connect_material_property(add, "", unreal.MaterialProperty.MP_OPACITY)
+
+    mel.recompile_material(mat)
+    unreal.EditorAssetLibrary.save_loaded_asset(mat)
