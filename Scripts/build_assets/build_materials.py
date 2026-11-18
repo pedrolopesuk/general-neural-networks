@@ -258,7 +258,35 @@ def build_edge_and_pulse_materials():
     unreal.log("[MetaBrain] Built M_EdgeFilament and M_SignalPulse successfully.")
 
 
+def build_backdrop_material():
+    mat_dir = "/Game/MetaBrain/Materials"
+    unreal.EditorAssetLibrary.make_directory(mat_dir)
+    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+    mel = unreal.MaterialEditingLibrary
+
+    bg_path = f"{mat_dir}/M_Backdrop"
+    if unreal.EditorAssetLibrary.does_asset_exist(bg_path):
+        unreal.EditorAssetLibrary.delete_asset(bg_path)
+
+    bg_mat = asset_tools.create_asset("M_Backdrop", mat_dir, unreal.Material, unreal.MaterialFactoryNew())
+    bg_mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    bg_mat.set_editor_property("two_sided", True)
+    try:
+        bg_mat.set_editor_property("is_sky", True)
+    except Exception:
+        pass
+
+    c_bg = mel.create_material_expression(bg_mat, unreal.MaterialExpressionConstant3Vector, -320, 0)
+    c_bg.set_editor_property("constant", srgb_to_linear("#0B0C0D"))
+    mel.connect_material_property(c_bg, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+
+    mel.recompile_material(bg_mat)
+    unreal.EditorAssetLibrary.save_loaded_asset(bg_mat)
+    unreal.log("[MetaBrain] Built M_Backdrop (#0B0C0D) successfully.")
+
+
 if __name__ == "__main__":
     build_neuron_material()
     build_holon_shell_material()
     build_edge_and_pulse_materials()
+    build_backdrop_material()

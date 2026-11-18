@@ -6,6 +6,7 @@
 #include "NiagaraSystem.h"
 #include "NiagaraDataInterfaceArrayFunctionLibrary.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/PostProcessVolume.h"
 #include "Materials/MaterialInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Camera/PlayerCameraManager.h"
@@ -130,11 +131,14 @@ void AMetaBrainSceneController::BeginPlay()
 	SimBridge->StartWorker(18);
 	CurrentSnapshot = SimBridge->GetLatestSnapshot();
 
+	CachedPostProcessVolume = Cast<APostProcessVolume>(UGameplayStatics::GetActorOfClass(this, APostProcessVolume::StaticClass()));
+
 	const FVector CamLoc = GetActiveCameraLocation();
 	const double NowSec = FPlatformTime::Seconds();
 	SyncNeuronHISM(NowSec, CamLoc);
 	SyncHolonShellsAndLabels(CamLoc);
 	SyncEdgesAndPulses(0.016f, NowSec);
+	UpdatePostProcessFocus(1.0f, CamLoc);
 }
 
 void AMetaBrainSceneController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -538,6 +542,39 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 	}
 }
 
+void AMetaBrainSceneController::UpdatePostProcessFocus(float DeltaSeconds, const FVector& CamLoc)
+{
+	if (!CachedPostProcessVolume)
+	{
+		CachedPostProcessVolume = Cast<APostProcessVolume>(UGameplayStatics::GetActorOfClass(this, APostProcessVolume::StaticClass()));
+		if (!CachedPostProcessVolume) return;
+	}
+
+	FVector FocusPoint = FocusedHolonTargetCm;
+	float TargetFStop = (CamLoc.Size() > 460.0) ? 4.0f : 2.8f;
+
+	if (SelectedNeuronId >= 0 && CurrentSnapshot.IsValid())
+	{
+		for (const FMetaBrainNeuronSnap& N : CurrentSnapshot->Neurons)
+		{
+			if (static_cast<int64>(N.Id) == SelectedNeuronId)
+			{
+				FocusPoint = FVector(N.PositionCm);
+				TargetFStop = 2.6f;
+				break;
+			}
+		}
+	}
+
+	const float TargetDist = FMath::Max(25.0f, static_cast<float>(FVector::Distance(CamLoc, FocusPoint)));
+	CurrentFocalDistanceCm = FMath::FInterpTo(CurrentFocalDistanceCm, TargetDist, DeltaSeconds, 10.0f);
+
+	CachedPostProcessVolume->Settings.bOverride_DepthOfFieldFocalDistance = true;
+	CachedPostProcessVolume->Settings.DepthOfFieldFocalDistance = CurrentFocalDistanceCm;
+	CachedPostProcessVolume->Settings.bOverride_DepthOfFieldFstop = true;
+	CachedPostProcessVolume->Settings.DepthOfFieldFstop = TargetFStop;
+}
+
 void AMetaBrainSceneController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -551,6 +588,7 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 		SyncNeuronHISM(NowSec, CamLoc);
 		SyncHolonShellsAndLabels(CamLoc);
 		SyncEdgesAndPulses(DeltaSeconds, NowSec);
+		UpdatePostProcessFocus(DeltaSeconds, CamLoc);
 	}
 
 	if (!AutoShotPath.IsEmpty())

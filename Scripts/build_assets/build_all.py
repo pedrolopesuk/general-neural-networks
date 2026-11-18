@@ -13,5 +13,6 @@ if __name__ == "__main__":
     build_materials.build_neuron_material()
     build_materials.build_holon_shell_material()
     build_materials.build_edge_and_pulse_materials()
+    build_materials.build_backdrop_material()
     build_niagara.build_niagara_systems()
     build_level.build_level()

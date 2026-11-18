@@ -11,6 +11,7 @@ class UNiagaraSystem;
 class UWidgetComponent;
 class UMaterialInterface;
 class UStaticMesh;
+class APostProcessVolume;
 
 struct FMetaBrainTravelingPulse
 {
@@ -45,6 +46,9 @@ public:
 
 	void SetManualWeightThreshold(float InThreshold);
 	float GetEffectiveWeightThreshold() const;
+
+	void SetFocusedWorldTarget(const FVector& InTargetCm) { FocusedHolonTargetCm = InTargetCm; }
+	FVector GetFocusedWorldTarget() const { return FocusedHolonTargetCm; }
 
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
@@ -86,6 +90,12 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> SignalPulseMaterial;
 
+	UPROPERTY()
+	TObjectPtr<APostProcessVolume> CachedPostProcessVolume;
+
+	FVector FocusedHolonTargetCm = FVector::ZeroVector;
+	float CurrentFocalDistanceCm = 680.0f;
+
 	TUniquePtr<FMetaBrainSimBridge> SimBridge;
 	TSharedPtr<const FMetaBrainSnapshot, ESPMode::ThreadSafe> CurrentSnapshot;
 
@@ -119,4 +129,5 @@ protected:
 	void SyncNeuronHISM(double NowWallSec, const FVector& CamLoc);
 	void SyncHolonShellsAndLabels(const FVector& CamLoc);
 	void SyncEdgesAndPulses(float DeltaSeconds, double NowWallSec);
+	void UpdatePostProcessFocus(float DeltaSeconds, const FVector& CamLoc);
 };
