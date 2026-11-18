@@ -171,9 +171,19 @@ protected:
 	FString AutoShotPath;
 	FString AutoShotMode;
 	FString AutoShotLens;
+	FString PerfReportPath;
 	bool bAutoSelectNeuron = false;
 	int32 FrameCounter = 0;
 	bool bShotRequested = false;
+
+	uint64 LastNeuronFullSyncTick = 0;
+	int64 LastNeuronSyncFocusId = -2;
+	EMetaBrainZoomLevel LastNeuronSyncZoom = EMetaBrainZoomLevel::Macro;
+	bool bLastNeuronSyncAge = false;
+	TArray<double> RecordedFrameMs;
+	TArray<double> RecordedGameThreadMs;
+	TArray<double> RecordedRenderThreadMs;
+	TArray<double> RecordedGpuMs;
 
 	FVector GetActiveCameraLocation() const;
 	void NotifyCameraFlyTo(const FVector& TargetPivotCm, float TargetDistanceCm);

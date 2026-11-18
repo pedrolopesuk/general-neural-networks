@@ -19,6 +19,10 @@
 #include "UnrealClient.h"
 #include "HAL/PlatformTime.h"
 #include "HAL/PlatformMisc.h"
+#include "Misc/FileHelper.h"
+#include "RHI.h"
+#include "RenderTimer.h"
+#include "Engine/Engine.h"
 
 AMetaBrainSceneController::AMetaBrainSceneController()
 {
@@ -131,7 +135,14 @@ void AMetaBrainSceneController::BeginPlay()
 	FParse::Value(FCommandLine::Get(), TEXT("AutoShot="), AutoShotPath);
 	FParse::Value(FCommandLine::Get(), TEXT("ShotMode="), AutoShotMode);
 	FParse::Value(FCommandLine::Get(), TEXT("ShotLens="), AutoShotLens);
+	FParse::Value(FCommandLine::Get(), TEXT("PerfReport="), PerfReportPath);
 	bAutoSelectNeuron = FParse::Param(FCommandLine::Get(), TEXT("ShotSelect"));
+
+	if (!PerfReportPath.IsEmpty() && GEngine)
+	{
+		GEngine->Exec(GetWorld(), TEXT("t.MaxFPS 0"));
+		GEngine->Exec(GetWorld(), TEXT("r.VSync 0"));
+	}
 
 	int32 MacroOverride = 0;
 	int32 EdgesOverride = 0;
@@ -463,10 +474,28 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 	TArray<float> CustomFloats;
 	CustomFloats.SetNumUninitialized(4);
 
+	const bool bNeedFullPass = (Count <= 1500) ||
+		(CurrentSnapshot->Tick != LastNeuronFullSyncTick) ||
+		(FocusId != LastNeuronSyncFocusId) ||
+		(CurrentZoomLevel != LastNeuronSyncZoom) ||
+		(bAgeLensActive != bLastNeuronSyncAge);
+
+	LastNeuronFullSyncTick = CurrentSnapshot->Tick;
+	LastNeuronSyncFocusId = FocusId;
+	LastNeuronSyncZoom = CurrentZoomLevel;
+	bLastNeuronSyncAge = bAgeLensActive;
+
+	bool bAnyDirty = false;
 	for (int32 i = 0; i < Count; ++i)
 	{
 		const FMetaBrainNeuronSnap& N = Neurons[i];
 		const double Elapsed = NowWallSec - N.LastFireWallSec;
+		const bool bInFlashWindow = (Elapsed >= 0.0 && Elapsed < 0.38);
+		if (!bNeedFullPass && !bInFlashWindow)
+		{
+			continue;
+		}
+
 		float Flash = 0.0f;
 		if (Elapsed >= 0.0 && Elapsed < 0.34)
 		{
@@ -496,8 +525,12 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 		CustomFloats[2] = BaseBrightness;
 		CustomFloats[3] = Flash;
 		NeuronHISM->SetCustomData(i, CustomFloats, false);
+		bAnyDirty = true;
 	}
-	NeuronHISM->MarkRenderStateDirty();
+	if (bAnyDirty)
+	{
+		NeuronHISM->MarkRenderStateDirty();
+	}
 }
 
 void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)
@@ -686,7 +719,7 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 			EdgeFilamentHISM->BuildTreeIfOutdated(false, true);
 		}
 
-		if (EdgeNiagaraComp && EdgeNiagaraComp->GetAsset())
+		if (EdgeNiagaraComp && EdgeNiagaraComp->GetAsset() && EdgeNiagaraComp->GetOverrideParameters().GetDataInterfaces().Num() > 0)
 		{
 			UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayPosition(EdgeNiagaraComp, TEXT("User.EdgeStarts"), NiagaraStarts);
 			UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayPosition(EdgeNiagaraComp, TEXT("User.EdgeEnds"), NiagaraEnds);
@@ -788,7 +821,7 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		SignalPulseHISM->MarkRenderStateDirty();
 	}
 
-	if (PulseNiagaraComp && PulseNiagaraComp->GetAsset())
+	if (PulseNiagaraComp && PulseNiagaraComp->GetAsset() && PulseNiagaraComp->GetOverrideParameters().GetDataInterfaces().Num() > 0)
 	{
 		UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayPosition(PulseNiagaraComp, TEXT("User.PulsePositions"), NiagaraPulsePositions);
 	}
@@ -848,6 +881,10 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 
 	if (FrameCounter == 8 && CurrentSnapshot.IsValid())
 	{
+		if (CurrentSnapshot->TotalNeurons >= 900 && AutoShotMode.IsEmpty())
+		{
+			NotifyCameraFlyTo(FVector(0.0, -52.0, 2.0), CurrentSnapshot->TotalNeurons >= 5000 ? 1680.0f : 1420.0f);
+		}
 		if (AutoShotMode.Equals(TEXT("Cluster"), ESearchCase::IgnoreCase))
 		{
 			ZoomToLevelSegmented(EMetaBrainZoomLevel::Cluster);
@@ -903,14 +940,51 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 		UpdatePostProcessFocus(DeltaSeconds, CamLoc);
 	}
 
-	if (!AutoShotPath.IsEmpty())
+	if (!PerfReportPath.IsEmpty() && FrameCounter >= 40 && FrameCounter <= 140)
 	{
-		if (FrameCounter == 75 && !bShotRequested)
+		RecordedFrameMs.Add(static_cast<double>(DeltaSeconds) * 1000.0);
+		RecordedGameThreadMs.Add(FPlatformTime::ToMilliseconds(GGameThreadTime));
+		RecordedRenderThreadMs.Add(FPlatformTime::ToMilliseconds(GRenderThreadTime));
+		RecordedGpuMs.Add(FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)));
+	}
+
+	const int32 ExitFrame = PerfReportPath.IsEmpty() ? 92 : 145;
+	const int32 ShotFrame = PerfReportPath.IsEmpty() ? 75 : 130;
+
+	if (!PerfReportPath.IsEmpty() && FrameCounter == 141 && RecordedFrameMs.Num() > 0)
+	{
+		auto AvgOf = [](const TArray<double>& Arr) -> double
+		{
+			double Sum = 0.0;
+			for (double V : Arr) Sum += V;
+			return Arr.Num() > 0 ? (Sum / Arr.Num()) : 0.0;
+		};
+		TArray<double> SortedFrame = RecordedFrameMs;
+		SortedFrame.Sort();
+		const double AvgFrameMs = AvgOf(RecordedFrameMs);
+		const double AvgFps = AvgFrameMs > 0.001 ? (1000.0 / AvgFrameMs) : 0.0;
+		const double P95FrameMs = SortedFrame[FMath::Clamp(FMath::FloorToInt(SortedFrame.Num() * 0.95f), 0, SortedFrame.Num() - 1)];
+		const double AvgGtMs = AvgOf(RecordedGameThreadMs);
+		const double AvgRtMs = AvgOf(RecordedRenderThreadMs);
+		const double AvgGpuMs = AvgOf(RecordedGpuMs);
+		const int32 NCount = CurrentSnapshot.IsValid() ? CurrentSnapshot->TotalNeurons : 0;
+		const int32 ECount = CurrentSnapshot.IsValid() ? CurrentSnapshot->TotalSynapses : 0;
+		const double SimUs = CurrentSnapshot.IsValid() ? CurrentSnapshot->StepMicroseconds : 0.0;
+
+		const FString JsonReport = FString::Printf(
+			TEXT("{\n  \"neurons\": %d,\n  \"synapses\": %d,\n  \"samples\": %d,\n  \"avg_fps\": %.2f,\n  \"avg_frame_ms\": %.3f,\n  \"p95_frame_ms\": %.3f,\n  \"avg_gamethread_ms\": %.3f,\n  \"avg_renderthread_ms\": %.3f,\n  \"avg_gpu_ms\": %.3f,\n  \"sim_worker_step_us\": %.1f\n}\n"),
+			NCount, ECount, RecordedFrameMs.Num(), AvgFps, AvgFrameMs, P95FrameMs, AvgGtMs, AvgRtMs, AvgGpuMs, SimUs);
+		FFileHelper::SaveStringToFile(JsonReport, *PerfReportPath);
+	}
+
+	if (!AutoShotPath.IsEmpty() || !PerfReportPath.IsEmpty())
+	{
+		if (FrameCounter == ShotFrame && !bShotRequested && !AutoShotPath.IsEmpty())
 		{
 			bShotRequested = true;
 			FScreenshotRequest::RequestScreenshot(AutoShotPath, true, false);
 		}
-		else if (FrameCounter >= 92)
+		else if (FrameCounter >= ExitFrame)
 		{
 			FGenericPlatformMisc::RequestExit(false);
 		}
