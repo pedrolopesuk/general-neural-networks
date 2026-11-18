@@ -24,6 +24,7 @@
 #include "RHI.h"
 #include "RenderTimer.h"
 #include "Engine/Engine.h"
+#include "MetaBrainNeuronMorphologyData.h"
 
 AMetaBrainSceneController::AMetaBrainSceneController()
 {
@@ -39,6 +40,18 @@ AMetaBrainSceneController::AMetaBrainSceneController()
 	NeuronHISM->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	NeuronHISM->SetCollisionResponseToAllChannels(ECR_Ignore);
 	NeuronHISM->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+
+	NeuronMorphHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("NeuronMorphHISM"));
+	NeuronMorphHISM->SetupAttachment(Root);
+	NeuronMorphHISM->NumCustomDataFloats = 4;
+	NeuronMorphHISM->SetCastShadow(true);
+	NeuronMorphHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	HeroNeuronISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("HeroNeuronISM"));
+	HeroNeuronISM->SetupAttachment(Root);
+	HeroNeuronISM->NumCustomDataFloats = 4;
+	HeroNeuronISM->SetCastShadow(true);
+	HeroNeuronISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	DendriteArborHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("DendriteArborHISM"));
 	DendriteArborHISM->SetupAttachment(Root);
@@ -117,6 +130,22 @@ void AMetaBrainSceneController::BeginPlay()
 		NeuronHISM->SetMaterial(0, NeuronMaterial);
 		DendriteArborHISM->SetMaterial(0, NeuronMaterial);
 		SynapticBoutonHISM->SetMaterial(0, NeuronMaterial);
+	}
+
+	// Real neuron morphology (built by Scripts/build_assets/build_meshes.py). Falls back to
+	// the procedural sphere + cylinder arbor when the assets have not been built.
+	NeuronSomaMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/MetaBrain/Meshes/SM_NeuronSoma.SM_NeuronSoma"));
+	NeuronFullMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/MetaBrain/Meshes/SM_NeuronFull.SM_NeuronFull"));
+	bUseMorphMesh = (NeuronSomaMesh != nullptr);
+	if (bUseMorphMesh)
+	{
+		NeuronMorphHISM->SetStaticMesh(NeuronSomaMesh);
+		NeuronHISM->SetVisibility(false); // invisible sphere proxy keeps cursor picking cheap
+		DendriteArborHISM->SetVisibility(false);
+	}
+	if (NeuronFullMesh)
+	{
+		HeroNeuronISM->SetStaticMesh(NeuronFullMesh);
 	}
 
 	HolonShellMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_HolonShell.M_HolonShell"));
@@ -487,6 +516,10 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 		bEdgeFilterDirty = true;
 
 		NeuronHISM->ClearInstances();
+		NeuronMorphHISM->ClearInstances();
+		HeroNeuronISM->ClearInstances();
+		HeroNeuronIndex = INDEX_NONE;
+		NeuronMorphTransforms.Reset();
 		DendriteArborHISM->ClearInstances();
 		NeuronArborSpans.Reset();
 		NeuronArborSpans.SetNum(Count);
@@ -513,7 +546,11 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 			SomaTransforms.SetNumUninitialized(Count);
 
 			TArray<FTransform> ArborTransforms;
-			const bool bBuildDetailedArbors = (Count <= 600);
+			const bool bBuildDetailedArbors = !bUseMorphMesh && (Count <= 600);
+			if (bUseMorphMesh)
+			{
+				NeuronMorphTransforms.SetNum(Count);
+			}
 			if (bBuildDetailedArbors)
 			{
 				ArborTransforms.Reserve(Count * 16);
@@ -539,6 +576,26 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 
 				FDendriteNeuronSpan& Span = NeuronArborSpans[i];
 				Span.FirstArborIdx = ArborTransforms.Num();
+
+				if (bUseMorphMesh)
+				{
+					// Real morphology: uniform scale (mesh soma radius = 50 units), axon initial
+					// segment along HillockDir, per-neuron roll so no two cells look identical.
+					const FQuat Roll(HillockDir, static_cast<double>(N.Id % 360) * GoldenAngle);
+					const FTransform MorphT(Roll * SomaRot, SomaCenter, FVector(BaseScale));
+					NeuronMorphTransforms[i] = MorphT;
+
+					using namespace MetaBrainNeuronMorphology;
+					const double ToLocal = 50.0; // soma radii -> mesh-local units
+					Span.AxonHillockTipCm = MorphT.TransformPosition(FVector(HillockTip[0], HillockTip[1], HillockTip[2]) * ToLocal);
+					Span.DistalSpineTipsCm.Reserve(NumDendriteTips);
+					for (int32 t = 0; t < NumDendriteTips; ++t)
+					{
+						Span.DistalSpineTipsCm.Add(MorphT.TransformPosition(FVector(DendriteTips[t][0], DendriteTips[t][1], DendriteTips[t][2]) * ToLocal));
+					}
+					Span.NumArborSegs = 0;
+					continue;
+				}
 
 				if (!bBuildDetailedArbors)
 				{
@@ -602,6 +659,12 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 			NeuronHISM->AddInstances(SomaTransforms, false, true);
 			NeuronHISM->BuildTreeIfOutdated(false, true);
 
+			if (bUseMorphMesh)
+			{
+				NeuronMorphHISM->AddInstances(NeuronMorphTransforms, false, true);
+				NeuronMorphHISM->BuildTreeIfOutdated(false, true);
+			}
+
 			if (ArborTransforms.Num() > 0)
 			{
 				DendriteArborHISM->AddInstances(ArborTransforms, false, true);
@@ -611,6 +674,8 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 	}
 
 	if (Count == 0) return;
+
+	UpdateHeroNeuron();
 
 	const int64 FocusId = (HoveredNeuronId >= 0) ? HoveredNeuronId : SelectedNeuronId;
 
@@ -693,6 +758,14 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 		SomaCustom[2] = BaseBrightness;
 		SomaCustom[3] = Flash;
 		NeuronHISM->SetCustomData(i, SomaCustom, false);
+		if (bUseMorphMesh)
+		{
+			NeuronMorphHISM->SetCustomData(i, SomaCustom, false);
+			if (i == HeroNeuronIndex && HeroNeuronISM->GetInstanceCount() > 0)
+			{
+				HeroNeuronISM->SetCustomData(0, SomaCustom, true);
+			}
+		}
 		bAnySomaDirty = true;
 
 		if (NeuronArborSpans.IsValidIndex(i) && NeuronArborSpans[i].NumArborSegs > 0)
@@ -711,7 +784,43 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 	}
 
 	if (bAnySomaDirty) NeuronHISM->MarkRenderStateDirty();
+	if (bAnySomaDirty && bUseMorphMesh) NeuronMorphHISM->MarkRenderStateDirty();
 	if (bAnyArborDirty) DendriteArborHISM->MarkRenderStateDirty();
+}
+
+void AMetaBrainSceneController::UpdateHeroNeuron()
+{
+	// Selected neuron is drawn as the full myelinated cell (SM_NeuronFull); its
+	// SM_NeuronSoma instance is collapsed so the coincident surfaces don't z-fight.
+	if (!bUseMorphMesh || !NeuronFullMesh || !CurrentSnapshot.IsValid()) return;
+
+	int32 Wanted = INDEX_NONE;
+	if (SelectedNeuronId >= 0)
+	{
+		const TArray<FMetaBrainNeuronSnap>& Neurons = CurrentSnapshot->Neurons;
+		for (int32 i = 0; i < Neurons.Num(); ++i)
+		{
+			if (Neurons[i].Id == SelectedNeuronId) { Wanted = i; break; }
+		}
+	}
+	if (Wanted == HeroNeuronIndex) return;
+	if (Wanted != INDEX_NONE && !NeuronMorphTransforms.IsValidIndex(Wanted)) return;
+
+	if (NeuronMorphTransforms.IsValidIndex(HeroNeuronIndex))
+	{
+		NeuronMorphHISM->UpdateInstanceTransform(HeroNeuronIndex, NeuronMorphTransforms[HeroNeuronIndex], true, true);
+	}
+	HeroNeuronISM->ClearInstances();
+	HeroNeuronIndex = Wanted;
+
+	if (HeroNeuronIndex != INDEX_NONE)
+	{
+		FTransform Collapsed = NeuronMorphTransforms[HeroNeuronIndex];
+		Collapsed.SetScale3D(FVector(1e-4));
+		NeuronMorphHISM->UpdateInstanceTransform(HeroNeuronIndex, Collapsed, true, true);
+		HeroNeuronISM->AddInstance(NeuronMorphTransforms[HeroNeuronIndex], true);
+		LastNeuronFullSyncTick = 0; // force custom data push to the hero next sync
+	}
 }
 
 void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)

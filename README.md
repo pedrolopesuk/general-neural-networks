@@ -24,3 +24,10 @@ cmd /c "`"C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\Common7\T
 
 ### 3. Unreal Engine 5.8 Niagara VFX Integration
 Copy `include/metabrain/`, `src/` (excluding `main.cpp`), and `ue5_integration/*` into your UE 5.8 project's `Source/MetaBrain/` module directory, add `"MetaBrain"` to your `.uproject` / `Target.cs`, and bind `UNiagaraDataInterfaceMetaBrain` to your Soma & Synapse Ribbon emitters.
+
+---
+
+## Credits
+- Neuron mesh: "Neuron" by Versal (https://sketchfab.com/versal), CC-BY-4.0 —
+  https://sketchfab.com/3d-models/neuron-d40557a1e4154267b78117433bc51296.
+  Re-framed and split by `Scripts/build_assets/prepare_neuron_mesh.py`.

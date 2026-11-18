@@ -43,6 +43,7 @@ def build_neuron_material():
     mat = asset_tools.create_asset("M_Neuron", mat_dir, unreal.Material, mat_factory)
     mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_SUBSURFACE)
     mat.set_editor_property("used_with_instanced_static_meshes", True)
+    mat.set_editor_property("used_with_nanite", True)
 
     # Palette colors (converted accurately from approved sRGB tokens to linear space)
     col_idle = srgb_to_linear("#6B6F75")   # Matte warm-neutral gray
@@ -96,9 +97,20 @@ def build_neuron_material():
     mel.connect_material_expressions(lerp_age, "", lerp_lens, "B")
     mel.connect_material_expressions(mpc_lens, "", lerp_lens, "Alpha")
 
+    # Organic membrane mottling: ~1 cm world-space noise (0.82..1.08) so the
+    # surface reads as living tissue instead of uniform plastic.
+    noise = mel.create_material_expression(mat, unreal.MaterialExpressionNoise, -420, 360)
+    noise.set_editor_property("scale", 0.8)
+    noise.set_editor_property("levels", 3)
+    noise.set_editor_property("output_min", 0.82)
+    noise.set_editor_property("output_max", 1.08)
+    mul_noise = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -150, 120)
+    mel.connect_material_expressions(lerp_lens, "", mul_noise, "A")
+    mel.connect_material_expressions(noise, "", mul_noise, "B")
+
     # Multiply BaseColor by Isolation factor (1.0 normal, 0.20 dimmed when hovering another node)
     mul_iso = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -60, 0)
-    mel.connect_material_expressions(lerp_lens, "", mul_iso, "A")
+    mel.connect_material_expressions(mul_noise, "", mul_iso, "A")
     mel.connect_material_expressions(cd_iso, "", mul_iso, "B")
     mel.connect_material_property(mul_iso, "", unreal.MaterialProperty.MP_BASE_COLOR)
 
@@ -138,6 +150,54 @@ def build_neuron_material():
     mel.recompile_material(mat)
     unreal.EditorAssetLibrary.save_loaded_asset(mat)
     unreal.log("[MetaBrain] Built MPC_MetaBrain and M_Neuron successfully.")
+
+
+def _build_static_tissue_material(name, base_hex, sss_hex, roughness, specular, opacity):
+    """Opaque subsurface tissue material for the hero neuron's non-membrane slots."""
+    mat_dir = "/Game/MetaBrain/Materials"
+    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+    mel = unreal.MaterialEditingLibrary
+    path = f"{mat_dir}/{name}"
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        unreal.EditorAssetLibrary.delete_asset(path)
+    mat = asset_tools.create_asset(name, mat_dir, unreal.Material, unreal.MaterialFactoryNew())
+    mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_SUBSURFACE)
+    mat.set_editor_property("used_with_instanced_static_meshes", True)
+    mat.set_editor_property("used_with_nanite", True)
+
+    base = mel.create_material_expression(mat, unreal.MaterialExpressionConstant3Vector, -500, 0)
+    base.set_editor_property("constant", srgb_to_linear(base_hex))
+    noise = mel.create_material_expression(mat, unreal.MaterialExpressionNoise, -500, 120)
+    noise.set_editor_property("scale", 1.2)
+    noise.set_editor_property("levels", 2)
+    noise.set_editor_property("output_min", 0.9)
+    noise.set_editor_property("output_max", 1.05)
+    mul = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -250, 0)
+    mel.connect_material_expressions(base, "", mul, "A")
+    mel.connect_material_expressions(noise, "", mul, "B")
+    mel.connect_material_property(mul, "", unreal.MaterialProperty.MP_BASE_COLOR)
+
+    sss = mel.create_material_expression(mat, unreal.MaterialExpressionConstant3Vector, -250, 200)
+    sss.set_editor_property("constant", srgb_to_linear(sss_hex))
+    mel.connect_material_property(sss, "", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
+
+    for prop, val, y in ((unreal.MaterialProperty.MP_ROUGHNESS, roughness, 300),
+                         (unreal.MaterialProperty.MP_SPECULAR, specular, 380),
+                         (unreal.MaterialProperty.MP_OPACITY, opacity, 460)):
+        c = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -250, y)
+        c.set_editor_property("r", val)
+        mel.connect_material_property(c, "", prop)
+
+    mel.recompile_material(mat)
+    unreal.EditorAssetLibrary.save_loaded_asset(mat)
+
+
+def build_hero_neuron_materials():
+    # Myelin: lipid-rich, pale ivory, glossier than membrane, strong scatter
+    _build_static_tissue_material("M_Myelin", "#D9D0BC", "#E8C9A8", 0.36, 0.5, 0.85)
+    # Schwann cell nucleus: hematoxylin-like violet tint, matte
+    _build_static_tissue_material("M_SchwannNucleus", "#6E5A86", "#8A6FA8", 0.62, 0.35, 0.6)
+    unreal.log("[MetaBrain] Built M_Myelin + M_SchwannNucleus.")
 
 
 def build_holon_shell_material():

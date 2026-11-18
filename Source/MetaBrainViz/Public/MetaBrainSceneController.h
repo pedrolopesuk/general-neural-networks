@@ -114,6 +114,15 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> NeuronHISM;
 
+	// Real neuron morphology (SM_NeuronSoma, Nanite): soma + dendrites + axon initial segment.
+	// When present, NeuronHISM stays as an invisible sphere proxy for cursor hit-testing.
+	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
+	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> NeuronMorphHISM;
+
+	// Full myelinated cell (SM_NeuronFull) shown in place of the selected neuron.
+	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
+	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> HeroNeuronISM;
+
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> DendriteArborHISM;
 
@@ -149,6 +158,17 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UStaticMesh> ConeMesh;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> NeuronSomaMesh;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> NeuronFullMesh;
+
+	bool bUseMorphMesh = false;
+	TArray<FTransform> NeuronMorphTransforms;
+	int32 HeroNeuronIndex = INDEX_NONE;
+	void UpdateHeroNeuron();
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> NeuronMaterial;
