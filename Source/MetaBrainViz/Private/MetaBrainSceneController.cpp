@@ -2,6 +2,9 @@
 #include "MetaBrainHolonLabelWidget.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraDataInterfaceArrayFunctionLibrary.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
 #include "Kismet/GameplayStatics.h"
@@ -35,12 +38,41 @@ AMetaBrainSceneController::AMetaBrainSceneController()
 	HolonShellHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	HolonShellHISM->SetTranslucentSortPriority(10);
 
+	EdgeFilamentHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("EdgeFilamentHISM"));
+	EdgeFilamentHISM->SetupAttachment(Root);
+	EdgeFilamentHISM->NumCustomDataFloats = 2;
+	EdgeFilamentHISM->SetCastShadow(false);
+	EdgeFilamentHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	EdgeFilamentHISM->SetTranslucentSortPriority(5);
+
+	SignalPulseHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("SignalPulseHISM"));
+	SignalPulseHISM->SetupAttachment(Root);
+	SignalPulseHISM->NumCustomDataFloats = 1;
+	SignalPulseHISM->SetCastShadow(false);
+	SignalPulseHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	EdgeNiagaraComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EdgeNiagaraComp"));
+	EdgeNiagaraComp->SetupAttachment(Root);
+	EdgeNiagaraComp->bAutoActivate = true;
+
+	PulseNiagaraComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("PulseNiagaraComp"));
+	PulseNiagaraComp->SetupAttachment(Root);
+	PulseNiagaraComp->bAutoActivate = true;
+
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	if (SphereFinder.Succeeded())
 	{
 		SphereMesh = SphereFinder.Object;
 		NeuronHISM->SetStaticMesh(SphereMesh);
 		HolonShellHISM->SetStaticMesh(SphereMesh);
+		SignalPulseHISM->SetStaticMesh(SphereMesh);
+	}
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylFinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+	if (CylFinder.Succeeded())
+	{
+		CylinderMesh = CylFinder.Object;
+		EdgeFilamentHISM->SetStaticMesh(CylinderMesh);
 	}
 }
 
@@ -49,18 +81,28 @@ void AMetaBrainSceneController::BeginPlay()
 	Super::BeginPlay();
 
 	NeuronMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_Neuron.M_Neuron"));
-	if (NeuronMaterial)
-	{
-		NeuronHISM->SetMaterial(0, NeuronMaterial);
-	}
+	if (NeuronMaterial) NeuronHISM->SetMaterial(0, NeuronMaterial);
 
 	HolonShellMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_HolonShell.M_HolonShell"));
-	if (HolonShellMaterial)
+	if (HolonShellMaterial) HolonShellHISM->SetMaterial(0, HolonShellMaterial);
+
+	EdgeFilamentMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_EdgeFilament.M_EdgeFilament"));
+	if (EdgeFilamentMaterial) EdgeFilamentHISM->SetMaterial(0, EdgeFilamentMaterial);
+
+	SignalPulseMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_SignalPulse.M_SignalPulse"));
+	if (SignalPulseMaterial) SignalPulseHISM->SetMaterial(0, SignalPulseMaterial);
+
+	if (UNiagaraSystem* EdgeSys = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/MetaBrain/FX/NS_SynapseRibbons.NS_SynapseRibbons")))
 	{
-		HolonShellHISM->SetMaterial(0, HolonShellMaterial);
+		EdgeNiagaraComp->SetAsset(EdgeSys);
+		EdgeNiagaraComp->Activate(true);
+	}
+	if (UNiagaraSystem* PulseSys = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/MetaBrain/FX/NS_SignalPulses.NS_SignalPulses")))
+	{
+		PulseNiagaraComp->SetAsset(PulseSys);
+		PulseNiagaraComp->Activate(true);
 	}
 
-	// Pre-allocate pool of 28 screen-space stabilized world-anchored Holon label widgets
 	constexpr int32 MaxLabels = 28;
 	HolonLabelPool.Reserve(MaxLabels);
 	for (int32 i = 0; i < MaxLabels; ++i)
@@ -89,8 +131,10 @@ void AMetaBrainSceneController::BeginPlay()
 	CurrentSnapshot = SimBridge->GetLatestSnapshot();
 
 	const FVector CamLoc = GetActiveCameraLocation();
-	SyncNeuronHISM(FPlatformTime::Seconds(), CamLoc);
+	const double NowSec = FPlatformTime::Seconds();
+	SyncNeuronHISM(NowSec, CamLoc);
 	SyncHolonShellsAndLabels(CamLoc);
+	SyncEdgesAndPulses(0.016f, NowSec);
 }
 
 void AMetaBrainSceneController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -101,6 +145,40 @@ void AMetaBrainSceneController::EndPlay(const EEndPlayReason::Type EndPlayReason
 		SimBridge.Reset();
 	}
 	Super::EndPlay(EndPlayReason);
+}
+
+void AMetaBrainSceneController::SetHoveredNeuronId(int64 InId)
+{
+	if (HoveredNeuronId != InId)
+	{
+		HoveredNeuronId = InId;
+		bEdgeFilterDirty = true;
+	}
+}
+
+void AMetaBrainSceneController::SetSelectedNeuronId(int64 InId)
+{
+	if (SelectedNeuronId != InId)
+	{
+		SelectedNeuronId = InId;
+		bEdgeFilterDirty = true;
+	}
+}
+
+void AMetaBrainSceneController::SetManualWeightThreshold(float InThreshold)
+{
+	bUseAutoTop20Filter = false;
+	ManualWeightThreshold = FMath::Clamp(InThreshold, 0.0f, 3.5f);
+	bEdgeFilterDirty = true;
+}
+
+float AMetaBrainSceneController::GetEffectiveWeightThreshold() const
+{
+	if (bUseAutoTop20Filter && CurrentSnapshot.IsValid())
+	{
+		return CurrentSnapshot->DefaultTop20WeightCutoff;
+	}
+	return ManualWeightThreshold;
 }
 
 FVector AMetaBrainSceneController::GetActiveCameraLocation() const
@@ -114,10 +192,7 @@ FVector AMetaBrainSceneController::GetActiveCameraLocation() const
 
 void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector& CamLoc)
 {
-	if (!CurrentSnapshot.IsValid() || !NeuronHISM)
-	{
-		return;
-	}
+	if (!CurrentSnapshot.IsValid() || !NeuronHISM) return;
 
 	const TArray<FMetaBrainNeuronSnap>& Neurons = CurrentSnapshot->Neurons;
 	const int32 Count = Neurons.Num();
@@ -134,24 +209,18 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 			for (int32 i = 0; i < Count; ++i)
 			{
 				const float UniformScale = FMath::Max(0.02f, Neurons[i].RadiusCm / 50.0f);
-				Transforms[i] = FTransform(
-					FRotator::ZeroRotator,
-					FVector(Neurons[i].PositionCm),
-					FVector(UniformScale));
+				Transforms[i] = FTransform(FRotator::ZeroRotator, FVector(Neurons[i].PositionCm), FVector(UniformScale));
 			}
 			NeuronHISM->AddInstances(Transforms, false, true);
 		}
 	}
 
-	if (Count == 0)
-	{
-		return;
-	}
+	if (Count == 0) return;
 
 	const float CamDistOrigin = static_cast<float>(CamLoc.Size());
 	const bool bIsMacro = (CamDistOrigin > 460.0f);
-
 	const int64 FocusId = (HoveredNeuronId >= 0) ? HoveredNeuronId : SelectedNeuronId;
+
 	TSet<uint64> IsolatedSet;
 	if (FocusId >= 0)
 	{
@@ -176,7 +245,6 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 			Flash = static_cast<float>(FMath::Exp(-Elapsed / 0.11));
 		}
 
-		// Macro fades inner neurons so nested 3D holon containment shells read clearly; Cluster/Micro fade in
 		float BaseBrightness = 1.0f;
 		if (bIsMacro && N.Role != 0 && N.Role != 3)
 		{
@@ -198,10 +266,7 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 
 void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)
 {
-	if (!CurrentSnapshot.IsValid() || !HolonShellHISM)
-	{
-		return;
-	}
+	if (!CurrentSnapshot.IsValid() || !HolonShellHISM) return;
 
 	const TArray<FMetaBrainHolonSnap>& Holons = CurrentSnapshot->Holons;
 	const int32 NumH = Holons.Num();
@@ -218,10 +283,7 @@ void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)
 			for (int32 i = 0; i < NumH; ++i)
 			{
 				const float UniformScale = FMath::Max(0.05f, Holons[i].RadiusCm / 50.0f);
-				Transforms[i] = FTransform(
-					FRotator::ZeroRotator,
-					FVector(Holons[i].CenterCm),
-					FVector(UniformScale));
+				Transforms[i] = FTransform(FRotator::ZeroRotator, FVector(Holons[i].CenterCm), FVector(UniformScale));
 			}
 			HolonShellHISM->AddInstances(Transforms, false, true);
 		}
@@ -235,15 +297,11 @@ void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)
 	{
 		const FMetaBrainHolonSnap& H = Holons[i];
 		const float DistToShellCenter = FVector::Distance(CamLoc, FVector(H.CenterCm));
-
-		// Smoothly fade outer shell out as the camera flies inside its radius (Cluster / Micro zoom)
 		const float ShellFade = FMath::Clamp((DistToShellCenter - H.RadiusCm * 0.85f) / FMath::Max(12.0f, H.RadiusCm * 0.65f), 0.0f, 1.0f);
 		HolonShellHISM->SetCustomDataValue(i, 0, ShellFade, false);
 
-		// Attach world-positioned sans label for visible holon depth tier
 		if (H.Level <= MaxLabelLevel && ShellFade > 0.25f && LabelSlot < HolonLabelPool.Num())
 		{
-			// Only show Level 2+ labels when camera is reasonably close to that holon
 			if (H.Level == 1 || DistToShellCenter < H.RadiusCm * 4.5f)
 			{
 				UWidgetComponent* WC = HolonLabelPool[LabelSlot++];
@@ -265,6 +323,221 @@ void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)
 	}
 }
 
+void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double NowWallSec)
+{
+	if (!CurrentSnapshot.IsValid() || !EdgeFilamentHISM || !SignalPulseHISM) return;
+
+	const int64 FocusId = (HoveredNeuronId >= 0) ? HoveredNeuronId : SelectedNeuronId;
+	const TArray<FMetaBrainNeuronSnap>& Neurons = CurrentSnapshot->Neurons;
+	const TArray<FMetaBrainEdgeSnap>& Edges = CurrentSnapshot->Edges;
+	const TArray<FMetaBrainHolonSnap>& Holons = CurrentSnapshot->Holons;
+
+	// 1. Rebuild visible edge geometry only when topology, threshold slider, or focus target changes
+	if (RenderedEdgeTopoRev != CurrentSnapshot->TopologyRevision || bEdgeFilterDirty || LastRenderedFocusId != FocusId)
+	{
+		RenderedEdgeTopoRev = CurrentSnapshot->TopologyRevision;
+		LastRenderedFocusId = FocusId;
+		bEdgeFilterDirty = false;
+
+		ActiveEdgeInstances.Reset();
+		EdgeFilamentHISM->ClearInstances();
+
+		// Map Region Name -> Level-1 Holon for clean sensory boundary bundling
+		TMap<FString, const FMetaBrainHolonSnap*> RegionHolonMap;
+		for (const FMetaBrainHolonSnap& H : Holons)
+		{
+			if (H.Level == 1) RegionHolonMap.Add(H.Label, &H);
+		}
+		TSet<FString> BundledRootPairs;
+
+		TArray<FTransform> FilamentTransforms;
+		TArray<FVector> NiagaraStarts;
+		TArray<FVector> NiagaraEnds;
+		TArray<float> NiagaraWeights;
+
+		// Cap rendered filaments at 4,000 max even at extreme slider 0.0 on 10k-edge benchmark
+		constexpr int32 MaxRenderedEdges = 4000;
+		const float FilamentRadiusCm = (Neurons.Num() > 800) ? 0.25f : 0.38f;
+
+		for (int32 Idx = 0; Idx < Edges.Num() && ActiveEdgeInstances.Num() < MaxRenderedEdges; ++Idx)
+		{
+			const FMetaBrainEdgeSnap& E = Edges[Idx];
+			const bool bIsIncident = (FocusId >= 0) &&
+				(static_cast<int64>(E.SourceId) == FocusId || static_cast<int64>(E.TargetId) == FocusId);
+
+			bool bPassThreshold = bUseAutoTop20Filter ? E.bInDefaultTop20Pct : (E.AbsWeight >= ManualWeightThreshold);
+			if (!bPassThreshold && !bIsIncident)
+			{
+				continue;
+			}
+
+			if (!Neurons.IsValidIndex(E.SourceIndex) || !Neurons.IsValidIndex(E.TargetIndex))
+			{
+				continue;
+			}
+
+			const FMetaBrainNeuronSnap& Src = Neurons[E.SourceIndex];
+			const FMetaBrainNeuronSnap& Dst = Neurons[E.TargetIndex];
+
+			FVector StartPos(Src.PositionCm);
+			FVector EndPos(Dst.PositionCm);
+
+			// Bundle root sensory edges to target Region Holon shell perimeter unless inspecting directly
+			if (Src.Role == 0 && Dst.Role == 1 && FocusId < 0)
+			{
+				int32 DotPos = INDEX_NONE;
+				FString RegName = Dst.Label;
+				if (Dst.Label.FindChar(TEXT('.'), DotPos) && DotPos > 0)
+				{
+					RegName = Dst.Label.Left(DotPos);
+				}
+				const FString BundleKey = FString::Printf(TEXT("%llu:%s"), Src.Id, *RegName);
+				if (BundledRootPairs.Contains(BundleKey))
+				{
+					continue;
+				}
+				BundledRootPairs.Add(BundleKey);
+
+				if (const FMetaBrainHolonSnap* const* FoundH = RegionHolonMap.Find(RegName))
+				{
+					const FVector Center((*FoundH)->CenterCm);
+					const FVector ToSrc = (StartPos - Center).GetSafeNormal();
+					EndPos = Center + ToSrc * (*FoundH)->RadiusCm;
+				}
+			}
+
+			const FVector Delta = EndPos - StartPos;
+			const float Len = static_cast<float>(Delta.Size());
+			if (Len < 1.0f) continue;
+
+			const FQuat Rot = FRotationMatrix::MakeFromZ(Delta).ToQuat();
+			const FVector Mid = (StartPos + EndPos) * 0.5;
+			const FVector Scale(FilamentRadiusCm / 50.0, FilamentRadiusCm / 50.0, Len / 100.0);
+
+			FilamentTransforms.Add(FTransform(Rot, Mid, Scale));
+			ActiveEdgeInstances.Add({ Idx, StartPos, EndPos });
+
+			NiagaraStarts.Add(StartPos);
+			NiagaraEnds.Add(EndPos);
+			NiagaraWeights.Add(E.AbsWeight);
+		}
+
+		if (FilamentTransforms.Num() > 0)
+		{
+			EdgeFilamentHISM->AddInstances(FilamentTransforms, false, true);
+		}
+
+		if (EdgeNiagaraComp && EdgeNiagaraComp->GetAsset())
+		{
+			UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayPosition(EdgeNiagaraComp, TEXT("User.EdgeStarts"), NiagaraStarts);
+			UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayPosition(EdgeNiagaraComp, TEXT("User.EdgeEnds"), NiagaraEnds);
+			UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayFloat(EdgeNiagaraComp, TEXT("User.EdgeWeights"), NiagaraWeights);
+		}
+	}
+
+	// 2. Update per-filament opacity & brief amber signal flash + spawn traveling pulses on new sim tick
+	const bool bNewSimTick = (CurrentSnapshot->Tick != LastProcessedSimTick);
+	if (bNewSimTick)
+	{
+		LastProcessedSimTick = CurrentSnapshot->Tick;
+	}
+
+	TArray<float> EdgeCustom;
+	EdgeCustom.SetNumUninitialized(2);
+
+	for (int32 InstIdx = 0; InstIdx < ActiveEdgeInstances.Num(); ++InstIdx)
+	{
+		const FRenderedEdgeMap& Map = ActiveEdgeInstances[InstIdx];
+		if (!Edges.IsValidIndex(Map.SnapshotEdgeIdx)) continue;
+
+		const FMetaBrainEdgeSnap& E = Edges[Map.SnapshotEdgeIdx];
+		const FMetaBrainNeuronSnap& Src = Neurons[E.SourceIndex];
+
+		const bool bIsIncident = (FocusId >= 0) &&
+			(static_cast<int64>(E.SourceId) == FocusId || static_cast<int64>(E.TargetId) == FocusId);
+
+		// Opacity proportional to |w|, dimmed to 20% when hovering/isolating another node
+		const float WeightNorm = FMath::Clamp(E.AbsWeight / 3.5f, 0.08f, 1.0f);
+		float Opacity = 0.08f + 0.34f * WeightNorm;
+		if (FocusId >= 0)
+		{
+			Opacity = bIsIncident ? FMath::Max(0.55f, Opacity * 1.6f) : (Opacity * 0.20f);
+		}
+
+		float SignalFlash = 0.0f;
+		const double SinceSrcFire = NowWallSec - Src.LastFireWallSec;
+		if (SinceSrcFire >= 0.0 && SinceSrcFire < 0.22 && Src.Activation > 0.28f)
+		{
+			SignalFlash = static_cast<float>(FMath::Exp(-SinceSrcFire / 0.08));
+			if (FocusId < 0 || bIsIncident)
+			{
+				Opacity = FMath::Max(Opacity, 0.52f * SignalFlash);
+			}
+		}
+
+		EdgeCustom[0] = Opacity;
+		EdgeCustom[1] = (FocusId >= 0 && !bIsIncident) ? 0.0f : SignalFlash;
+		EdgeFilamentHISM->SetCustomData(InstIdx, EdgeCustom, false);
+
+		// Spawn traveling amber pulse when source neuron fired this tick (speed scaled by |weight|)
+		if (bNewSimTick && Src.bFiredThisTick && TravelingPulses.Num() < 256 && (FocusId < 0 || bIsIncident))
+		{
+			const float Len = static_cast<float>((Map.EndPos - Map.StartPos).Size());
+			if (Len > 4.0f)
+			{
+				FMetaBrainTravelingPulse P;
+				P.StartPos = Map.StartPos;
+				P.EndPos = Map.EndPos;
+				P.LengthCm = Len;
+				P.SpeedCmPerSec = 240.0f + 220.0f * E.AbsWeight;
+				P.Progress = 0.0f;
+				TravelingPulses.Add(P);
+			}
+		}
+	}
+	EdgeFilamentHISM->MarkRenderStateDirty();
+
+	// 3. Advance & render traveling amber signal pulses + push to Niagara Pulse Array DI
+	TArray<FTransform> PulseTransforms;
+	TArray<float> PulseEnvelopes;
+	TArray<FVector> NiagaraPulsePositions;
+
+	for (int32 i = TravelingPulses.Num() - 1; i >= 0; --i)
+	{
+		FMetaBrainTravelingPulse& P = TravelingPulses[i];
+		P.Progress += (P.SpeedCmPerSec / FMath::Max(10.0f, P.LengthCm)) * DeltaSeconds;
+		if (P.Progress >= 1.0f)
+		{
+			TravelingPulses.RemoveAtSwap(i);
+			continue;
+		}
+
+		const FVector Pos = FMath::Lerp(P.StartPos, P.EndPos, P.Progress);
+		const float Envelope = FMath::Sin(P.Progress * PI);
+		const float PulseScale = (1.6f * (0.65f + 0.35f * Envelope)) / 50.0f;
+
+		PulseTransforms.Add(FTransform(FRotator::ZeroRotator, Pos, FVector(PulseScale)));
+		PulseEnvelopes.Add(Envelope);
+		NiagaraPulsePositions.Add(Pos);
+	}
+
+	SignalPulseHISM->ClearInstances();
+	if (PulseTransforms.Num() > 0)
+	{
+		SignalPulseHISM->AddInstances(PulseTransforms, false, true);
+		for (int32 i = 0; i < PulseEnvelopes.Num(); ++i)
+		{
+			SignalPulseHISM->SetCustomDataValue(i, 0, PulseEnvelopes[i], false);
+		}
+		SignalPulseHISM->MarkRenderStateDirty();
+	}
+
+	if (PulseNiagaraComp && PulseNiagaraComp->GetAsset())
+	{
+		UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayPosition(PulseNiagaraComp, TEXT("User.PulsePositions"), NiagaraPulsePositions);
+	}
+}
+
 void AMetaBrainSceneController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -274,8 +547,10 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 	{
 		CurrentSnapshot = SimBridge->GetLatestSnapshot();
 		const FVector CamLoc = GetActiveCameraLocation();
-		SyncNeuronHISM(FPlatformTime::Seconds(), CamLoc);
+		const double NowSec = FPlatformTime::Seconds();
+		SyncNeuronHISM(NowSec, CamLoc);
 		SyncHolonShellsAndLabels(CamLoc);
+		SyncEdgesAndPulses(DeltaSeconds, NowSec);
 	}
 
 	if (!AutoShotPath.IsEmpty())

@@ -188,6 +188,77 @@ def build_holon_shell_material():
     unreal.log("[MetaBrain] Built M_HolonShell (3-6% Fresnel rim translucency) successfully.")
 
 
+def build_edge_and_pulse_materials():
+    mat_dir = "/Game/MetaBrain/Materials"
+    unreal.EditorAssetLibrary.make_directory(mat_dir)
+    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+    mel = unreal.MaterialEditingLibrary
+
+    col_gray = srgb_to_linear("#6B6F75")
+    col_amber = srgb_to_linear("#FFB000")
+
+    # 1. M_EdgeFilament: thin unlit gray, opacity proportional to |w|, turns amber briefly on signal
+    edge_path = f"{mat_dir}/M_EdgeFilament"
+    if unreal.EditorAssetLibrary.does_asset_exist(edge_path):
+        unreal.EditorAssetLibrary.delete_asset(edge_path)
+
+    edge_mat = asset_tools.create_asset("M_EdgeFilament", mat_dir, unreal.Material, unreal.MaterialFactoryNew())
+    edge_mat.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
+    edge_mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    edge_mat.set_editor_property("used_with_instanced_static_meshes", True)
+    edge_mat.set_editor_property("used_with_niagara_ribbons", True)
+
+    # CustomData[0] = Opacity (scaled by |w| and hover isolation), CustomData[1] = SignalFlash (0..1)
+    cd_op = mel.create_material_expression(edge_mat, unreal.MaterialExpressionPerInstanceCustomData, -540, 140)
+    cd_op.set_editor_property("data_index", 0)
+
+    cd_sig = mel.create_material_expression(edge_mat, unreal.MaterialExpressionPerInstanceCustomData, -540, -60)
+    cd_sig.set_editor_property("data_index", 1)
+
+    c_gray = mel.create_material_expression(edge_mat, unreal.MaterialExpressionConstant3Vector, -540, -240)
+    c_gray.set_editor_property("constant", col_gray)
+
+    c_amber_hdr = mel.create_material_expression(edge_mat, unreal.MaterialExpressionConstant3Vector, -540, -150)
+    c_amber_hdr.set_editor_property("constant", unreal.LinearColor(col_amber.r * 2.4, col_amber.g * 2.4, 0.0, 1.0))
+
+    lerp_col = mel.create_material_expression(edge_mat, unreal.MaterialExpressionLinearInterpolate, -240, -140)
+    mel.connect_material_expressions(c_gray, "", lerp_col, "A")
+    mel.connect_material_expressions(c_amber_hdr, "", lerp_col, "B")
+    mel.connect_material_expressions(cd_sig, "", lerp_col, "Alpha")
+    mel.connect_material_property(lerp_col, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    mel.connect_material_property(cd_op, "", unreal.MaterialProperty.MP_OPACITY)
+
+    mel.recompile_material(edge_mat)
+    unreal.EditorAssetLibrary.save_loaded_asset(edge_mat)
+
+    # 2. M_SignalPulse: small traveling amber light pulse spawned when source fires
+    pulse_path = f"{mat_dir}/M_SignalPulse"
+    if unreal.EditorAssetLibrary.does_asset_exist(pulse_path):
+        unreal.EditorAssetLibrary.delete_asset(pulse_path)
+
+    pulse_mat = asset_tools.create_asset("M_SignalPulse", mat_dir, unreal.Material, unreal.MaterialFactoryNew())
+    pulse_mat.set_editor_property("blend_mode", unreal.BlendMode.BLEND_OPAQUE)
+    pulse_mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    pulse_mat.set_editor_property("used_with_instanced_static_meshes", True)
+    pulse_mat.set_editor_property("used_with_niagara_sprites", True)
+
+    cd_env = mel.create_material_expression(pulse_mat, unreal.MaterialExpressionPerInstanceCustomData, -460, 40)
+    cd_env.set_editor_property("data_index", 0)
+
+    c_pulse_hdr = mel.create_material_expression(pulse_mat, unreal.MaterialExpressionConstant3Vector, -460, -100)
+    c_pulse_hdr.set_editor_property("constant", unreal.LinearColor(col_amber.r * 4.8, col_amber.g * 4.8, 0.0, 1.0))
+
+    mul_pulse = mel.create_material_expression(pulse_mat, unreal.MaterialExpressionMultiply, -200, -40)
+    mel.connect_material_expressions(c_pulse_hdr, "", mul_pulse, "A")
+    mel.connect_material_expressions(cd_env, "", mul_pulse, "B")
+    mel.connect_material_property(mul_pulse, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+
+    mel.recompile_material(pulse_mat)
+    unreal.EditorAssetLibrary.save_loaded_asset(pulse_mat)
+    unreal.log("[MetaBrain] Built M_EdgeFilament and M_SignalPulse successfully.")
+
+
 if __name__ == "__main__":
     build_neuron_material()
     build_holon_shell_material()
+    build_edge_and_pulse_materials()
