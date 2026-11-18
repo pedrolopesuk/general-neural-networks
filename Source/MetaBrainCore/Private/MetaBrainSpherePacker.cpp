@@ -87,7 +87,7 @@ namespace
 			const float theta = GoldenAngle * static_cast<float>(i);
 			const float shellScale = 0.48f + 0.52f * FMath::Pow(u, 0.35f);
 			Parent.Children[i]->LocalPos = FVector3f(
-				FMath::Cos(theta) * rXY * UsableR * shellScale * 0.75f, // X (depth)
+				FMath::Cos(theta) * rXY * UsableR * shellScale,         // X (full 3D depth)
 				FMath::Sin(theta) * rXY * UsableR * shellScale,         // Y (horizontal)
 				z * UsableR * shellScale                                // Z (vertical)
 			);
@@ -391,15 +391,16 @@ FMetaBrainPackedLayout FMetaBrainSpherePacker::ComputeLayout(const metabrain::Br
 		{
 			MaxRegR = FMath::Max(MaxRegR, Reg->RadiusCm);
 		}
-		const float SpreadY = MaxRegR * 1.28f;
-		const float SpreadZ = MaxRegR * 0.92f;
-		const float SpreadX = MaxRegR * 0.42f;
+		const float SpreadY = MaxRegR * 1.24f;
+		const float SpreadZ = MaxRegR * 0.88f;
+		const float SpreadX = MaxRegR * 0.96f;
 
-		// Hippocampus (upper-left), Association (upper-mid-right), Prefrontal (mid-right), Amygdala (lower-center)
-		VirtualBrainRoot.Children[0]->LocalPos = FVector3f(-SpreadX, -SpreadY * 0.88f,  SpreadZ * 0.62f);
-		VirtualBrainRoot.Children[1]->LocalPos = FVector3f( SpreadX * 0.6f, SpreadY * 0.12f, SpreadZ * 0.95f);
-		VirtualBrainRoot.Children[2]->LocalPos = FVector3f(-SpreadX * 0.4f, SpreadY * 1.02f, SpreadZ * 0.08f);
-		VirtualBrainRoot.Children[3]->LocalPos = FVector3f( SpreadX * 0.8f, -SpreadY * 0.05f, -SpreadZ * 0.98f);
+		// True 3D stereotactic tetrahedral cortical arrangement across X, Y, Z:
+		// Hippocampus (posterior-left-upper), Association (dorsal-anterior-center), Prefrontal (anterior-right), Amygdala (ventral-deep)
+		VirtualBrainRoot.Children[0]->LocalPos = FVector3f(-SpreadX * 0.82f, -SpreadY * 0.86f,  SpreadZ * 0.56f);
+		VirtualBrainRoot.Children[1]->LocalPos = FVector3f( SpreadX * 0.88f,  SpreadY * 0.08f,  SpreadZ * 0.92f);
+		VirtualBrainRoot.Children[2]->LocalPos = FVector3f( SpreadX * 0.48f,  SpreadY * 1.02f,  SpreadZ * 0.06f);
+		VirtualBrainRoot.Children[3]->LocalPos = FVector3f(-SpreadX * 0.55f, -SpreadY * 0.04f, -SpreadZ * 0.96f);
 	}
 
 	PropagateWorldPositions(VirtualBrainRoot, FVector3f::ZeroVector, Out, IdToIndex);
@@ -421,17 +422,21 @@ FMetaBrainPackedLayout FMetaBrainSpherePacker::ComputeLayout(const metabrain::Br
 	for (int32 i = 0; i < Roots.Num(); ++i)
 	{
 		const float u = (Roots.Num() > 1) ? (static_cast<float>(i) / static_cast<float>(Roots.Num() - 1) - 0.5f) : 0.0f;
-		const float CurveX = FMath::Cos(u * 2.2f) * 28.0f - 18.0f;
-		Out.NeuronPositionsCm.Add(Roots[i]->GetId(), FVector3f(CurveX, LeftRailY, -u * RailSpanZ));
-		Out.NeuronRadiiCm.Add(Roots[i]->GetId(), BaseLeafRadiusCm * 1.05f);
+		const float Angle = u * 2.35f;
+		const float CurveX = FMath::Sin(Angle) * 145.0f;
+		const float CurveY = LeftRailY + (1.0f - FMath::Cos(Angle)) * 42.0f;
+		Out.NeuronPositionsCm.Add(Roots[i]->GetId(), FVector3f(CurveX, CurveY, -u * RailSpanZ));
+		Out.NeuronRadiiCm.Add(Roots[i]->GetId(), BaseLeafRadiusCm * 1.08f);
 	}
 
 	for (int32 i = 0; i < Terminals.Num(); ++i)
 	{
 		const float u = (Terminals.Num() > 1) ? (static_cast<float>(i) / static_cast<float>(Terminals.Num() - 1) - 0.5f) : 0.0f;
-		const float CurveX = FMath::Cos(u * 1.8f) * 22.0f - 12.0f;
-		Out.NeuronPositionsCm.Add(Terminals[i]->GetId(), FVector3f(CurveX, RightRailY, -u * RailSpanZ * 0.68f));
-		Out.NeuronRadiiCm.Add(Terminals[i]->GetId(), BaseLeafRadiusCm * 1.2f);
+		const float Angle = u * 1.95f;
+		const float CurveX = -FMath::Sin(Angle) * 115.0f;
+		const float CurveY = RightRailY - (1.0f - FMath::Cos(Angle)) * 36.0f;
+		Out.NeuronPositionsCm.Add(Terminals[i]->GetId(), FVector3f(CurveX, CurveY, -u * RailSpanZ * 0.72f));
+		Out.NeuronRadiiCm.Add(Terminals[i]->GetId(), BaseLeafRadiusCm * 1.22f);
 	}
 
 	return Out;

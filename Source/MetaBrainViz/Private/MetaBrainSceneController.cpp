@@ -3,6 +3,7 @@
 #include "MetaBrainHolonLabelWidget.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Components/PointLightComponent.h"
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
 #include "NiagaraDataInterfaceArrayFunctionLibrary.h"
@@ -129,8 +130,26 @@ void AMetaBrainSceneController::BeginPlay()
 		HolonLabelPool.Add(WC);
 	}
 
+	// Pooled dynamic Lumen & Volumetric Fog #FFB000 point lights (0 intensity at rest; ignite ONLY while neurons fire)
+	constexpr int32 MaxFiringLights = 10;
+	FiringLightPool.Reserve(MaxFiringLights);
+	const FColor SignalAmberSRGB(255, 176, 0, 255);
+	for (int32 i = 0; i < MaxFiringLights; ++i)
+	{
+		UPointLightComponent* PL = NewObject<UPointLightComponent>(this);
+		PL->SetupAttachment(GetRootComponent());
+		PL->SetIntensity(0.0f);
+		PL->SetAttenuationRadius(165.0f);
+		PL->SetLightColor(FLinearColor::FromSRGBColor(SignalAmberSRGB));
+		PL->SetCastShadows(false);
+		PL->SetVolumetricScatteringIntensity(1.85f);
+		PL->SetVisibility(false);
+		PL->RegisterComponent();
+		FiringLightPool.Add(PL);
+	}
+
 	Breadcrumbs.Reset();
-	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -52.0, 2.0), 1260.0f });
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -46.0, 4.0), 1140.0f });
 
 	FParse::Value(FCommandLine::Get(), TEXT("AutoShot="), AutoShotPath);
 	FParse::Value(FCommandLine::Get(), TEXT("ShotMode="), AutoShotMode);
@@ -243,8 +262,16 @@ void AMetaBrainSceneController::ZoomToMacro()
 	CurrentZoomLevel = EMetaBrainZoomLevel::Macro;
 	FocusedHolonKey.Empty();
 	Breadcrumbs.Reset();
-	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -52.0, 2.0), 1260.0f });
-	NotifyCameraFlyTo(FVector(0.0, -52.0, 2.0), 1260.0f);
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -46.0, 4.0), 1140.0f });
+	FocusedHolonTargetCm = FVector(0.0, -46.0, 4.0);
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+	{
+		if (AMetaBrainCameraPawn* CamPawn = Cast<AMetaBrainCameraPawn>(PC->GetPawn()))
+		{
+			CamPawn->ResetTo3DMacroView();
+		}
+	}
+	bEdgeFilterDirty = true;
 }
 
 void AMetaBrainSceneController::ZoomIntoHolon(const FString& HolonKey)
@@ -701,12 +728,48 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 			const float Len = static_cast<float>(Delta.Size());
 			if (Len < 1.0f) continue;
 
-			const FQuat Rot = FRotationMatrix::MakeFromZ(Delta).ToQuat();
-			const FVector Mid = (StartPos + EndPos) * 0.5;
-			const FVector Scale(FilamentRadiusCm / 50.0, FilamentRadiusCm / 50.0, Len / 100.0);
+			// Compute organic 3D curved Bezier control point bowed gently outward/across 3D volume
+			const FVector MidLinear = (StartPos + EndPos) * 0.5;
+			FVector RadialOut = MidLinear.GetSafeNormal();
+			if (RadialOut.IsNearlyZero()) RadialOut = FVector::UpVector;
+			const FVector ChordDir = Delta / Len;
+			FVector SideTangent = FVector::CrossProduct(ChordDir, RadialOut).GetSafeNormal();
+			if (SideTangent.IsNearlyZero()) SideTangent = FVector::UpVector;
+			const float HashSign = ((E.SourceId * 1315423911ULL + E.TargetId) & 1ULL) ? 1.0f : -1.0f;
+			const FVector BowDir = (RadialOut * 0.68 + SideTangent * (0.45 * HashSign)).GetSafeNormal();
+			const FVector CtrlPos = MidLinear + BowDir * FMath::Min(68.0, Len * 0.16);
 
-			FilamentTransforms.Add(FTransform(Rot, Mid, Scale));
-			ActiveEdgeInstances.Add({ Idx, StartPos, EndPos });
+			const int32 SubSegs = (Neurons.Num() > 1200) ? 1 : 5;
+			const int32 FirstSegIdx = FilamentTransforms.Num();
+
+			auto EvalBez = [&](double T) -> FVector
+			{
+				const double U = 1.0 - T;
+				return (U * U) * StartPos + (2.0 * U * T) * CtrlPos + (T * T) * EndPos;
+			};
+
+			FVector PrevPt = StartPos;
+			for (int32 s = 1; s <= SubSegs; ++s)
+			{
+				const double T = static_cast<double>(s) / static_cast<double>(SubSegs);
+				const FVector NextPt = (SubSegs == 1) ? EndPos : EvalBez(T);
+				const FVector SegDelta = NextPt - PrevPt;
+				const double SegLen = SegDelta.Size();
+				if (SegLen > 0.05)
+				{
+					const FQuat SegRot = FRotationMatrix::MakeFromZ(SegDelta).ToQuat();
+					const FVector SegMid = (PrevPt + NextPt) * 0.5;
+					const FVector SegScale(FilamentRadiusCm / 50.0, FilamentRadiusCm / 50.0, (SegLen * 1.03) / 100.0);
+					FilamentTransforms.Add(FTransform(SegRot, SegMid, SegScale));
+				}
+				PrevPt = NextPt;
+			}
+
+			const int32 AddedSegs = FilamentTransforms.Num() - FirstSegIdx;
+			if (AddedSegs > 0)
+			{
+				ActiveEdgeInstances.Add({ Idx, FirstSegIdx, AddedSegs, StartPos, CtrlPos, EndPos });
+			}
 
 			NiagaraStarts.Add(StartPos);
 			NiagaraEnds.Add(EndPos);
@@ -767,7 +830,10 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 
 		EdgeCustom[0] = Opacity;
 		EdgeCustom[1] = (FocusId >= 0 && !bIsIncident) ? 0.0f : SignalFlash;
-		EdgeFilamentHISM->SetCustomData(InstIdx, EdgeCustom, false);
+		for (int32 SegOffset = 0; SegOffset < Map.NumSegments; ++SegOffset)
+		{
+			EdgeFilamentHISM->SetCustomData(Map.FirstHismIdx + SegOffset, EdgeCustom, false);
+		}
 
 		if (bNewSimTick && Src.bFiredThisTick && TravelingPulses.Num() < 256 && (FocusId < 0 || bIsIncident))
 		{
@@ -776,9 +842,10 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 			{
 				FMetaBrainTravelingPulse P;
 				P.StartPos = Map.StartPos;
+				P.CtrlPos = Map.CtrlPos;
 				P.EndPos = Map.EndPos;
-				P.LengthCm = Len;
-				P.SpeedCmPerSec = 240.0f + 220.0f * E.AbsWeight;
+				P.LengthCm = Len * 1.06f;
+				P.SpeedCmPerSec = 250.0f + 230.0f * E.AbsWeight;
 				P.Progress = 0.0f;
 				TravelingPulses.Add(P);
 			}
@@ -786,27 +853,38 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 	}
 	EdgeFilamentHISM->MarkRenderStateDirty();
 
+	// Evaluate 4-bead tapered comet-tail #FFB000 pulses gliding along each 3D Quadratic Bezier tract
 	TArray<FTransform> PulseTransforms;
 	TArray<float> PulseEnvelopes;
 	TArray<FVector> NiagaraPulsePositions;
+
+	const int32 BeadsPerPulse = (Neurons.Num() > 1200) ? 1 : 4;
 
 	for (int32 i = TravelingPulses.Num() - 1; i >= 0; --i)
 	{
 		FMetaBrainTravelingPulse& P = TravelingPulses[i];
 		P.Progress += (P.SpeedCmPerSec / FMath::Max(10.0f, P.LengthCm)) * DeltaSeconds;
-		if (P.Progress >= 1.0f)
+		if (P.Progress >= 1.08f)
 		{
 			TravelingPulses.RemoveAtSwap(i);
 			continue;
 		}
 
-		const FVector Pos = FMath::Lerp(P.StartPos, P.EndPos, P.Progress);
-		const float Envelope = FMath::Sin(P.Progress * PI);
-		const float PulseScale = (1.6f * (0.65f + 0.35f * Envelope)) / 50.0f;
+		for (int32 b = 0; b < BeadsPerPulse; ++b)
+		{
+			const float BeadT = P.Progress - static_cast<float>(b) * 0.032f;
+			if (BeadT < 0.0f || BeadT > 1.0f) continue;
 
-		PulseTransforms.Add(FTransform(FRotator::ZeroRotator, Pos, FVector(PulseScale)));
-		PulseEnvelopes.Add(Envelope);
-		NiagaraPulsePositions.Add(Pos);
+			const double U = 1.0 - BeadT;
+			const FVector Pos = (U * U) * P.StartPos + (2.0 * U * BeadT) * P.CtrlPos + (BeadT * BeadT) * P.EndPos;
+			const float TailFalloff = FMath::Pow(0.62f, static_cast<float>(b));
+			const float Envelope = FMath::Sin(BeadT * PI) * TailFalloff;
+			const float RadiusCm = (2.15f * TailFalloff) * (0.65f + 0.35f * FMath::Sin(BeadT * PI));
+
+			PulseTransforms.Add(FTransform(FRotator::ZeroRotator, Pos, FVector(RadiusCm / 50.0f)));
+			PulseEnvelopes.Add(Envelope);
+			if (b == 0) NiagaraPulsePositions.Add(Pos);
+		}
 	}
 
 	SignalPulseHISM->ClearInstances();
@@ -824,6 +902,52 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 	if (PulseNiagaraComp && PulseNiagaraComp->GetAsset() && PulseNiagaraComp->GetOverrideParameters().GetDataInterfaces().Num() > 0)
 	{
 		UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayPosition(PulseNiagaraComp, TEXT("User.PulsePositions"), NiagaraPulsePositions);
+	}
+}
+
+void AMetaBrainSceneController::SyncFiringPointLights(double NowWallSec)
+{
+	if (!CurrentSnapshot.IsValid() || FiringLightPool.Num() == 0) return;
+
+	struct FFiringCandidate
+	{
+		FVector Pos;
+		float Flash;
+	};
+	TArray<FFiringCandidate> Candidates;
+
+	for (const FMetaBrainNeuronSnap& N : CurrentSnapshot->Neurons)
+	{
+		const double Elapsed = NowWallSec - N.LastFireWallSec;
+		if (Elapsed >= 0.0 && Elapsed < 0.32)
+		{
+			const float Flash = static_cast<float>(FMath::Exp(-Elapsed / 0.11));
+			if (Flash > 0.06f)
+			{
+				Candidates.Add({ FVector(N.PositionCm), Flash });
+			}
+		}
+	}
+
+	Candidates.Sort([](const FFiringCandidate& A, const FFiringCandidate& B) { return A.Flash > B.Flash; });
+
+	const int32 ActiveCount = FMath::Min(FiringLightPool.Num(), Candidates.Num());
+	for (int32 i = 0; i < FiringLightPool.Num(); ++i)
+	{
+		UPointLightComponent* PL = FiringLightPool[i];
+		if (!PL) continue;
+
+		if (i < ActiveCount)
+		{
+			PL->SetWorldLocation(Candidates[i].Pos);
+			PL->SetIntensity(Candidates[i].Flash * 1650.0f);
+			PL->SetVisibility(true);
+		}
+		else
+		{
+			PL->SetIntensity(0.0f);
+			PL->SetVisibility(false);
+		}
 	}
 }
 
@@ -937,6 +1061,7 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 		SyncNeuronHISM(NowSec, CamLoc);
 		SyncHolonShellsAndLabels(CamLoc);
 		SyncEdgesAndPulses(DeltaSeconds, NowSec);
+		SyncFiringPointLights(NowSec);
 		UpdatePostProcessFocus(DeltaSeconds, CamLoc);
 	}
 

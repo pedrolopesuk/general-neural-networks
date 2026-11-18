@@ -3,8 +3,6 @@
 #include "MetaBrainSceneController.h"
 #include "MetaBrainHUDWidget.h"
 #include "Blueprint/UserWidget.h"
-#include "Misc/CommandLine.h"
-#include "Misc/Parse.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
@@ -13,6 +11,8 @@
 #include "EngineUtils.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Layout/WidgetPath.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "HAL/PlatformTime.h"
 
 AMetaBrainPlayerController::AMetaBrainPlayerController()
@@ -23,40 +23,31 @@ AMetaBrainPlayerController::AMetaBrainPlayerController()
 	DefaultMouseCursor = EMouseCursor::Default;
 }
 
-void AMetaBrainPlayerController::EnsureEnhancedInputAssets()
+void AMetaBrainPlayerController::BuildCleanEnhancedInput()
 {
-	IA_PrimaryPointer = LoadObject<UInputAction>(nullptr, TEXT("/Game/MetaBrain/Input/IA_PrimaryPointer.IA_PrimaryPointer"));
-	IA_OrbitHold = LoadObject<UInputAction>(nullptr, TEXT("/Game/MetaBrain/Input/IA_OrbitHold.IA_OrbitHold"));
-	IA_PanHold = LoadObject<UInputAction>(nullptr, TEXT("/Game/MetaBrain/Input/IA_PanHold.IA_PanHold"));
-	IA_LookDelta = LoadObject<UInputAction>(nullptr, TEXT("/Game/MetaBrain/Input/IA_LookDelta.IA_LookDelta"));
-	IA_ZoomWheel = LoadObject<UInputAction>(nullptr, TEXT("/Game/MetaBrain/Input/IA_ZoomWheel.IA_ZoomWheel"));
-	IA_StepUp = LoadObject<UInputAction>(nullptr, TEXT("/Game/MetaBrain/Input/IA_StepUp.IA_StepUp"));
-	CameraMappingContext = LoadObject<UInputMappingContext>(nullptr, TEXT("/Game/MetaBrain/Input/IMC_MetaBrainCamera.IMC_MetaBrainCamera"));
+	if (CameraMappingContext) return;
 
-	auto MakeFallbackAction = [this](const TCHAR* Name, EInputActionValueType ValType) -> UInputAction*
+	auto MakeAction = [this](const TCHAR* Name, EInputActionValueType ValType) -> UInputAction*
 	{
 		UInputAction* Act = NewObject<UInputAction>(this, Name);
 		Act->ValueType = ValType;
 		return Act;
 	};
 
-	if (!IA_PrimaryPointer) IA_PrimaryPointer = MakeFallbackAction(TEXT("IA_PrimaryPointer_RT"), EInputActionValueType::Boolean);
-	if (!IA_OrbitHold) IA_OrbitHold = MakeFallbackAction(TEXT("IA_OrbitHold_RT"), EInputActionValueType::Boolean);
-	if (!IA_PanHold) IA_PanHold = MakeFallbackAction(TEXT("IA_PanHold_RT"), EInputActionValueType::Boolean);
-	if (!IA_LookDelta) IA_LookDelta = MakeFallbackAction(TEXT("IA_LookDelta_RT"), EInputActionValueType::Axis2D);
-	if (!IA_ZoomWheel) IA_ZoomWheel = MakeFallbackAction(TEXT("IA_ZoomWheel_RT"), EInputActionValueType::Axis1D);
-	if (!IA_StepUp) IA_StepUp = MakeFallbackAction(TEXT("IA_StepUp_RT"), EInputActionValueType::Boolean);
+	IA_PrimaryPointer = MakeAction(TEXT("IA_PrimaryPointer_Live"), EInputActionValueType::Boolean);
+	IA_OrbitHold      = MakeAction(TEXT("IA_OrbitHold_Live"), EInputActionValueType::Boolean);
+	IA_PanHold        = MakeAction(TEXT("IA_PanHold_Live"), EInputActionValueType::Boolean);
+	IA_LookDelta      = MakeAction(TEXT("IA_LookDelta_Live"), EInputActionValueType::Axis2D);
+	IA_ZoomWheel      = MakeAction(TEXT("IA_ZoomWheel_Live"), EInputActionValueType::Axis1D);
+	IA_StepUp         = MakeAction(TEXT("IA_StepUp_Live"), EInputActionValueType::Boolean);
 
-	if (!CameraMappingContext || CameraMappingContext->GetMappings().Num() == 0)
-	{
-		CameraMappingContext = NewObject<UInputMappingContext>(this, TEXT("IMC_MetaBrainCamera_RT"));
-		CameraMappingContext->MapKey(IA_PrimaryPointer, EKeys::LeftMouseButton);
-		CameraMappingContext->MapKey(IA_OrbitHold, EKeys::RightMouseButton);
-		CameraMappingContext->MapKey(IA_PanHold, EKeys::MiddleMouseButton);
-		CameraMappingContext->MapKey(IA_LookDelta, EKeys::Mouse2D);
-		CameraMappingContext->MapKey(IA_ZoomWheel, EKeys::MouseWheelAxis);
-		CameraMappingContext->MapKey(IA_StepUp, EKeys::Escape);
-	}
+	CameraMappingContext = NewObject<UInputMappingContext>(this, TEXT("IMC_MetaBrainCamera_Live"));
+	CameraMappingContext->MapKey(IA_PrimaryPointer, EKeys::LeftMouseButton);
+	CameraMappingContext->MapKey(IA_OrbitHold, EKeys::RightMouseButton);
+	CameraMappingContext->MapKey(IA_PanHold, EKeys::MiddleMouseButton);
+	CameraMappingContext->MapKey(IA_LookDelta, EKeys::Mouse2D);
+	CameraMappingContext->MapKey(IA_ZoomWheel, EKeys::MouseWheelAxis);
+	CameraMappingContext->MapKey(IA_StepUp, EKeys::Escape);
 }
 
 void AMetaBrainPlayerController::BeginPlay()
@@ -72,7 +63,7 @@ void AMetaBrainPlayerController::BeginPlay()
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsys = LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
 		{
-			EnsureEnhancedInputAssets();
+			BuildCleanEnhancedInput();
 			Subsys->ClearAllMappings();
 			Subsys->AddMappingContext(CameraMappingContext, 0);
 		}
@@ -88,6 +79,8 @@ void AMetaBrainPlayerController::BeginPlay()
 		ActiveHUDWidget = CreateWidget<UMetaBrainHUDWidget>(this, HUDClass);
 		if (ActiveHUDWidget)
 		{
+			// CRITICAL: Outer UUserWidget wrapper must be SelfHitTestInvisible so the 3D stage receives mouse drag/pan/wheel!
+			ActiveHUDWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 			ActiveHUDWidget->AddToViewport(0);
 		}
 	}
@@ -96,86 +89,12 @@ void AMetaBrainPlayerController::BeginPlay()
 void AMetaBrainPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
-	EnsureEnhancedInputAssets();
+	BuildCleanEnhancedInput();
 
 	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent))
 	{
-		EIC->BindAction(IA_PrimaryPointer, ETriggerEvent::Started, this, &AMetaBrainPlayerController::OnPrimaryStarted);
-		EIC->BindAction(IA_PrimaryPointer, ETriggerEvent::Completed, this, &AMetaBrainPlayerController::OnPrimaryCompleted);
-		EIC->BindAction(IA_OrbitHold, ETriggerEvent::Started, this, &AMetaBrainPlayerController::OnOrbitStarted);
-		EIC->BindAction(IA_OrbitHold, ETriggerEvent::Completed, this, &AMetaBrainPlayerController::OnOrbitCompleted);
-		EIC->BindAction(IA_PanHold, ETriggerEvent::Started, this, &AMetaBrainPlayerController::OnPanStarted);
-		EIC->BindAction(IA_PanHold, ETriggerEvent::Completed, this, &AMetaBrainPlayerController::OnPanCompleted);
-		EIC->BindAction(IA_LookDelta, ETriggerEvent::Triggered, this, &AMetaBrainPlayerController::OnLookDelta);
 		EIC->BindAction(IA_ZoomWheel, ETriggerEvent::Triggered, this, &AMetaBrainPlayerController::OnZoomWheel);
 		EIC->BindAction(IA_StepUp, ETriggerEvent::Started, this, &AMetaBrainPlayerController::OnStepUp);
-	}
-}
-
-void AMetaBrainPlayerController::OnPrimaryStarted(const FInputActionValue&)
-{
-	if (IsCursorOverUIWidget()) return;
-	bPrimaryDown = true;
-	bPrimaryDragged = false;
-	GetMousePosition(PrimaryPressPos.X, PrimaryPressPos.Y);
-}
-
-void AMetaBrainPlayerController::OnPrimaryCompleted(const FInputActionValue&)
-{
-	if (bPrimaryDown && !bPrimaryDragged && !IsCursorOverUIWidget())
-	{
-		HandleSceneClick();
-	}
-	bPrimaryDown = false;
-	bPrimaryDragged = false;
-}
-
-void AMetaBrainPlayerController::OnOrbitStarted(const FInputActionValue&)
-{
-	if (!IsCursorOverUIWidget()) bOrbitDown = true;
-}
-
-void AMetaBrainPlayerController::OnOrbitCompleted(const FInputActionValue&)
-{
-	bOrbitDown = false;
-}
-
-void AMetaBrainPlayerController::OnPanStarted(const FInputActionValue&)
-{
-	if (!IsCursorOverUIWidget()) bPanDown = true;
-}
-
-void AMetaBrainPlayerController::OnPanCompleted(const FInputActionValue&)
-{
-	bPanDown = false;
-}
-
-void AMetaBrainPlayerController::OnLookDelta(const FInputActionValue& Value)
-{
-	AMetaBrainCameraPawn* CamPawn = GetMetaBrainPawn();
-	if (!CamPawn) return;
-
-	const FVector2D Delta = Value.Get<FVector2D>();
-	if (Delta.IsNearlyZero()) return;
-
-	if (bPrimaryDown && !bPrimaryDragged)
-	{
-		FVector2D CurPos = PrimaryPressPos;
-		GetMousePosition(CurPos.X, CurPos.Y);
-		if (FVector2D::Distance(CurPos, PrimaryPressPos) > 4.5f)
-		{
-			bPrimaryDragged = true;
-		}
-	}
-
-	const bool bShiftDown = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
-	if (bPanDown || (bOrbitDown && bShiftDown))
-	{
-		CamPawn->AddPanInput(Delta.X * 2.2f, -Delta.Y * 2.2f);
-	}
-	else if (bOrbitDown || (bPrimaryDown && bPrimaryDragged))
-	{
-		CamPawn->AddOrbitInput(Delta.X * 0.32f, Delta.Y * 0.32f);
 	}
 }
 
@@ -213,6 +132,13 @@ AMetaBrainCameraPawn* AMetaBrainPlayerController::GetMetaBrainPawn() const
 	return Cast<AMetaBrainCameraPawn>(GetPawn());
 }
 
+bool AMetaBrainPlayerController::IsTextBoxFocused() const
+{
+	if (!FSlateApplication::IsInitialized()) return false;
+	TSharedPtr<SWidget> Focused = FSlateApplication::Get().GetKeyboardFocusedWidget();
+	return Focused.IsValid() && Focused->GetType() == TEXT("SEditableTextBox");
+}
+
 bool AMetaBrainPlayerController::IsCursorOverUIWidget() const
 {
 	if (!FSlateApplication::IsInitialized()) return false;
@@ -223,13 +149,117 @@ bool AMetaBrainPlayerController::IsCursorOverUIWidget() const
 	for (int32 i = WidgetPath.Widgets.Num() - 1; i >= 0; --i)
 	{
 		const FName TypeName = WidgetPath.Widgets[i].Widget->GetType();
-		if (TypeName == TEXT("SButton") || TypeName == TEXT("SSlider") || TypeName == TEXT("SEditableTextBox") ||
-			TypeName == TEXT("SMetaBrainTraceWidget") || TypeName == TEXT("SScrollBox"))
+		if (TypeName == TEXT("SBorder") || TypeName == TEXT("SButton") || TypeName == TEXT("SSlider") ||
+			TypeName == TEXT("SEditableTextBox") || TypeName == TEXT("SMetaBrainTraceWidget") ||
+			TypeName == TEXT("SMetaBrainRetinaWidget") || TypeName == TEXT("SScrollBox"))
 		{
 			return true;
 		}
 	}
 	return false;
+}
+
+void AMetaBrainPlayerController::ProcessPointerAndKeyboardCamera(float DeltaTime)
+{
+	AMetaBrainCameraPawn* CamPawn = GetMetaBrainPawn();
+	if (!CamPawn || !FSlateApplication::IsInitialized()) return;
+
+	const FVector2D CurScreenPos = FSlateApplication::Get().GetCursorPos();
+	if (!bHasLastCursor)
+	{
+		LastCursorScreenPos = CurScreenPos;
+		bHasLastCursor = true;
+	}
+	const FVector2D ScreenDelta = CurScreenPos - LastCursorScreenPos;
+	LastCursorScreenPos = CurScreenPos;
+
+	const TSet<FKey> PressedButtons = FSlateApplication::Get().GetPressedMouseButtons();
+	const FModifierKeysState ModKeys = FSlateApplication::Get().GetModifierKeys();
+
+	const bool bLmbNow = PressedButtons.Contains(EKeys::LeftMouseButton);
+	const bool bRmbNow = PressedButtons.Contains(EKeys::RightMouseButton);
+	const bool bMmbNow = PressedButtons.Contains(EKeys::MiddleMouseButton);
+	const bool bShift  = ModKeys.IsShiftDown();
+
+	// Pan activates on Right-Drag, Middle-Drag, OR Shift + Left-Drag!
+	const bool bPanBtnNow = bRmbNow || bMmbNow || (bLmbNow && bShift);
+	const bool bOrbitBtnNow = bLmbNow && !bShift && !bRmbNow && !bMmbNow;
+
+	// 1. Handle Pan Start / Drag / End
+	if (bPanBtnNow && !bPrevPanBtnDown)
+	{
+		if (!IsCursorOverUIWidget())
+		{
+			bStagePanActive = true;
+		}
+	}
+	else if (!bPanBtnNow)
+	{
+		bStagePanActive = false;
+	}
+
+	if (bStagePanActive && !ScreenDelta.IsNearlyZero())
+	{
+		CamPawn->AddPanInput(static_cast<float>(ScreenDelta.X), static_cast<float>(-ScreenDelta.Y));
+	}
+
+	// 2. Handle Left-Button Orbit Drag vs Single/Double Click
+	if (bOrbitBtnNow && !bPrevLmbDown)
+	{
+		if (!IsCursorOverUIWidget())
+		{
+			bStageLmbActive = true;
+			bLmbDragged = false;
+			LmbPressScreenPos = CurScreenPos;
+		}
+	}
+	else if (bOrbitBtnNow && bStageLmbActive)
+	{
+		if (!bLmbDragged && FVector2D::Distance(CurScreenPos, LmbPressScreenPos) > 4.5)
+		{
+			bLmbDragged = true;
+		}
+		if (bLmbDragged && !ScreenDelta.IsNearlyZero())
+		{
+			CamPawn->AddOrbitInput(static_cast<float>(ScreenDelta.X) * 0.28f, static_cast<float>(-ScreenDelta.Y) * 0.24f);
+		}
+	}
+	else if (!bOrbitBtnNow && bPrevLmbDown)
+	{
+		if (bStageLmbActive && !bLmbDragged && !bStagePanActive && !IsCursorOverUIWidget())
+		{
+			HandleSceneClick();
+		}
+		bStageLmbActive = false;
+		bLmbDragged = false;
+	}
+
+	bPrevLmbDown = bOrbitBtnNow;
+	bPrevPanBtnDown = bPanBtnNow;
+
+	// 3. Direct Mouse Wheel Backup (in case Slate window holds focus outside SViewport)
+	const float RawWheel = GetInputAnalogKeyState(EKeys::MouseWheelAxis);
+	if (!FMath::IsNearlyZero(RawWheel) && !IsCursorOverUIWidget())
+	{
+		CamPawn->AddDollyWheelInput(RawWheel * 0.35f);
+	}
+
+	// 4. Keyboard 3D Free-Fly / Pan (WASD + QE + Arrow Keys) when not typing in text box
+	if (!IsTextBoxFocused())
+	{
+		FVector MoveVec = FVector::ZeroVector;
+		if (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up))    MoveVec.X += 1.0;
+		if (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down))  MoveVec.X -= 1.0;
+		if (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right)) MoveVec.Y += 1.0;
+		if (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left))  MoveVec.Y -= 1.0;
+		if (IsInputKeyDown(EKeys::E) || IsInputKeyDown(EKeys::PageUp))   MoveVec.Z += 1.0;
+		if (IsInputKeyDown(EKeys::Q) || IsInputKeyDown(EKeys::PageDown)) MoveVec.Z -= 1.0;
+
+		if (!MoveVec.IsNearlyZero())
+		{
+			CamPawn->AddFreeFlyInput(MoveVec.GetClampedToMaxSize(1.0), DeltaTime);
+		}
+	}
 }
 
 static bool RaySphereHit(const FVector& RayOrigin, const FVector& RayDir, const FVector& Center, float Radius, double& OutDist)
@@ -252,7 +282,7 @@ void AMetaBrainPlayerController::UpdateHoverRaycast()
 	AMetaBrainSceneController* SC = FindSceneController();
 	if (!SC) return;
 
-	if (bPrimaryDragged || bOrbitDown || bPanDown || IsCursorOverUIWidget())
+	if (bLmbDragged || bStagePanActive || IsCursorOverUIWidget())
 	{
 		return;
 	}
@@ -271,19 +301,17 @@ void AMetaBrainPlayerController::UpdateHoverRaycast()
 	const EMetaBrainZoomLevel ZoomLevel = SC->GetZoomLevel();
 	const FString& FocusedHolon = SC->GetFocusedHolonKey();
 
-	// 1. Check neuron hit
 	int64 BestNeuronId = -1;
 	double BestNeuronDist = 1e12;
 	for (const FMetaBrainNeuronSnap& N : Snap->Neurons)
 	{
-		// In Macro view, inner cortical/micro neurons are faded behind holon shells; allow hovering Root/Terminal directly
 		if (ZoomLevel == EMetaBrainZoomLevel::Macro && N.Role != 0 && N.Role != 3)
 		{
 			continue;
 		}
 
 		double HitDist = 0.0;
-		const float PickRadius = FMath::Max(4.0f, N.RadiusCm * 1.40f);
+		const float PickRadius = FMath::Max(4.5f, N.RadiusCm * 1.45f);
 		if (RaySphereHit(RayOrigin, RayDir, FVector(N.PositionCm), PickRadius, HitDist) && HitDist < BestNeuronDist)
 		{
 			BestNeuronDist = HitDist;
@@ -291,7 +319,6 @@ void AMetaBrainPlayerController::UpdateHoverRaycast()
 		}
 	}
 
-	// 2. Check holon shell hit for zoom-in target
 	FString BestHolonKey;
 	double BestHolonDist = 1e12;
 	const int32 TargetHolonLevel = (ZoomLevel == EMetaBrainZoomLevel::Macro) ? 1 : ((ZoomLevel == EMetaBrainZoomLevel::Cluster) ? 2 : 3);
@@ -349,5 +376,6 @@ void AMetaBrainPlayerController::HandleSceneClick()
 void AMetaBrainPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
+	ProcessPointerAndKeyboardCamera(DeltaTime);
 	UpdateHoverRaycast();
 }

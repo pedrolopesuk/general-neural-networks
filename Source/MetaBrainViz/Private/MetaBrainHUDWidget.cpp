@@ -322,14 +322,16 @@ TSharedRef<SWidget> UMetaBrainHUDWidget::RebuildWidget()
 	}
 
 	// ========================================================================
-	// Compose Full HUD Hierarchy
+	// Compose Full HUD Hierarchy (Root SOverlay MUST be SelfHitTestInvisible so 3D viewport receives mouse drag/pan/wheel!)
 	// ========================================================================
 	TSharedRef<SWidget> RootLayout = SNew(SOverlay)
+	.Visibility(EVisibility::SelfHitTestInvisible)
 
 	// 1. Top 32 px Instrument Header Bar
 	+ SOverlay::Slot().HAlign(HAlign_Fill).VAlign(VAlign_Top)
 	[
 		SNew(SVerticalBox)
+		.Visibility(EVisibility::SelfHitTestInvisible)
 		+ SVerticalBox::Slot().AutoHeight()
 		[
 			SNew(SBox).HeightOverride(Style->HeaderHeightPx)
@@ -400,6 +402,7 @@ TSharedRef<SWidget> UMetaBrainHUDWidget::RebuildWidget()
 	+ SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Fill).Padding(0.0f, Style->HeaderHeightPx + 1.0f, 0.0f, 0.0f)
 	[
 		SNew(SHorizontalBox)
+		.Visibility(EVisibility::SelfHitTestInvisible)
 		+ SHorizontalBox::Slot().AutoWidth()
 		[
 			SNew(SBox).WidthOverride(Style->LeftColumnWidthPx)

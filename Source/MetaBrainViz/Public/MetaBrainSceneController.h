@@ -13,6 +13,7 @@ class UMaterialInterface;
 class UMaterialParameterCollection;
 class UStaticMesh;
 class APostProcessVolume;
+class UPointLightComponent;
 
 UENUM(BlueprintType)
 enum class EMetaBrainZoomLevel : uint8
@@ -35,6 +36,7 @@ struct FMetaBrainBreadcrumbNode
 struct FMetaBrainTravelingPulse
 {
 	FVector StartPos = FVector::ZeroVector;
+	FVector CtrlPos = FVector::ZeroVector;
 	FVector EndPos = FVector::ZeroVector;
 	float LengthCm = 100.0f;
 	float SpeedCmPerSec = 350.0f;
@@ -111,6 +113,9 @@ protected:
 	TArray<TObjectPtr<UWidgetComponent>> HolonLabelPool;
 
 	UPROPERTY()
+	TArray<TObjectPtr<UPointLightComponent>> FiringLightPool;
+
+	UPROPERTY()
 	TObjectPtr<UStaticMesh> SphereMesh;
 
 	UPROPERTY()
@@ -162,7 +167,10 @@ protected:
 	struct FRenderedEdgeMap
 	{
 		int32 SnapshotEdgeIdx = 0;
+		int32 FirstHismIdx = 0;
+		int32 NumSegments = 1;
 		FVector StartPos = FVector::ZeroVector;
+		FVector CtrlPos = FVector::ZeroVector;
 		FVector EndPos = FVector::ZeroVector;
 	};
 	TArray<FRenderedEdgeMap> ActiveEdgeInstances;
@@ -190,5 +198,6 @@ protected:
 	void SyncNeuronHISM(double NowWallSec, const FVector& CamLoc);
 	void SyncHolonShellsAndLabels(const FVector& CamLoc);
 	void SyncEdgesAndPulses(float DeltaSeconds, double NowWallSec);
+	void SyncFiringPointLights(double NowWallSec);
 	void UpdatePostProcessFocus(float DeltaSeconds, const FVector& CamLoc);
 };

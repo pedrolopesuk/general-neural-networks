@@ -102,30 +102,30 @@ def build_neuron_material():
     mel.connect_material_expressions(cd_iso, "", mul_iso, "B")
     mel.connect_material_property(mul_iso, "", unreal.MaterialProperty.MP_BASE_COLOR)
 
-    # Subtle Subsurface Scattering Color (0.28 * BaseColor) + Scatter Opacity 0.78
+    # Subtle Subsurface Scattering Color (0.42 * BaseColor) + Scatter Opacity 0.72 for deep microscopy translucency
     c_sss_scale = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -220, 220)
-    c_sss_scale.set_editor_property("r", 0.28)
+    c_sss_scale.set_editor_property("r", 0.42)
     mul_sss = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -60, 180)
     mel.connect_material_expressions(mul_iso, "", mul_sss, "A")
     mel.connect_material_expressions(c_sss_scale, "", mul_sss, "B")
     mel.connect_material_property(mul_sss, "", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
 
     c_opacity = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -60, 270)
-    c_opacity.set_editor_property("r", 0.78)
+    c_opacity.set_editor_property("r", 0.72)
     mel.connect_material_property(c_opacity, "", unreal.MaterialProperty.MP_OPACITY)
 
-    # Roughness (0.72 matte dielectric) & Specular (0.28)
+    # Roughness (0.58 satin dielectric so 3D spheres catch key + rim + neighbor firing bounce highlights) & Specular (0.42)
     c_rough = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -60, 340)
-    c_rough.set_editor_property("r", 0.72)
+    c_rough.set_editor_property("r", 0.58)
     mel.connect_material_property(c_rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
 
     c_spec = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -60, 410)
-    c_spec.set_editor_property("r", 0.28)
+    c_spec.set_editor_property("r", 0.42)
     mel.connect_material_property(c_spec, "", unreal.MaterialProperty.MP_SPECULAR)
 
-    # Emissive ONLY while firing (Amber * Flash * 3.8 -> crosses BloomThreshold > 1.2 ONLY during 300ms flash!)
+    # Emissive ONLY while firing (Amber * Flash * 5.2 -> crosses BloomThreshold > 1.25 ONLY during 300ms flash!)
     c_emissive_gain = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -420, -340)
-    c_emissive_gain.set_editor_property("r", 3.8)
+    c_emissive_gain.set_editor_property("r", 5.2)
     mul_flash_gain = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -250, -320)
     mel.connect_material_expressions(cd_flash, "", mul_flash_gain, "A")
     mel.connect_material_expressions(c_emissive_gain, "", mul_flash_gain, "B")

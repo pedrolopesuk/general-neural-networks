@@ -48,29 +48,27 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UMetaBrainHUDWidget> ActiveHUDWidget;
 
-	bool bPrimaryDown = false;
-	bool bOrbitDown = false;
-	bool bPanDown = false;
-	bool bPrimaryDragged = false;
-	FVector2D PrimaryPressPos = FVector2D::ZeroVector;
+	bool bPrevLmbDown = false;
+	bool bPrevPanBtnDown = false;
+	bool bStageLmbActive = false;
+	bool bStagePanActive = false;
+	bool bLmbDragged = false;
+	FVector2D LmbPressScreenPos = FVector2D::ZeroVector;
+	FVector2D LastCursorScreenPos = FVector2D::ZeroVector;
+	bool bHasLastCursor = false;
+
 	double LastClickWallSec = -10.0;
 	int64 LastClickedNeuronId = -1;
 
-	void EnsureEnhancedInputAssets();
-
-	void OnPrimaryStarted(const FInputActionValue& Value);
-	void OnPrimaryCompleted(const FInputActionValue& Value);
-	void OnOrbitStarted(const FInputActionValue& Value);
-	void OnOrbitCompleted(const FInputActionValue& Value);
-	void OnPanStarted(const FInputActionValue& Value);
-	void OnPanCompleted(const FInputActionValue& Value);
-	void OnLookDelta(const FInputActionValue& Value);
+	void BuildCleanEnhancedInput();
 	void OnZoomWheel(const FInputActionValue& Value);
 	void OnStepUp(const FInputActionValue& Value);
 
 	AMetaBrainSceneController* FindSceneController() const;
 	AMetaBrainCameraPawn* GetMetaBrainPawn() const;
 	bool IsCursorOverUIWidget() const;
+	bool IsTextBoxFocused() const;
+	void ProcessPointerAndKeyboardCamera(float DeltaTime);
 	void UpdateHoverRaycast();
 	void HandleSceneClick();
 };

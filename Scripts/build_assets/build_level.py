@@ -1,3 +1,4 @@
+import os
 import unreal
 
 
@@ -23,6 +24,12 @@ def build_level():
     unreal.EditorLoadingAndSavingUtils.new_blank_map(False)
     if unreal.EditorAssetLibrary.does_asset_exist(map_asset_path):
         unreal.EditorAssetLibrary.delete_asset(map_asset_path)
+    disk_umap = os.path.join(unreal.Paths.project_content_dir(), "MetaBrain", "Maps", "L_MetaBrain.umap")
+    if os.path.exists(disk_umap):
+        try:
+            os.remove(disk_umap)
+        except Exception:
+            pass
 
     level_subsys.new_level(map_asset_path)
 
@@ -39,16 +46,28 @@ def build_level():
         smc.set_editor_property("cast_shadow", False)
         smc.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
 
-    # 2. One Soft Key Light (Museum / Light-Sheet Microscopy Directional Key)
+    # 2. Soft Key Light + Grazing Rim Backlight (3-point Light-Sheet Microscopy Illumination)
     key_light = actor_subsys.spawn_actor_from_class(unreal.DirectionalLight, unreal.Vector(-500.0, -350.0, 520.0))
     if key_light:
         key_light.set_actor_label("SoftKeyLight")
         key_light.set_actor_rotation(unreal.Rotator(-36.0, 34.0, 0.0), False)
         lc = key_light.light_component
-        lc.set_editor_property("intensity", 3.6)
-        lc.set_editor_property("light_color", unreal.Color(248, 246, 242, 255))
-        lc.set_editor_property("light_source_angle", 6.0)
-        lc.set_editor_property("volumetric_scattering_intensity", 0.35)
+        lc.set_editor_property("intensity", 3.8)
+        lc.set_editor_property("light_color", unreal.Color(250, 247, 242, 255))
+        lc.set_editor_property("light_source_angle", 6.5)
+        lc.set_editor_property("volumetric_scattering_intensity", 0.45)
+        lc.set_editor_property("forward_shading_priority", 1)
+
+    rim_light = actor_subsys.spawn_actor_from_class(unreal.DirectionalLight, unreal.Vector(520.0, 420.0, 380.0))
+    if rim_light:
+        rim_light.set_actor_label("MicroscopyRimBackLight")
+        rim_light.set_actor_rotation(unreal.Rotator(-26.0, -142.0, 0.0), False)
+        rlc = rim_light.light_component
+        rlc.set_editor_property("intensity", 2.35)
+        rlc.set_editor_property("light_color", unreal.Color(224, 230, 238, 255))
+        rlc.set_editor_property("light_source_angle", 4.0)
+        rlc.set_editor_property("cast_shadows", False)
+        rlc.set_editor_property("volumetric_scattering_intensity", 0.55)
 
     # 3. Subtle Neutral Fill SkyLight for Lumen GI subsurface shadow definition
     sky = actor_subsys.spawn_actor_from_class(unreal.SkyLight, unreal.Vector(0.0, 0.0, 400.0))
@@ -98,9 +117,13 @@ def build_level():
 
         # Bloom threshold set strictly > 1.0 so ONLY emissive amber (#FFB000, >2.4 HDR) blooms; nothing glows at rest
         s.set_editor_property("override_bloom_intensity", True)
-        s.set_editor_property("bloom_intensity", 0.60)
+        s.set_editor_property("bloom_intensity", 0.88)
         s.set_editor_property("override_bloom_threshold", True)
-        s.set_editor_property("bloom_threshold", 1.35)
+        s.set_editor_property("bloom_threshold", 1.25)
+        s.set_editor_property("override_lens_flare_intensity", True)
+        s.set_editor_property("lens_flare_intensity", 0.045)
+        s.set_editor_property("override_lens_flare_threshold", True)
+        s.set_editor_property("lens_flare_threshold", 2.6)
 
         # Cinematic Depth of Field (dynamically focused on selected neuron / holon by AMetaBrainSceneController)
         s.set_editor_property("override_depth_of_field_focal_distance", True)
