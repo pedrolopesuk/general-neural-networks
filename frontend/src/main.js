@@ -86,6 +86,7 @@ function positionPopover(clientX, clientY) {
 
 const viewport = new BrainViewport(document.getElementById('viewport-root'), {
   onSelectNeuron: async (id, clientX, clientY) => {
+    document.getElementById('hover-card').style.display = 'none';
     if (id === null) {
       closeInspector();
       return;

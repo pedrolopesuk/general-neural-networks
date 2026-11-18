@@ -409,14 +409,14 @@ export class BrainViewport {
       })
     };
 
-    const packDiam = Math.max(260, Math.min(this.width - 280, this.height - 96));
+    const packDiam = Math.max(250, Math.min(this.width - 300, this.height - 108));
     const rootHier = hierarchy(treeData)
       .sum(d => d.value || 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0));
 
     const packLayout = pack()
       .size([packDiam, packDiam])
-      .padding(d => (d.depth === 0 ? 18 : (d.depth === 1 ? 11 : 6)));
+      .padding(d => (d.depth === 0 ? 32 : (d.depth === 1 ? 12 : 6)));
 
     packLayout(rootHier);
 
@@ -505,18 +505,39 @@ export class BrainViewport {
       this._computePackedLayout();
     }
 
-    // Default edge filter so roughly 20% of edges are visible (with rank tie-breaker if weights saturate at clip)
+    // Default edge filter so roughly 20% of edges are visible across sensory, cortical & output pathways
     if (this.weightThreshold === null && this.synapses.length > 0) {
-      const scored = this.synapses.map((s, idx) => ({
-        idx,
-        score: Math.abs(s.weight) + Math.abs(s.eligibility || 0) * 0.05
-      })).sort((a, b) => b.score - a.score);
+      const keepTotal = Math.max(1, Math.round(this.synapses.length * 0.20));
+      const allowedSet = new Set();
 
-      const keepCount = Math.max(1, Math.round(this.synapses.length * 0.20));
-      const allowedSet = new Set(scored.slice(0, keepCount).map(d => d.idx));
+      const rootEdges = [];
+      const termEdges = [];
+      const cortEdges = [];
+
+      this.synapses.forEach((s, idx) => {
+        const src = this.nodeMap.get(s.source);
+        const dst = this.nodeMap.get(s.target);
+        const item = { idx, score: Math.abs(s.weight) + Math.abs(s.eligibility || 0) * 0.05 };
+        if (src?.role === 'RootSensory') rootEdges.push(item);
+        else if (dst?.role === 'TerminalReadout') termEdges.push(item);
+        else cortEdges.push(item);
+      });
+
+      rootEdges.sort((a, b) => b.score - a.score);
+      termEdges.sort((a, b) => b.score - a.score);
+      cortEdges.sort((a, b) => b.score - a.score);
+
+      const nRoot = Math.min(rootEdges.length, Math.round(keepTotal * 0.22));
+      const nTerm = Math.min(termEdges.length, Math.round(keepTotal * 0.14));
+      const nCort = Math.max(0, keepTotal - nRoot - nTerm);
+
+      for (let i = 0; i < nRoot; i++) allowedSet.add(rootEdges[i].idx);
+      for (let i = 0; i < nTerm; i++) allowedSet.add(termEdges[i].idx);
+      for (let i = 0; i < Math.min(cortEdges.length, nCort); i++) allowedSet.add(cortEdges[i].idx);
+
       this.edgeCutoffRank = allowedSet;
-
-      const kthWeight = Math.min(3.45, Math.abs(this.synapses[scored[keepCount - 1].idx].weight));
+      const allSorted = this.synapses.map(s => Math.abs(s.weight)).sort((a, b) => b - a);
+      const kthWeight = Math.min(3.40, allSorted[Math.min(allSorted.length - 1, keepTotal - 1)]);
       this.weightThreshold = kthWeight;
       if (this.onAutoThreshold) {
         this.onAutoThreshold(kthWeight, 3.5);
@@ -670,15 +691,11 @@ export class BrainViewport {
 
         // Compute aggregate firing flash across member neurons for Macro view
         let recentFlashes = 0;
-        let sumAct = 0;
         for (const mid of h.memberIds) {
-          const mn = this.nodeMap.get(mid);
-          if (mn) sumAct += (mn.activation || 0);
           const fst = this.flashState.get(mid);
           if (fst && (nowMs - fst.flashMs) < 300) recentFlashes++;
         }
         const flashRatio = h.memberIds.length > 0 ? Math.min(1, recentFlashes / Math.max(2, h.memberIds.length * 0.35)) : 0;
-        const meanAct = h.memberIds.length > 0 ? (sumAct / h.memberIds.length) : 0;
 
         // In Macro view, show subtle aggregate activity ring on top-level holons when firing
         if (tier === 'macro' && h.level === 1 && flashRatio > 0.05) {
@@ -701,10 +718,7 @@ export class BrainViewport {
 
         if (showLabel) {
           ctx.fillStyle = theme.textDim;
-          const lblText = (tier === 'macro' && h.level === 1)
-            ? `${h.label} · ${meanAct.toFixed(2)}`
-            : h.label;
-          ctx.fillText(lblText, h._sx, h._sy - h._sr - 3);
+          ctx.fillText(h.label, h._sx, h._sy - h._sr - 4);
         }
       }
     }
