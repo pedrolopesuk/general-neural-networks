@@ -126,7 +126,7 @@ void AMetaBrainSceneController::BeginPlay()
 	}
 
 	Breadcrumbs.Reset();
-	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -48.0, 4.0), 860.0f });
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -52.0, 2.0), 1260.0f });
 
 	FParse::Value(FCommandLine::Get(), TEXT("AutoShot="), AutoShotPath);
 	FParse::Value(FCommandLine::Get(), TEXT("ShotMode="), AutoShotMode);
@@ -232,8 +232,8 @@ void AMetaBrainSceneController::ZoomToMacro()
 	CurrentZoomLevel = EMetaBrainZoomLevel::Macro;
 	FocusedHolonKey.Empty();
 	Breadcrumbs.Reset();
-	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -48.0, 4.0), 860.0f });
-	NotifyCameraFlyTo(FVector(0.0, -48.0, 4.0), 860.0f);
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -52.0, 2.0), 1260.0f });
+	NotifyCameraFlyTo(FVector(0.0, -52.0, 2.0), 1260.0f);
 }
 
 void AMetaBrainSceneController::ZoomIntoHolon(const FString& HolonKey)
@@ -252,7 +252,7 @@ void AMetaBrainSceneController::ZoomIntoHolon(const FString& HolonKey)
 	if (!TargetH) return;
 
 	Breadcrumbs.Reset();
-	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -48.0, 4.0), 860.0f });
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -52.0, 2.0), 1260.0f });
 
 	if (TargetH->Level == 1)
 	{
@@ -427,6 +427,7 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 				Transforms[i] = FTransform(FRotator::ZeroRotator, FVector(Neurons[i].PositionCm), FVector(UniformScale));
 			}
 			NeuronHISM->AddInstances(Transforms, false, true);
+			NeuronHISM->BuildTreeIfOutdated(false, true);
 		}
 	}
 
@@ -475,8 +476,8 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 		float BaseBrightness = 1.0f;
 		if (bIsMacro && N.Role != 0 && N.Role != 3)
 		{
-			// Macro: top-level holons dominate, inner neurons faded subtly
-			BaseBrightness = (N.Depth == 0) ? 0.38f : 0.22f;
+			// Macro: top-level holons dominate in Activity lens; in Age lens keep full ramp legibility
+			BaseBrightness = bAgeLensActive ? 0.92f : ((N.Depth == 0) ? 0.44f : 0.28f);
 		}
 		else if (FocusedHolonMemberSet.Num() > 0)
 		{
@@ -521,6 +522,7 @@ void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)
 				Transforms[i] = FTransform(FRotator::ZeroRotator, FVector(Holons[i].CenterCm), FVector(UniformScale));
 			}
 			HolonShellHISM->AddInstances(Transforms, false, true);
+			HolonShellHISM->BuildTreeIfOutdated(false, true);
 		}
 	}
 
@@ -681,6 +683,7 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		if (FilamentTransforms.Num() > 0)
 		{
 			EdgeFilamentHISM->AddInstances(FilamentTransforms, false, true);
+			EdgeFilamentHISM->BuildTreeIfOutdated(false, true);
 		}
 
 		if (EdgeNiagaraComp && EdgeNiagaraComp->GetAsset())
@@ -777,6 +780,7 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 	if (PulseTransforms.Num() > 0)
 	{
 		SignalPulseHISM->AddInstances(PulseTransforms, false, true);
+		SignalPulseHISM->BuildTreeIfOutdated(false, true);
 		for (int32 i = 0; i < PulseEnvelopes.Num(); ++i)
 		{
 			SignalPulseHISM->SetCustomDataValue(i, 0, PulseEnvelopes[i], false);
@@ -829,6 +833,19 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 	++FrameCounter;
 
 	// Automated CLI fly-in & selection triggers at Frame 8 so 400 ms ease-out settles smoothly before Frame 75 screenshot
+	if (FrameCounter == 5 && bAgeLensActive && SimBridge)
+	{
+		// Spawn fresh child sub-networks so both new (#8FD3A8) and established (#5A6B8C) neurons are visible in Age Lens
+		for (int32 k = 0; k < 3; ++k)
+		{
+			FMetaBrainCommand GrowCmd;
+			GrowCmd.Type = EMetaBrainCmdType::AddChild;
+			GrowCmd.TargetId = -1;
+			GrowCmd.CountA = 4;
+			SimBridge->EnqueueCommand(GrowCmd);
+		}
+	}
+
 	if (FrameCounter == 8 && CurrentSnapshot.IsValid())
 	{
 		if (AutoShotMode.Equals(TEXT("Cluster"), ESearchCase::IgnoreCase))

@@ -260,7 +260,7 @@ TSharedRef<SWidget> UMetaBrainHUDWidget::RebuildWidget()
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
 			[
-				SNew(SBox).WidthOverride(78.0f)
+				SNew(SBox).WidthOverride(102.0f)
 				[
 					SAssignNew(Row.NameTxt, STextBlock)
 					.Text(FText::FromString(FString::Printf(TEXT("Out_%d"), r)))
