@@ -1,6 +1,10 @@
 #include "MetaBrainPlayerController.h"
 #include "MetaBrainCameraPawn.h"
 #include "MetaBrainSceneController.h"
+#include "MetaBrainHUDWidget.h"
+#include "Blueprint/UserWidget.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
@@ -71,6 +75,20 @@ void AMetaBrainPlayerController::BeginPlay()
 			EnsureEnhancedInputAssets();
 			Subsys->ClearAllMappings();
 			Subsys->AddMappingContext(CameraMappingContext, 0);
+		}
+	}
+
+	if (!FParse::Param(FCommandLine::Get(), TEXT("NoHUD")))
+	{
+		UClass* HUDClass = LoadClass<UMetaBrainHUDWidget>(nullptr, TEXT("/Game/MetaBrain/UI/WBP_MetaBrainHUD.WBP_MetaBrainHUD_C"));
+		if (!HUDClass)
+		{
+			HUDClass = UMetaBrainHUDWidget::StaticClass();
+		}
+		ActiveHUDWidget = CreateWidget<UMetaBrainHUDWidget>(this, HUDClass);
+		if (ActiveHUDWidget)
+		{
+			ActiveHUDWidget->AddToViewport(0);
 		}
 	}
 }

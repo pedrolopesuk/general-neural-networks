@@ -36,9 +36,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Camera")
 	TObjectPtr<UCameraComponent> CameraComp;
 
-	// Current & Target Orbit State (with smooth exponential inertia)
-	FVector CurrentPivotCm = FVector::ZeroVector;
-	FVector TargetPivotCm = FVector::ZeroVector;
+	// Current & Target Orbit State (with smooth exponential inertia; offset slightly left so brain centers right of 260px UI column)
+	FVector CurrentPivotCm = FVector(0.0, -48.0, 4.0);
+	FVector TargetPivotCm = FVector(0.0, -48.0, 4.0);
 
 	float CurrentYawDeg = 0.0f;
 	float TargetYawDeg = 0.0f;
@@ -46,8 +46,8 @@ protected:
 	float CurrentPitchDeg = -2.2f;
 	float TargetPitchDeg = -2.2f;
 
-	float CurrentDistanceCm = 680.0f;
-	float TargetDistanceCm = 680.0f;
+	float CurrentDistanceCm = 860.0f;
+	float TargetDistanceCm = 860.0f;
 
 	// 400 ms Cubic Ease-Out Fly-In State
 	bool bIsFlying = false;

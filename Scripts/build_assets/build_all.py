@@ -8,6 +8,7 @@ if SCRIPT_DIR not in sys.path:
 import build_materials
 import build_niagara
 import build_input
+import build_ui
 import build_level
 
 if __name__ == "__main__":
@@ -17,4 +18,5 @@ if __name__ == "__main__":
     build_materials.build_backdrop_material()
     build_niagara.build_niagara_systems()
     build_input.build_enhanced_input()
+    build_ui.build_ui_assets()
     build_level.build_level()

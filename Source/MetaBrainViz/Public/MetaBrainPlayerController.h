@@ -9,6 +9,7 @@ class UInputMappingContext;
 class UInputAction;
 class AMetaBrainSceneController;
 class AMetaBrainCameraPawn;
+class UMetaBrainHUDWidget;
 
 UCLASS()
 class METABRAINVIZ_API AMetaBrainPlayerController : public APlayerController
@@ -43,6 +44,9 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UInputAction> IA_StepUp;
+
+	UPROPERTY()
+	TObjectPtr<UMetaBrainHUDWidget> ActiveHUDWidget;
 
 	bool bPrimaryDown = false;
 	bool bOrbitDown = false;

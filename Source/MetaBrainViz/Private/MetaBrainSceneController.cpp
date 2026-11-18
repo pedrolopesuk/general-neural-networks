@@ -126,7 +126,7 @@ void AMetaBrainSceneController::BeginPlay()
 	}
 
 	Breadcrumbs.Reset();
-	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector::ZeroVector, 680.0f });
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -48.0, 4.0), 860.0f });
 
 	FParse::Value(FCommandLine::Get(), TEXT("AutoShot="), AutoShotPath);
 	FParse::Value(FCommandLine::Get(), TEXT("ShotMode="), AutoShotMode);
@@ -232,8 +232,8 @@ void AMetaBrainSceneController::ZoomToMacro()
 	CurrentZoomLevel = EMetaBrainZoomLevel::Macro;
 	FocusedHolonKey.Empty();
 	Breadcrumbs.Reset();
-	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector::ZeroVector, 680.0f });
-	NotifyCameraFlyTo(FVector::ZeroVector, 680.0f);
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -48.0, 4.0), 860.0f });
+	NotifyCameraFlyTo(FVector(0.0, -48.0, 4.0), 860.0f);
 }
 
 void AMetaBrainSceneController::ZoomIntoHolon(const FString& HolonKey)
@@ -252,7 +252,7 @@ void AMetaBrainSceneController::ZoomIntoHolon(const FString& HolonKey)
 	if (!TargetH) return;
 
 	Breadcrumbs.Reset();
-	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector::ZeroVector, 680.0f });
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector(0.0, -48.0, 4.0), 860.0f });
 
 	if (TargetH->Level == 1)
 	{
