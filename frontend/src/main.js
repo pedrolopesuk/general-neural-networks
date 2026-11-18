@@ -13,6 +13,21 @@ let dynamicForces = true;
 let sliderBeingDragged = false;
 let currentLens = 'activity';
 
+function formatOutputName(raw) {
+  let s = raw.replace(/^Output\./, '').replaceAll('_', ' ');
+  s = s.replace(/\bAlpha\b/gi, 'A').replace(/\bBeta\b/gi, 'B');
+  if (s.length > 1) {
+    s = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+    s = s.replace(/\bpattern a\b/i, 'Pattern A').replace(/\bpattern b\b/i, 'Pattern B');
+  }
+  return s;
+}
+
+function formatNodeName(raw) {
+  if (!raw) return '';
+  return raw.replace(/^Output\./, '').replace(/^Sensory\./, '').replaceAll('_', ' ');
+}
+
 let toastTimer = null;
 function showToast(msg) {
   const el = document.getElementById('toast-banner');
@@ -205,7 +220,7 @@ function switchLens(mode) {
   drawLegendRamp(mode);
   const labels = document.getElementById('lens-labels');
   if (mode === 'activity') {
-    labels.innerHTML = '<span class="mono">0.0</span><span class="mono">1.0</span>';
+    labels.innerHTML = '<span>idle → firing</span>';
   } else {
     labels.innerHTML = '<span>new → established</span>';
   }
@@ -472,7 +487,7 @@ function applyIncomingState(state) {
       <div class="term-row">
         <div class="term-hdr">
           <span style="color:${win ? 'var(--signal)' : 'var(--text)'};">
-            ${t.label.replace('Output.', '').replaceAll('_', ' ')}
+            ${formatOutputName(t.label)}
           </span>
           <div style="display:flex;align-items:center;gap:6px;">
             <span class="mono" style="color:${win ? 'var(--signal)' : 'var(--text)'};">

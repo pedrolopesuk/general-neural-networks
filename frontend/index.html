@@ -14,23 +14,22 @@
 
   <header id="hud-top">
     <div class="brand-cluster">
-      <div class="brand-logo">MetaBrain // Recursive Neural Engine</div>
-    </div>
-
-    <div class="telemetry-strip">
-      <div>tick <strong id="t-tick">0</strong></div>
-      <div>neurons <strong id="t-neurons">0</strong></div>
-      <div>holons <strong id="t-holons">0</strong></div>
-      <div>synapses <strong id="t-synapses">0</strong></div>
-      <div>depth <strong id="t-depth">0</strong></div>
-      <div>step <strong id="t-step-us">0</strong> us</div>
+      <div class="brand-logo">MetaBrain</div>
+      <div class="telemetry-strip">
+        <div>tick <strong id="t-tick">0</strong></div>
+        <div>neurons <strong id="t-neurons">0</strong></div>
+        <div>holons <strong id="t-holons">0</strong></div>
+        <div>synapses <strong id="t-synapses">0</strong></div>
+        <div>depth <strong id="t-depth">0</strong></div>
+        <div>step <strong id="t-step-us">0</strong> µs</div>
+      </div>
     </div>
 
     <div class="transport-strip">
-      <button id="btn-run-toggle" class="active btn-sm">Running (18Hz)</button>
-      <button id="btn-physics-toggle" class="btn-sm">3D Forces</button>
-      <button id="btn-save" class="btn-sm">Save JSON/GraphML</button>
-      <button id="btn-bench" class="btn-sm">C++ AVX2 Bench</button>
+      <button id="btn-run-toggle" class="btn-sm">Pause · 18 Hz</button>
+      <button id="btn-physics-toggle" class="btn-sm">3D</button>
+      <button id="btn-save" class="btn-sm">Save</button>
+      <button id="btn-bench" class="btn-sm">Benchmark</button>
       <button id="btn-reset" class="btn-sm">Reset</button>
     </div>
   </header>
@@ -38,63 +37,66 @@
   <aside id="hud-left" class="panel-flat">
     <section>
       <div class="sec-hdr">
-        <span>Real-Time Heatmap Lens</span>
+        <span>Lens</span>
       </div>
       <div class="segmented" style="width:100%;display:grid;grid-template-columns:1fr 1fr;">
-        <button id="btn-lens-activity" class="active">Activity Lens</button>
-        <button id="btn-lens-age">Age Memory Lens</button>
+        <button id="btn-lens-activity" class="active btn-sm">Activity</button>
+        <button id="btn-lens-age" class="btn-sm">Age</button>
       </div>
       <canvas id="legend-canvas" width="160" height="4"></canvas>
       <div id="lens-labels" class="legend-ticks">
-        <span>0.0</span>
-        <span>1.0</span>
+        <span>idle → firing</span>
       </div>
     </section>
 
     <section>
       <div class="sec-hdr">
-        <span>Endocrine System (Global Wash)</span>
+        <span>State</span>
       </div>
 
-      <div class="slider-row">
+      <div class="slider-row" title="Lowers activation threshold θ globally, increasing reactivity">
         <div class="slider-top">
-          <span>Fear / Anxiety</span>
+          <span>Fear</span>
           <strong id="lbl-fear">0.12</strong>
         </div>
-        <input type="range" id="sl-fear" min="0" max="1" step="0.01" value="0.12" />
+        <input type="range" id="sl-fear" min="0" max="1" step="0.01" value="0.12"
+               title="Lowers activation threshold θ globally, increasing reactivity" />
       </div>
 
-      <div class="slider-row">
+      <div class="slider-row" title="Boosts learning rate η, consolidating active pathways">
         <div class="slider-top">
-          <span>Dopamine / Reward</span>
+          <span>Dopamine</span>
           <strong id="lbl-dopamine">0.25</strong>
         </div>
-        <input type="range" id="sl-dopamine" min="-0.5" max="2.0" step="0.02" value="0.25" />
+        <input type="range" id="sl-dopamine" min="-0.5" max="2.0" step="0.02" value="0.25"
+               title="Boosts learning rate η, consolidating active pathways" />
       </div>
 
-      <div class="slider-row">
+      <div class="slider-row" title="Raises activation threshold θ, dampening response">
         <div class="slider-top">
-          <span>Fatigue / Sadness</span>
+          <span>Fatigue</span>
           <strong id="lbl-fatigue">0.08</strong>
         </div>
-        <input type="range" id="sl-fatigue" min="0" max="1" step="0.01" value="0.08" />
+        <input type="range" id="sl-fatigue" min="0" max="1" step="0.01" value="0.08"
+               title="Raises activation threshold θ, dampening response" />
       </div>
 
-      <div class="slider-row">
+      <div class="slider-row" title="Drives stochastic exploration and recursive child growth">
         <div class="slider-top">
-          <span>Curiosity / Plasticity</span>
+          <span>Curiosity</span>
           <strong id="lbl-curiosity">0.50</strong>
         </div>
-        <input type="range" id="sl-curiosity" min="0" max="1" step="0.01" value="0.50" />
+        <input type="range" id="sl-curiosity" min="0" max="1" step="0.01" value="0.50"
+               title="Drives stochastic exploration and recursive child growth" />
       </div>
 
       <div class="kpi-pair">
         <div>
-          <span>Effective Threshold θ</span>
+          <span>threshold θ</span>
           <strong id="kpi-theta">0.352</strong>
         </div>
         <div>
-          <span>Effective Learning Rate η</span>
+          <span>learning rate η</span>
           <strong id="kpi-lr">0.024</strong>
         </div>
       </div>
@@ -102,18 +104,18 @@
 
     <section>
       <div class="sec-hdr">
-        <span>Live Neural &amp; Endocrine Oscilloscope</span>
+        <span>Trace</span>
       </div>
       <canvas id="oscilloscope" width="240" height="120"></canvas>
     </section>
 
     <section>
       <div class="sec-hdr">
-        <span>Structural Graph Plasticity</span>
+        <span>Structure</span>
       </div>
       <div class="grid-2">
-        <button id="btn-mitosis-global" class="btn-sm">Auto AddChild()</button>
-        <button id="btn-synaptogenesis" class="btn-sm">Wire Co-Active</button>
+        <button id="btn-mitosis-global" class="btn-sm">Grow automatically</button>
+        <button id="btn-synaptogenesis" class="btn-sm">Wire co-active</button>
       </div>
     </section>
   </aside>
@@ -121,24 +123,24 @@
   <aside id="hud-right" class="panel-flat">
     <section>
       <div class="sec-hdr">
-        <span>Sensory Input Transducer</span>
+        <span>Input</span>
       </div>
       <div class="segmented" style="width:100%;display:grid;grid-template-columns:1fr 1fr 1fr;">
-        <button id="tab-btn-text" class="btn-sm active">Text SDR</button>
-        <button id="tab-btn-retina" class="btn-sm">16x16 Retina</button>
-        <button id="tab-btn-manual" class="btn-sm">Manual [0-1]</button>
+        <button id="tab-btn-text" class="btn-sm active">Text</button>
+        <button id="tab-btn-retina" class="btn-sm">Retina 16×16</button>
+        <button id="tab-btn-manual" class="btn-sm">Manual</button>
       </div>
 
       <div id="pane-text" class="tab-pane active">
         <div class="input-line">
-          <input type="text" id="inp-text" value="HARMONY_REWARD_EXPLORE_SIGNAL" />
-          <button id="btn-send-text" class="primary">Pulse</button>
+          <input type="text" id="inp-text" placeholder="Type input text…" />
+          <button id="btn-send-text" class="primary btn-sm">Pulse</button>
         </div>
         <div class="grid-2" style="margin-top:6px;">
-          <button class="btn-sm" data-preset="HARMONY_REWARD_EXPLORE_SIGNAL">Alpha Harmony</button>
-          <button class="btn-sm" data-preset="HAZARD_PREDATOR_FREEZE_ALARM">Beta Threat</button>
-          <button class="btn-sm" data-preset="NOVEL_FRACTAL_QUANTUM_PARADOX_INPUT">Novel Paradox</button>
-          <button class="btn-sm" data-preset="CALM_SEROTONERGIC_REST_WAVE">Serene Wave</button>
+          <button class="btn-sm" data-preset="HARMONY_REWARD_EXPLORE_SIGNAL">Stimulus A</button>
+          <button class="btn-sm" data-preset="HAZARD_PREDATOR_FREEZE_ALARM">Stimulus B</button>
+          <button class="btn-sm" data-preset="NOVEL_FRACTAL_QUANTUM_PARADOX_INPUT">Stimulus C</button>
+          <button class="btn-sm" data-preset="CALM_SEROTONERGIC_REST_WAVE">Stimulus D</button>
         </div>
       </div>
 
@@ -167,23 +169,18 @@
 
     <section>
       <div class="sec-hdr">
-        <span>Terminal Readout Brightness</span>
+        <span>Output</span>
       </div>
       <div id="terminal-container"></div>
 
       <div class="grid-2" style="margin-top:8px;">
-        <button id="btn-reward">Reward</button>
-        <button id="btn-punish" class="btn-danger">Punish</button>
+        <button id="btn-reward" class="btn-sm">Reward</button>
+        <button id="btn-punish" class="btn-danger btn-sm">Punish</button>
       </div>
     </section>
 
     <section>
-      <div class="sec-hdr">
-        <span>Composite Neuron Inspector</span>
-      </div>
-      <div id="inspector-box" class="inspector-card">
-        <div style="color:var(--text-dim);">Select a neuron to inspect.</div>
-      </div>
+      <div id="inspector-box" class="inspector-card"></div>
     </section>
   </aside>
 
@@ -192,9 +189,9 @@
       <span class="crumb" data-fly="macro">Macro</span>
     </div>
     <div class="segmented">
-      <button id="btn-z-macro" class="btn-sm active">Macro View</button>
-      <button id="btn-z-cluster" class="btn-sm">Cluster View</button>
-      <button id="btn-z-micro" class="btn-sm">Micro Recursive View</button>
+      <button id="btn-z-macro" class="btn-sm active">Macro</button>
+      <button id="btn-z-cluster" class="btn-sm">Cluster</button>
+      <button id="btn-z-micro" class="btn-sm">Micro</button>
     </div>
   </footer>
 
