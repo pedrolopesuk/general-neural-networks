@@ -1,0 +1,24 @@
+:root {
+  /* Core Instrument Palette */
+  --bg: #0B0C0D;
+  --surface: #131416;
+  --line: #26282B;
+  --text-dim: #6B6F75;
+  --text: #C9CCD1;
+  --signal: #FFB000;
+  --young: #8FD3A8;
+  --old: #5A6B8C;
+  --danger: #E5484D;
+
+  /* Typography */
+  --font-sans: 'Inter', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  /* Sizing & Geometry */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --header-h: 32px;
+  --rail-w: 260px;
+  --radius: 2px;
+}

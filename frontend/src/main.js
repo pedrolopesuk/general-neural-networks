@@ -1,32 +1,51 @@
 import * as THREE from 'three';
 import { MetaBrainBackendClient } from './api/backendClient.js';
 import { BrainViewport } from './scene/BrainViewport.js';
+import { getTheme, lerpRgb } from './theme.js';
 
 const api = new MetaBrainBackendClient();
+const theme = getTheme();
+
 let latestState = null;
 let selectedNeuronId = null;
 let simRunning = true;
 let dynamicForces = true;
 let sliderBeingDragged = false;
+let currentLens = 'activity';
 
-// Toast Helper
 let toastTimer = null;
 function showToast(msg) {
   const el = document.getElementById('toast-banner');
   el.textContent = msg;
   el.style.display = 'block';
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 3800);
+  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 3200);
 }
 
-// -----------------------------------------------------------------------------
-// Initialize 3D Viewport
-// -----------------------------------------------------------------------------
+function drawLegendRamp(mode) {
+  const c = document.getElementById('legend-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const w = c.width;
+  const h = c.height;
+  for (let x = 0; x < w; x++) {
+    const t = x / Math.max(1, w - 1);
+    const rgb = mode === 'activity'
+      ? lerpRgb(theme.rgb.textDim, theme.rgb.signal, t)
+      : lerpRgb(theme.rgb.young, theme.rgb.old, t);
+    ctx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+    ctx.fillRect(x, 0, 1, h);
+  }
+}
+drawLegendRamp('activity');
+
 const viewport = new BrainViewport(document.getElementById('viewport-root'), {
   onSelectNeuron: async (id) => {
     selectedNeuronId = id;
-    await refreshNeuronInspector(id);
-    updateBreadcrumbs(id);
+    if (id !== null) {
+      await refreshNeuronInspector(id);
+      updateBreadcrumbs(id);
+    }
   },
   onHoverNeuron: (node, x, y) => {
     const card = document.getElementById('hover-card');
@@ -35,13 +54,11 @@ const viewport = new BrainViewport(document.getElementById('viewport-root'), {
       return;
     }
     card.style.display = 'block';
-    card.style.left = `${x + 15}px`;
+    card.style.left = `${x + 12}px`;
     card.style.top = `${y + 12}px`;
     card.innerHTML = `
-      <div style="font-weight:700;color:#7ce8ff;margin-bottom:3px;">${node.label} (#${node.id})</div>
-      <div style="color:#b8cbe8;">Role: <strong>${node.role}</strong> • Depth: <strong>${node.depth}</strong></div>
-      <div style="color:#b8cbe8;">Fire: <strong>${(node.activation || 0).toFixed(3)}</strong> • Age: <strong>${node.age_ticks}t</strong></div>
-      ${node.is_composite ? `<div style="color:#00ff95;margin-top:3px;">✦ Composite Holon (${node.child_count} children) — Double-click to zoom inside</div>` : ''}
+      <div>${node.label}</div>
+      <div style="color:var(--text-dim);" class="mono">act ${(node.activation || 0).toFixed(3)} · age ${node.age_ticks}</div>
     `;
   },
   onZoomTierChange: (tier) => {
@@ -51,9 +68,7 @@ const viewport = new BrainViewport(document.getElementById('viewport-root'), {
   }
 });
 
-// -----------------------------------------------------------------------------
-// 16x16 Interactive Visual Retina Canvas
-// -----------------------------------------------------------------------------
+// Retina 16x16 Canvas
 const retinaCanvas = document.getElementById('retina-canvas');
 const rCtx = retinaCanvas.getContext('2d');
 const retinaGrid = new Float32Array(16 * 16);
@@ -62,10 +77,11 @@ function renderRetinaPad() {
   const img = rCtx.createImageData(16, 16);
   for (let i = 0; i < 256; i++) {
     const v = Math.max(0, Math.min(1, retinaGrid[i]));
+    const rgb = lerpRgb(theme.rgb.bg, theme.rgb.text, v);
     const p = i * 4;
-    img.data[p]     = Math.round(12 + 243 * v);
-    img.data[p + 1] = Math.round(22 + 225 * v);
-    img.data[p + 2] = Math.round(48 + 207 * v);
+    img.data[p]     = rgb[0];
+    img.data[p + 1] = rgb[1];
+    img.data[p + 2] = rgb[2];
     img.data[p + 3] = 255;
   }
   rCtx.putImageData(img, 0, 0);
@@ -117,12 +133,10 @@ document.getElementById('ret-clear').onclick  = () => { retinaGrid.fill(0); rend
 document.getElementById('btn-send-retina').onclick = async () => {
   const state = await api.injectImage(Array.from(retinaGrid), 16, 16, 20);
   applyIncomingState(state);
-  showToast('Injected 16×16 Retina Visual Grid → C++ SensoryPipeline');
+  showToast('Retina pulse sent');
 };
 
-// -----------------------------------------------------------------------------
-// Manual Float [0..1] Root Channel Faders
-// -----------------------------------------------------------------------------
+// Manual Channels
 const manualValues = [0.85, 0.2, 0.65, 0.1, 0.9, 0.15, 0.45, 0.3];
 const manualContainer = document.getElementById('manual-channels');
 
@@ -132,7 +146,7 @@ function renderManualFaders() {
       <div class="ch-bar-wrap" data-ch="${i}">
         <div class="ch-bar-fill" style="height:${Math.round(v * 100)}%"></div>
       </div>
-      <span class="ch-lbl">R${i}</span>
+      <span class="ch-lbl">${i + 1}</span>
     </div>
   `).join('');
 
@@ -155,10 +169,9 @@ renderManualFaders();
 document.getElementById('btn-send-manual').onclick = async () => {
   const state = await api.injectManual(manualValues, 18);
   applyIncomingState(state);
-  showToast('Injected Manual [0..1] Float Vector → Root Sensory Neurons');
+  showToast('Manual pulse sent');
 };
 
-// Sensory Tab Switching
 const tabs = [
   ['tab-btn-text', 'pane-text'],
   ['tab-btn-retina', 'pane-retina'],
@@ -173,7 +186,6 @@ tabs.forEach(([btnId, paneId]) => {
   };
 });
 
-// Text Sensory Injection
 async function triggerTextPulse(txt) {
   document.getElementById('inp-text').value = txt;
   const state = await api.injectText(txt, 18);
@@ -185,21 +197,17 @@ document.querySelectorAll('[data-preset]').forEach(btn => {
   btn.onclick = () => triggerTextPulse(btn.dataset.preset);
 });
 
-// -----------------------------------------------------------------------------
-// Lenses, Endocrine Sliders & Transport Controls
-// -----------------------------------------------------------------------------
 function switchLens(mode) {
+  currentLens = mode;
   viewport.setLens(mode);
   document.getElementById('btn-lens-activity').classList.toggle('active', mode === 'activity');
   document.getElementById('btn-lens-age').classList.toggle('active', mode === 'age');
-  const ramp = document.getElementById('lens-ramp');
+  drawLegendRamp(mode);
   const labels = document.getElementById('lens-labels');
   if (mode === 'activity') {
-    ramp.style.background = 'linear-gradient(90deg, #091533, #00e5ff, #ffffff)';
-    labels.innerHTML = '<span>Resting (0.0)</span><span>Cyan Active</span><span>White Firing (1.0)</span>';
+    labels.innerHTML = '<span class="mono">0.0</span><span class="mono">1.0</span>';
   } else {
-    ramp.style.background = 'linear-gradient(90deg, #00ff95, #38bdf8, #a855f7)';
-    labels.innerHTML = '<span>Emerald (Nascent)</span><span>Consolidating</span><span>Purple (Mature)</span>';
+    labels.innerHTML = '<span>new → established</span>';
   }
 }
 document.getElementById('btn-lens-activity').onclick = () => switchLens('activity');
@@ -229,32 +237,29 @@ slIds.forEach(id => {
 document.getElementById('btn-reward').onclick = async () => {
   const state = await api.sendFeedback({ valence: 1.15 });
   applyIncomingState(state);
-  showToast('▲ Global Reward (+Dopamine Surge & Recursive Backpropagation)');
 };
 
 document.getElementById('btn-punish').onclick = async () => {
   const state = await api.sendFeedback({ valence: -1.0 });
   applyIncomingState(state);
-  showToast('▼ Global Punish (+Fear Alert & Synaptic Error Correction)');
 };
 
 document.getElementById('btn-mitosis-global').onclick = async () => {
   const state = await api.addChildSubNetwork(-1, 3);
   applyIncomingState(state);
-  switchLens('age');
-  showToast('✦ Curiosity Mitosis: Spawned New Emerald Micro-Circuit via AddChild()');
+  showToast('Added 3 children');
 };
 
 document.getElementById('btn-synaptogenesis').onclick = async () => {
   const state = await api.triggerSynaptogenesis();
   applyIncomingState(state);
-  showToast('🔗 Synaptogenesis: Wired Co-Active Neurons & Pruned Weak Synapses');
+  showToast('Wired co-active neurons');
 };
 
 document.getElementById('btn-run-toggle').onclick = async (e) => {
   simRunning = !simRunning;
   await api.setControl({ running: simRunning });
-  e.target.textContent = simRunning ? '⏸ Running (18Hz)' : '▶ Paused';
+  e.target.textContent = simRunning ? 'Pause · 18 Hz' : 'Run · 18 Hz';
   e.target.classList.toggle('active', simRunning);
 };
 
@@ -267,18 +272,17 @@ document.getElementById('btn-physics-toggle').onclick = async (e) => {
 document.getElementById('btn-save').onclick = async () => {
   const res = await api.saveSnapshots();
   if (res.saved) {
-    showToast(`💾 Saved ${res.json_path} & ${res.graphml_path}`);
+    showToast(`Saved ${res.json_path}`);
   }
 };
 
 document.getElementById('btn-bench').onclick = async (e) => {
   const orig = e.target.textContent;
-  e.target.textContent = '⏳ Benchmarking...';
+  e.target.textContent = 'Running...';
   try {
     const rep = await api.runBenchmark(10000);
     showToast(
-      `⚡ C++20 AVX2 CSR [${rep.total_neurons.toLocaleString()} Neurons / ${rep.total_synapses.toLocaleString()} Synapses]: ` +
-      `${rep.forward_msyn_s.toFixed(0)}M Syn/s (${rep.forward_ms.toFixed(2)}ms/tick)`
+      `Benchmark: ${rep.total_neurons} neurons, ${rep.total_synapses} synapses · ${rep.forward_msyn_s.toFixed(0)} MSyn/s (${rep.forward_ms.toFixed(2)} ms/tick)`
     );
   } finally {
     e.target.textContent = orig;
@@ -290,10 +294,8 @@ document.getElementById('btn-reset').onclick = async () => {
   const state = await api.resetBrain({ roots: 8, cortical: 20, terminals: 4 });
   applyIncomingState(state);
   viewport.flyToTarget(new THREE.Vector3(0, 0, 0), 395);
-  showToast('↺ Rebuilt Fresh Recursive Emotional Brain');
 };
 
-// Infinite Zoom Footer Buttons
 document.getElementById('btn-z-macro').onclick = () => {
   viewport.flyToTarget(new THREE.Vector3(0, 0, 0), 395);
 };
@@ -307,9 +309,6 @@ document.getElementById('btn-z-micro').onclick = () => {
   if (sub) viewport.selectAndFlyTo(sub.id);
 };
 
-// -----------------------------------------------------------------------------
-// Deep Neuron Inspector & Hierarchy Breadcrumbs
-// -----------------------------------------------------------------------------
 function updateBreadcrumbs(id) {
   const bc = document.getElementById('breadcrumbs');
   const chain = [];
@@ -319,9 +318,9 @@ function updateBreadcrumbs(id) {
     cur = cur.parent_id >= 0 ? latestState.flat_nodes.find(n => n.id === cur.parent_id) : null;
   }
 
-  let html = `<span class="crumb" data-fly="macro">🧠 Macro Brain</span>`;
+  let html = `<span class="crumb" data-fly="macro">Macro</span>`;
   for (const node of chain) {
-    html += `<span>›</span><span class="crumb" data-nid="${node.id}">${node.label}</span>`;
+    html += `<span>/</span><span class="crumb" data-nid="${node.id}">${node.label}</span>`;
   }
   bc.innerHTML = html;
 
@@ -346,125 +345,90 @@ async function refreshNeuronInspector(id) {
     if (d.error) return;
     const box = document.getElementById('inspector-box');
 
-    const childrenHtml = d.children && d.children.length > 0
-      ? `<div class="sub-pill-list">
-           ${d.children.map(c => `<span class="sub-pill" data-cid="${c.id}">${c.label.split('.').pop()} (${c.activation.toFixed(2)})</span>`).join('')}
-         </div>`
-      : `<div style="font-size:10.5px;color:var(--txt-muted);">Leaf Neuron (0 nested Child_Neurons)</div>`;
-
     const weightsHtml = d.incoming_synapses && d.incoming_synapses.length > 0
       ? `<div class="weight-table">
            ${d.incoming_synapses.slice(0, 12).map(s => `
              <div class="w-row">
-               <span style="color:#9eb6db;">← ${s.source_label}</span>
-               <strong style="color:${s.weight >= 0 ? '#00ff95' : '#ff6b8b'};">
-                 w=${s.weight >= 0 ? '+' : ''}${s.weight.toFixed(3)} (e=${s.eligibility.toFixed(2)})
-               </strong>
+               <span style="color:var(--text-dim);">${s.source_label}</span>
+               <span>${s.weight >= 0 ? '+' : ''}${s.weight.toFixed(3)}</span>
              </div>
            `).join('')}
          </div>`
-      : `<div style="font-size:10.5px;color:var(--txt-muted);">Direct Sensory Receptor (No presynaptic weights)</div>`;
+      : `<div style="color:var(--text-dim);">No incoming connections</div>`;
 
     box.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <strong style="color:#7ce8ff;font-size:12.5px;">${d.label} (#${d.id})</strong>
-        <button id="btn-dive-sel" class="btn-sm">🔍 Zoom In</button>
+        <span>${d.label}</span>
+        <button id="btn-dive-sel" class="btn-sm">Zoom in</button>
       </div>
       <div class="insp-meta">
-        <div>Role: <strong>${d.role}</strong></div>
-        <div>Depth: <strong>${d.depth}</strong></div>
-        <div>Bias: <strong>${d.bias.toFixed(3)}</strong></div>
-        <div>Membrane V: <strong>${d.potential.toFixed(3)}</strong></div>
-        <div>Activation: <strong>${d.activation.toFixed(3)}</strong></div>
-        <div>Age: <strong>${d.age_ticks} ticks</strong></div>
+        <div>role <strong>${d.role}</strong></div>
+        <div>depth <strong>${d.depth}</strong></div>
+        <div>bias <strong>${d.bias.toFixed(3)}</strong></div>
+        <div>voltage <strong>${d.potential.toFixed(3)}</strong></div>
+        <div>act <strong>${d.activation.toFixed(3)}</strong></div>
+        <div>age <strong>${d.age_ticks}</strong></div>
+        <div>children <strong>${d.children.length}</strong></div>
       </div>
-      <div>
-        <div style="font-size:10px;color:#82a2d1;margin-bottom:4px;font-weight:700;">
-          COMPOSITE CHILD_NEURONS (${d.children.length})
-        </div>
-        ${childrenHtml}
+      <div style="color:var(--text-dim);">
+        Connections · ${d.incoming_synapses.length} in, ${d.outgoing_synapses.length} out
       </div>
-      <div>
-        <div style="font-size:10px;color:#82a2d1;margin-bottom:4px;font-weight:700;">
-          CONNECTION_WEIGHTS (${d.incoming_synapses.length} IN / ${d.outgoing_synapses.length} OUT)
-        </div>
-        ${weightsHtml}
-      </div>
+      ${weightsHtml}
       ${d.role !== 'RootSensory' && d.role !== 'TerminalReadout' ? `
-        <button id="btn-spawn-here" class="btn-purple btn-sm" style="width:100%;">
-          ✦ AddChild() — Instantiate 3 Sub-Neurons Inside #${d.id}
-        </button>
+        <button id="btn-spawn-here" class="btn-sm">Add 3 children</button>
       ` : ''}
     `;
 
     document.getElementById('btn-dive-sel').onclick = () => viewport.selectAndFlyTo(d.id);
-
-    box.querySelectorAll('[data-cid]').forEach(pill => {
-      pill.onclick = async () => {
-        const cid = parseInt(pill.dataset.cid, 10);
-        selectedNeuronId = cid;
-        viewport.selectAndFlyTo(cid);
-        await refreshNeuronInspector(cid);
-        updateBreadcrumbs(cid);
-      };
-    });
-
     const spawnBtn = document.getElementById('btn-spawn-here');
     if (spawnBtn) {
       spawnBtn.onclick = async () => {
         const state = await api.addChildSubNetwork(d.id, 3);
         applyIncomingState(state);
-        viewport.selectAndFlyTo(d.id);
         await refreshNeuronInspector(d.id);
-        showToast(`✦ Instantiated 3 Child Neurons inside ${d.label}!`);
       };
     }
   } catch (_) {}
 }
 
-// -----------------------------------------------------------------------------
-// Oscilloscope Sparkline Renderer
-// -----------------------------------------------------------------------------
+// Oscilloscope placeholder until Task 7 full 600-tick ring buffer
 const oscCanvas = document.getElementById('oscilloscope');
 const oscCtx = oscCanvas.getContext('2d');
 
 function drawOscilloscope(telemetry) {
   const w = oscCanvas.width;
   const h = oscCanvas.height;
-  oscCtx.clearRect(0, 0, w, h);
+  oscCtx.fillStyle = theme.bg;
+  oscCtx.fillRect(0, 0, w, h);
 
   if (!telemetry || telemetry.length < 2) return;
 
-  // Subtle horizontal gridline
-  oscCtx.strokeStyle = 'rgba(130, 180, 255, 0.1)';
+  oscCtx.strokeStyle = theme.line;
   oscCtx.lineWidth = 1;
   oscCtx.beginPath();
   oscCtx.moveTo(0, h * 0.5);
   oscCtx.lineTo(w, h * 0.5);
   oscCtx.stroke();
 
-  const plotTrace = (getter, color, lineWidth = 1.8) => {
+  const plotTrace = (getter, color) => {
     oscCtx.strokeStyle = color;
-    oscCtx.lineWidth = lineWidth;
+    oscCtx.lineWidth = 1;
     oscCtx.beginPath();
     for (let i = 0; i < telemetry.length; i++) {
       const x = (i / (telemetry.length - 1)) * w;
       const val = Math.max(0, Math.min(1, getter(telemetry[i])));
-      const y = h - 5 - val * (h - 10);
+      const y = h - 4 - val * (h - 8);
       if (i === 0) oscCtx.moveTo(x, y);
       else oscCtx.lineTo(x, y);
     }
     oscCtx.stroke();
   };
 
-  plotTrace(s => s.f, 'rgba(255, 100, 140, 0.78)', 1.4);          // Fear
-  plotTrace(s => (s.d + 0.5) / 2.5, 'rgba(0, 255, 149, 0.8)', 1.5); // Dopamine normalized
-  plotTrace(s => s.a, '#00e5ff', 2.1);                            // Mean firing activity
+  plotTrace(s => s.f, theme.danger);
+  plotTrace(s => (s.d + 0.5) / 2.5, theme.young);
+  plotTrace(s => s.a, theme.signal);
 }
 
-// -----------------------------------------------------------------------------
-// Apply Incoming C++ Backend Telemetry State
-// -----------------------------------------------------------------------------
 function applyIncomingState(state) {
   if (!state || !state.metadata) return;
   latestState = state;
@@ -472,10 +436,6 @@ function applyIncomingState(state) {
 
   const m = state.metadata;
   const e = state.endocrine;
-
-  document.getElementById('backend-status').textContent =
-    `C++20 AVX2 Live (${api.lastLatencyMs.toFixed(1)}ms)`;
-  document.getElementById('backend-dot').style.background = '#00ff95';
 
   document.getElementById('t-tick').textContent = m.tick;
   document.getElementById('t-neurons').textContent = m.total_neurons;
@@ -498,7 +458,6 @@ function applyIncomingState(state) {
     document.getElementById('lbl-curiosity').textContent = e.curiosity.toFixed(2);
   }
 
-  // Render Terminal Output Brightness Bars + Targeted Conditioning Buttons
   const termContainer = document.getElementById('terminal-container');
   const terms = state.terminals || [];
   let bestId = -1, bestVal = -1;
@@ -512,18 +471,18 @@ function applyIncomingState(state) {
     return `
       <div class="term-row">
         <div class="term-hdr">
-          <span style="color:${win ? '#ffffff' : '#9bb3d6'};font-weight:${win ? '700' : '500'};">
-            ${win ? '★ ' : ''}${t.label.replace('Output.', '')}
+          <span style="color:${win ? 'var(--signal)' : 'var(--text)'};">
+            ${t.label.replace('Output.', '').replaceAll('_', ' ')}
           </span>
           <div style="display:flex;align-items:center;gap:6px;">
-            <strong style="color:${win ? '#00ff95' : '#8ea5cc'};font-variant-numeric:tabular-nums;">
+            <span class="mono" style="color:${win ? 'var(--signal)' : 'var(--text)'};">
               ${t.activation.toFixed(3)}
-            </strong>
-            <button class="btn-sm" data-train-id="${t.id}" title="Reward & Train Brain toward this Terminal">🎯</button>
+            </span>
+            <button class="btn-sm" data-train-id="${t.id}" title="Train target">Target</button>
           </div>
         </div>
         <div class="term-track">
-          <div class="term-fill" style="width:${pct}%;opacity:${0.35 + 0.65 * (pct / 100)};"></div>
+          <div class="term-fill ${win ? 'winner' : ''}" style="width:${pct}%;"></div>
         </div>
       </div>
     `;
@@ -534,16 +493,12 @@ function applyIncomingState(state) {
       const tid = parseInt(btn.dataset.trainId, 10);
       const next = await api.sendFeedback({ valence: 1.25, targetId: tid });
       applyIncomingState(next);
-      showToast(`🎯 Conditioned Pathway → Terminal #${tid} (+Dopamine Backprop)`);
     };
   });
 
   drawOscilloscope(state.telemetry);
 }
 
-// -----------------------------------------------------------------------------
-// High-Frequency Polling & 60-120 FPS Render Loop
-// -----------------------------------------------------------------------------
 let pollInFlight = false;
 let pollCount = 0;
 
@@ -557,16 +512,14 @@ setInterval(async () => {
     if (selectedNeuronId !== null && pollCount % 8 === 0) {
       await refreshNeuronInspector(selectedNeuronId);
     }
-  } catch (_) {
-    document.getElementById('backend-status').textContent = 'Backend Reconnecting (:8085)...';
-    document.getElementById('backend-dot').style.background = '#ff3b6b';
-  } finally {
+  } catch (_) {}
+  finally {
     pollInFlight = false;
   }
 }, 65);
 
-function renderLoop(nowMs) {
+function renderLoop() {
   requestAnimationFrame(renderLoop);
-  viewport.renderFrame(nowMs * 0.001);
+  viewport.renderFrame();
 }
 requestAnimationFrame(renderLoop);
