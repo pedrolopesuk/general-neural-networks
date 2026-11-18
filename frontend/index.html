@@ -10,137 +10,112 @@
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
-  <div id="viewport-root"></div>
-
-  <header id="hud-top">
-    <div class="brand-cluster">
-      <div class="brand-logo">MetaBrain</div>
-      <div class="telemetry-strip">
-        <div>tick <strong id="t-tick">0</strong></div>
-        <div>neurons <strong id="t-neurons">0</strong></div>
-        <div>holons <strong id="t-holons">0</strong></div>
-        <div>synapses <strong id="t-synapses">0</strong></div>
-        <div>depth <strong id="t-depth">0</strong></div>
-        <div>step <strong id="t-step-us">0</strong> µs</div>
+  <!-- Single-line 32px Instrument Header -->
+  <header id="header-bar">
+    <div class="header-left">
+      <span class="app-name">MetaBrain</span>
+      <div class="stats-row mono">
+        <span>tick <strong id="t-tick">0</strong></span>
+        <span>neurons <strong id="t-neurons">0</strong></span>
+        <span>holons <strong id="t-holons">0</strong></span>
+        <span>synapses <strong id="t-synapses">0</strong></span>
+        <span>depth <strong id="t-depth">0</strong></span>
+        <span>step <strong id="t-step-us">0</strong> µs</span>
       </div>
     </div>
 
-    <div class="transport-strip">
-      <button id="btn-run-toggle" class="btn-sm">Pause · 18 Hz</button>
-      <button id="btn-physics-toggle" class="btn-sm">3D</button>
-      <button id="btn-save" class="btn-sm">Save</button>
-      <button id="btn-bench" class="btn-sm">Benchmark</button>
-      <button id="btn-reset" class="btn-sm">Reset</button>
+    <div class="header-actions">
+      <button id="btn-run-toggle">Pause · 18 Hz</button>
+      <button id="btn-3d-toggle">3D</button>
+      <button id="btn-save">Save</button>
+      <button id="btn-bench">Benchmark</button>
+      <button id="btn-reset">Reset</button>
     </div>
   </header>
 
-  <aside id="hud-left" class="panel-flat">
-    <section>
-      <div class="sec-hdr">
-        <span>Lens</span>
-      </div>
-      <div class="segmented" style="width:100%;display:grid;grid-template-columns:1fr 1fr;">
-        <button id="btn-lens-activity" class="active btn-sm">Activity</button>
-        <button id="btn-lens-age" class="btn-sm">Age</button>
-      </div>
-      <canvas id="legend-canvas" width="160" height="4"></canvas>
-      <div id="lens-labels" class="legend-ticks">
-        <span>idle → firing</span>
-      </div>
-    </section>
+  <!-- Fixed 260px Left Control Column -->
+  <aside id="left-column">
+    <!-- 1. State -->
+    <section class="col-section">
+      <div class="sec-label">State</div>
 
-    <section>
-      <div class="sec-hdr">
-        <span>State</span>
-      </div>
-
-      <div class="slider-row" title="Lowers activation threshold θ globally, increasing reactivity">
+      <div class="slider-row" title="Lowers activation threshold θ globally, making the system hyper-reactive">
         <div class="slider-top">
           <span>Fear</span>
-          <strong id="lbl-fear">0.12</strong>
+          <span class="mono" id="lbl-fear">0.12</span>
         </div>
         <input type="range" id="sl-fear" min="0" max="1" step="0.01" value="0.12"
-               title="Lowers activation threshold θ globally, increasing reactivity" />
+               title="Lowers activation threshold θ globally, making the system hyper-reactive" />
       </div>
 
-      <div class="slider-row" title="Boosts learning rate η, consolidating active pathways">
+      <div class="slider-row" title="Temporarily boosts learning rate η, locking in active pathways">
         <div class="slider-top">
           <span>Dopamine</span>
-          <strong id="lbl-dopamine">0.25</strong>
+          <span class="mono" id="lbl-dopamine">0.25</span>
         </div>
         <input type="range" id="sl-dopamine" min="-0.5" max="2.0" step="0.02" value="0.25"
-               title="Boosts learning rate η, consolidating active pathways" />
+               title="Temporarily boosts learning rate η, locking in active pathways" />
       </div>
 
-      <div class="slider-row" title="Raises activation threshold θ, dampening response">
+      <div class="slider-row" title="Raises activation threshold θ, making the system sluggish and dampened">
         <div class="slider-top">
           <span>Fatigue</span>
-          <strong id="lbl-fatigue">0.08</strong>
+          <span class="mono" id="lbl-fatigue">0.08</span>
         </div>
         <input type="range" id="sl-fatigue" min="0" max="1" step="0.01" value="0.08"
-               title="Raises activation threshold θ, dampening response" />
+               title="Raises activation threshold θ, making the system sluggish and dampened" />
       </div>
 
-      <div class="slider-row" title="Drives stochastic exploration and recursive child growth">
+      <div class="slider-row" title="Adds exploratory noise and promotes recursive child sub-network growth">
         <div class="slider-top">
           <span>Curiosity</span>
-          <strong id="lbl-curiosity">0.50</strong>
+          <span class="mono" id="lbl-curiosity">0.50</span>
         </div>
         <input type="range" id="sl-curiosity" min="0" max="1" step="0.01" value="0.50"
-               title="Drives stochastic exploration and recursive child growth" />
+               title="Adds exploratory noise and promotes recursive child sub-network growth" />
       </div>
 
-      <div class="kpi-pair">
+      <div class="computed-pair">
         <div>
-          <span>threshold θ</span>
-          <strong id="kpi-theta">0.352</strong>
+          <span class="dim-label">threshold θ</span>
+          <span class="mono" id="kpi-theta">0.352</span>
         </div>
         <div>
-          <span>learning rate η</span>
-          <strong id="kpi-lr">0.024</strong>
+          <span class="dim-label">learning rate η</span>
+          <span class="mono" id="kpi-lr">0.024</span>
         </div>
       </div>
     </section>
 
-    <section>
-      <div class="sec-hdr">
+    <!-- 2. Trace (Oscilloscope) -->
+    <section class="col-section trace-section">
+      <div class="sec-label">
         <span>Trace</span>
+        <span id="trace-status" class="mono"></span>
       </div>
-      <canvas id="oscilloscope" width="240" height="120"></canvas>
+      <canvas id="oscilloscope" width="260" height="120" title="Click to pause or resume trace"></canvas>
+      <div id="trace-legend" class="trace-legend mono">act 0.00  da 0.00  fear 0.00</div>
     </section>
 
-    <section>
-      <div class="sec-hdr">
-        <span>Structure</span>
-      </div>
-      <div class="grid-2">
-        <button id="btn-mitosis-global" class="btn-sm">Grow automatically</button>
-        <button id="btn-synaptogenesis" class="btn-sm">Wire co-active</button>
-      </div>
-    </section>
-  </aside>
-
-  <aside id="hud-right" class="panel-flat">
-    <section>
-      <div class="sec-hdr">
-        <span>Input</span>
-      </div>
-      <div class="segmented" style="width:100%;display:grid;grid-template-columns:1fr 1fr 1fr;">
-        <button id="tab-btn-text" class="btn-sm active">Text</button>
-        <button id="tab-btn-retina" class="btn-sm">Retina 16×16</button>
-        <button id="tab-btn-manual" class="btn-sm">Manual</button>
+    <!-- 3. Input -->
+    <section class="col-section">
+      <div class="sec-label">Input</div>
+      <div class="segmented full-seg-3">
+        <button id="tab-btn-text" class="active">Text</button>
+        <button id="tab-btn-retina">Retina 16×16</button>
+        <button id="tab-btn-manual">Manual</button>
       </div>
 
       <div id="pane-text" class="tab-pane active">
         <div class="input-line">
           <input type="text" id="inp-text" placeholder="Type input text…" />
-          <button id="btn-send-text" class="primary btn-sm">Pulse</button>
+          <button id="btn-send-text" class="primary">Pulse</button>
         </div>
         <div class="grid-2" style="margin-top:6px;">
-          <button class="btn-sm" data-preset="HARMONY_REWARD_EXPLORE_SIGNAL">Stimulus A</button>
-          <button class="btn-sm" data-preset="HAZARD_PREDATOR_FREEZE_ALARM">Stimulus B</button>
-          <button class="btn-sm" data-preset="NOVEL_FRACTAL_QUANTUM_PARADOX_INPUT">Stimulus C</button>
-          <button class="btn-sm" data-preset="CALM_SEROTONERGIC_REST_WAVE">Stimulus D</button>
+          <button data-preset="HARMONY_REWARD_EXPLORE_SIGNAL" title="Pattern A stimulus">Stimulus A</button>
+          <button data-preset="HAZARD_PREDATOR_FREEZE_ALARM" title="Pattern B stimulus">Stimulus B</button>
+          <button data-preset="NOVEL_FRACTAL_QUANTUM_PARADOX_INPUT" title="Novel stimulus">Stimulus C</button>
+          <button data-preset="CALM_SEROTONERGIC_REST_WAVE" title="Baseline stimulus">Stimulus D</button>
         </div>
       </div>
 
@@ -148,12 +123,12 @@
         <div class="retina-wrap">
           <canvas id="retina-canvas" width="16" height="16"></canvas>
           <div class="retina-controls">
-            <button id="btn-send-retina" class="primary btn-sm">Pulse</button>
+            <button id="btn-send-retina" class="primary">Pulse</button>
             <div class="grid-2">
-              <button class="btn-sm" id="ret-circle">Circle</button>
-              <button class="btn-sm" id="ret-cross">Cross</button>
-              <button class="btn-sm" id="ret-diag">Slash</button>
-              <button class="btn-sm" id="ret-clear">Clear</button>
+              <button id="ret-circle">Circle</button>
+              <button id="ret-cross">Cross</button>
+              <button id="ret-diag">Slash</button>
+              <button id="ret-clear">Clear</button>
             </div>
           </div>
         </div>
@@ -161,42 +136,79 @@
 
       <div id="pane-manual" class="tab-pane">
         <div class="manual-channels" id="manual-channels"></div>
-        <button id="btn-send-manual" class="primary btn-sm" style="width:100%;margin-top:6px;">
-          Pulse
-        </button>
+        <button id="btn-send-manual" class="primary" style="width:100%;margin-top:6px;">Pulse</button>
       </div>
     </section>
 
-    <section>
-      <div class="sec-hdr">
-        <span>Output</span>
+    <!-- 4. Structure -->
+    <section class="col-section">
+      <div class="sec-label">Structure</div>
+      <div class="grid-2">
+        <button id="btn-add-child" title="Spawn 3 child neurons in the highest-surprise composite neuron">Add child</button>
+        <button id="btn-synaptogenesis" title="Connect co-firing neurons and prune weak synapses">Wire co-active</button>
       </div>
-      <div id="terminal-container"></div>
+      <button id="btn-auto-grow" style="width:100%;margin-top:4px;" title="Toggle automatic curiosity-driven neurogenesis">
+        Grow automatically
+      </button>
 
-      <div class="grid-2" style="margin-top:8px;">
-        <button id="btn-reward" class="btn-sm">Reward</button>
-        <button id="btn-punish" class="btn-danger btn-sm">Punish</button>
+      <div class="slider-row" style="margin-top:10px;margin-bottom:0;" title="Show only edges with |weight| above threshold">
+        <div class="slider-top">
+          <span class="dim-label">Edge |w| threshold</span>
+          <span class="mono" id="lbl-edge-thresh">0.45</span>
+        </div>
+        <input type="range" id="sl-edge-thresh" min="0" max="1.5" step="0.01" value="0.45" />
       </div>
-    </section>
-
-    <section>
-      <div id="inspector-box" class="inspector-card"></div>
     </section>
   </aside>
 
-  <footer id="hud-bottom" class="panel-flat">
-    <div class="breadcrumbs" id="breadcrumbs">
-      <span class="crumb" data-fly="macro">Macro</span>
-    </div>
-    <div class="segmented">
-      <button id="btn-z-macro" class="btn-sm active">Macro</button>
-      <button id="btn-z-cluster" class="btn-sm">Cluster</button>
-      <button id="btn-z-micro" class="btn-sm">Micro</button>
-    </div>
-  </footer>
+  <!-- Main Graph Canvas Area -->
+  <main id="canvas-stage">
+    <div id="viewport-root"></div>
 
-  <div id="hover-card" class="panel-flat"></div>
-  <div id="toast-banner" class="panel-flat"></div>
+    <!-- Top-Left Canvas Overlay: Lens Toggle + Legend Ramp -->
+    <div id="lens-overlay">
+      <div class="sec-label" style="margin-bottom:4px;">Lens</div>
+      <div class="segmented">
+        <button id="btn-lens-activity" class="active">Activity</button>
+        <button id="btn-lens-age">Age</button>
+      </div>
+      <canvas id="legend-canvas" width="124" height="4"></canvas>
+      <div id="lens-labels" class="legend-ticks">idle → firing</div>
+    </div>
+
+    <!-- Bottom-Right Canvas Overlay: Compact Output Readout Table + Reward / Punish -->
+    <div id="output-overlay">
+      <div class="sec-label" style="margin-bottom:4px;">Output</div>
+      <table class="output-table" id="output-table">
+        <tbody id="terminal-tbody"></tbody>
+      </table>
+      <div class="grid-2" style="margin-top:6px;">
+        <button id="btn-reward">Reward</button>
+        <button id="btn-punish" class="btn-danger">Punish</button>
+      </div>
+    </div>
+
+    <!-- Bottom-Center Canvas Overlay: Plain-Text Breadcrumb + View Switch -->
+    <div id="bottom-nav">
+      <div id="breadcrumbs" class="breadcrumbs">
+        <span class="crumb active" data-fly="macro">Macro</span>
+      </div>
+      <div class="segmented">
+        <button id="btn-z-macro" class="active">Macro</button>
+        <button id="btn-z-cluster">Cluster</button>
+        <button id="btn-z-micro">Micro</button>
+      </div>
+    </div>
+
+    <!-- Selection-Only Anchored Inspector Popover -->
+    <div id="inspector-popover" class="popover" style="display:none;"></div>
+
+    <!-- Lightweight Hover Readout -->
+    <div id="hover-card" class="popover" style="display:none;pointer-events:none;"></div>
+
+    <!-- Subtle Status Readout -->
+    <div id="toast-banner" class="popover" style="display:none;"></div>
+  </main>
 
   <script type="module" src="/src/main.js"></script>
 </body>

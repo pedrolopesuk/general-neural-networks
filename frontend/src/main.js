@@ -8,10 +8,11 @@ const theme = getTheme();
 
 let latestState = null;
 let selectedNeuronId = null;
+let lastAnchorPos = { x: 240, y: 160 };
 let simRunning = true;
-let dynamicForces = true;
+let is3DMode = false;
+let autoGrow = false;
 let sliderBeingDragged = false;
-let currentLens = 'activity';
 
 function formatOutputName(raw) {
   let s = raw.replace(/^Output\./, '').replaceAll('_', ' ');
@@ -34,7 +35,7 @@ function showToast(msg) {
   el.textContent = msg;
   el.style.display = 'block';
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 3200);
+  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2800);
 }
 
 function drawLegendRamp(mode) {
@@ -54,32 +55,75 @@ function drawLegendRamp(mode) {
 }
 drawLegendRamp('activity');
 
+const stageEl = document.getElementById('canvas-stage');
+const popoverEl = document.getElementById('inspector-popover');
+
+function closeInspector() {
+  selectedNeuronId = null;
+  popoverEl.style.display = 'none';
+  if (viewport.clearSelection) viewport.clearSelection();
+  else viewport.selectedId = null;
+}
+
+function positionPopover(clientX, clientY) {
+  const rect = stageEl.getBoundingClientRect();
+  const relX = clientX - rect.left;
+  const relY = clientY - rect.top;
+  const popW = 242;
+  const popH = popoverEl.offsetHeight || 220;
+
+  let left = relX + 14;
+  let top = relY - 16;
+  if (left + popW > rect.width - 12) left = Math.max(12, relX - popW - 14);
+  if (top + popH > rect.height - 12) top = Math.max(12, rect.height - popH - 12);
+  if (top < 12) top = 12;
+
+  popoverEl.style.left = `${Math.round(left)}px`;
+  popoverEl.style.top = `${Math.round(top)}px`;
+}
+
 const viewport = new BrainViewport(document.getElementById('viewport-root'), {
-  onSelectNeuron: async (id) => {
-    selectedNeuronId = id;
-    if (id !== null) {
-      await refreshNeuronInspector(id);
-      updateBreadcrumbs(id);
+  onSelectNeuron: async (id, clientX, clientY) => {
+    if (id === null) {
+      closeInspector();
+      return;
     }
+    selectedNeuronId = id;
+    if (clientX && clientY) {
+      lastAnchorPos = { x: clientX, y: clientY };
+    }
+    await refreshNeuronInspector(id, true);
+    updateBreadcrumbs(id);
   },
-  onHoverNeuron: (node, x, y) => {
+  onHoverNeuron: (node, clientX, clientY) => {
     const card = document.getElementById('hover-card');
-    if (!node) {
+    if (!node || selectedNeuronId === node.id) {
       card.style.display = 'none';
       return;
     }
+    const rect = stageEl.getBoundingClientRect();
     card.style.display = 'block';
-    card.style.left = `${x + 12}px`;
-    card.style.top = `${y + 12}px`;
+    card.style.left = `${Math.min(rect.width - 170, clientX - rect.left + 12)}px`;
+    card.style.top = `${Math.max(8, clientY - rect.top + 12)}px`;
     card.innerHTML = `
-      <div>${node.label}</div>
-      <div style="color:var(--text-dim);" class="mono">act ${(node.activation || 0).toFixed(3)} · age ${node.age_ticks}</div>
+      <div>${formatNodeName(node.label)}</div>
+      <div class="mono" style="color:var(--text-dim);">act ${(node.activation || 0).toFixed(3)} · age ${node.age_ticks}</div>
     `;
   },
   onZoomTierChange: (tier) => {
     document.getElementById('btn-z-macro').classList.toggle('active', tier === 'macro');
     document.getElementById('btn-z-cluster').classList.toggle('active', tier === 'cluster');
     document.getElementById('btn-z-micro').classList.toggle('active', tier === 'micro');
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (popoverEl.style.display !== 'none') {
+      closeInspector();
+    } else if (viewport.stepZoomOut) {
+      viewport.stepZoomOut();
+    }
   }
 });
 
@@ -148,7 +192,6 @@ document.getElementById('ret-clear').onclick  = () => { retinaGrid.fill(0); rend
 document.getElementById('btn-send-retina').onclick = async () => {
   const state = await api.injectImage(Array.from(retinaGrid), 16, 16, 20);
   applyIncomingState(state);
-  showToast('Retina pulse sent');
 };
 
 // Manual Channels
@@ -184,7 +227,6 @@ renderManualFaders();
 document.getElementById('btn-send-manual').onclick = async () => {
   const state = await api.injectManual(manualValues, 18);
   applyIncomingState(state);
-  showToast('Manual pulse sent');
 };
 
 const tabs = [
@@ -202,28 +244,25 @@ tabs.forEach(([btnId, paneId]) => {
 });
 
 async function triggerTextPulse(txt) {
-  document.getElementById('inp-text').value = txt;
+  if (!txt) return;
   const state = await api.injectText(txt, 18);
   applyIncomingState(state);
 }
-document.getElementById('btn-send-text').onclick = () =>
-  triggerTextPulse(document.getElementById('inp-text').value);
+document.getElementById('btn-send-text').onclick = () => {
+  const val = document.getElementById('inp-text').value.trim() || 'HARMONY_REWARD_EXPLORE_SIGNAL';
+  triggerTextPulse(val);
+};
 document.querySelectorAll('[data-preset]').forEach(btn => {
   btn.onclick = () => triggerTextPulse(btn.dataset.preset);
 });
 
 function switchLens(mode) {
-  currentLens = mode;
   viewport.setLens(mode);
   document.getElementById('btn-lens-activity').classList.toggle('active', mode === 'activity');
   document.getElementById('btn-lens-age').classList.toggle('active', mode === 'age');
   drawLegendRamp(mode);
-  const labels = document.getElementById('lens-labels');
-  if (mode === 'activity') {
-    labels.innerHTML = '<span>idle → firing</span>';
-  } else {
-    labels.innerHTML = '<span>new → established</span>';
-  }
+  document.getElementById('lens-labels').textContent =
+    mode === 'activity' ? 'idle → firing' : 'new → established';
 }
 document.getElementById('btn-lens-activity').onclick = () => switchLens('activity');
 document.getElementById('btn-lens-age').onclick      = () => switchLens('age');
@@ -249,6 +288,14 @@ slIds.forEach(id => {
   });
 });
 
+// Edge threshold slider
+const edgeSl = document.getElementById('sl-edge-thresh');
+edgeSl.addEventListener('input', () => {
+  const v = parseFloat(edgeSl.value);
+  document.getElementById('lbl-edge-thresh').textContent = v.toFixed(2);
+  if (viewport.setWeightThreshold) viewport.setWeightThreshold(v);
+});
+
 document.getElementById('btn-reward').onclick = async () => {
   const state = await api.sendFeedback({ valence: 1.15 });
   applyIncomingState(state);
@@ -259,10 +306,21 @@ document.getElementById('btn-punish').onclick = async () => {
   applyIncomingState(state);
 };
 
-document.getElementById('btn-mitosis-global').onclick = async () => {
-  const state = await api.addChildSubNetwork(-1, 3);
+document.getElementById('btn-add-child').onclick = async () => {
+  const targetParent = selectedNeuronId !== null ? selectedNeuronId : -1;
+  const state = await api.addChildSubNetwork(targetParent, 3);
   applyIncomingState(state);
-  showToast('Added 3 children');
+  if (selectedNeuronId !== null) await refreshNeuronInspector(selectedNeuronId, false);
+};
+
+document.getElementById('btn-auto-grow').onclick = async (e) => {
+  autoGrow = !autoGrow;
+  await api.setControl({ auto_neurogenesis: autoGrow });
+  e.target.classList.toggle('active', autoGrow);
+  if (autoGrow) {
+    const state = await api.addChildSubNetwork(-1, 3);
+    applyIncomingState(state);
+  }
 };
 
 document.getElementById('btn-synaptogenesis').onclick = async () => {
@@ -275,13 +333,12 @@ document.getElementById('btn-run-toggle').onclick = async (e) => {
   simRunning = !simRunning;
   await api.setControl({ running: simRunning });
   e.target.textContent = simRunning ? 'Pause · 18 Hz' : 'Run · 18 Hz';
-  e.target.classList.toggle('active', simRunning);
 };
 
-document.getElementById('btn-physics-toggle').onclick = async (e) => {
-  dynamicForces = !dynamicForces;
-  await api.setControl({ dynamic_layout: dynamicForces });
-  e.target.classList.toggle('active', dynamicForces);
+document.getElementById('btn-3d-toggle').onclick = (e) => {
+  is3DMode = !is3DMode;
+  e.target.classList.toggle('active', is3DMode);
+  if (viewport.set3DMode) viewport.set3DMode(is3DMode);
 };
 
 document.getElementById('btn-save').onclick = async () => {
@@ -293,11 +350,11 @@ document.getElementById('btn-save').onclick = async () => {
 
 document.getElementById('btn-bench').onclick = async (e) => {
   const orig = e.target.textContent;
-  e.target.textContent = 'Running...';
+  e.target.textContent = 'Running…';
   try {
     const rep = await api.runBenchmark(10000);
     showToast(
-      `Benchmark: ${rep.total_neurons} neurons, ${rep.total_synapses} synapses · ${rep.forward_msyn_s.toFixed(0)} MSyn/s (${rep.forward_ms.toFixed(2)} ms/tick)`
+      `${rep.total_neurons} neurons, ${rep.total_synapses} synapses · ${rep.forward_msyn_s.toFixed(0)} MSyn/s (${rep.forward_ms.toFixed(2)} ms/tick)`
     );
   } finally {
     e.target.textContent = orig;
@@ -305,108 +362,139 @@ document.getElementById('btn-bench').onclick = async (e) => {
 };
 
 document.getElementById('btn-reset').onclick = async () => {
-  selectedNeuronId = null;
+  closeInspector();
   const state = await api.resetBrain({ roots: 8, cortical: 20, terminals: 4 });
   applyIncomingState(state);
-  viewport.flyToTarget(new THREE.Vector3(0, 0, 0), 395);
+  if (viewport.zoomToMacro) viewport.zoomToMacro();
+  else viewport.flyToTarget(new THREE.Vector3(0, 0, 0), 395);
 };
 
 document.getElementById('btn-z-macro').onclick = () => {
-  viewport.flyToTarget(new THREE.Vector3(0, 0, 0), 395);
+  if (viewport.zoomToMacro) viewport.zoomToMacro();
+  else viewport.flyToTarget(new THREE.Vector3(0, 0, 0), 395);
+  updateBreadcrumbs(null);
 };
 document.getElementById('btn-z-cluster').onclick = () => {
-  const col = latestState?.flat_nodes?.find(n => n.is_composite && n.depth === 0);
-  if (col) viewport.selectAndFlyTo(col.id);
+  if (viewport.zoomToClusterDefault) {
+    viewport.zoomToClusterDefault();
+  } else {
+    const col = latestState?.flat_nodes?.find(n => n.is_composite && n.depth === 0);
+    if (col) viewport.selectAndFlyTo(col.id);
+  }
 };
 document.getElementById('btn-z-micro').onclick = () => {
-  const sub = latestState?.flat_nodes?.find(n => n.is_composite && n.depth >= 1) ||
-              latestState?.flat_nodes?.find(n => n.depth >= 2);
-  if (sub) viewport.selectAndFlyTo(sub.id);
+  if (viewport.zoomToMicroDefault) {
+    viewport.zoomToMicroDefault();
+  } else {
+    const sub = latestState?.flat_nodes?.find(n => n.is_composite && n.depth >= 1) ||
+                latestState?.flat_nodes?.find(n => n.depth >= 2);
+    if (sub) viewport.selectAndFlyTo(sub.id);
+  }
 };
 
 function updateBreadcrumbs(id) {
   const bc = document.getElementById('breadcrumbs');
   const chain = [];
-  let cur = latestState?.flat_nodes?.find(n => n.id === id);
+  let cur = id !== null ? latestState?.flat_nodes?.find(n => n.id === id) : null;
   while (cur) {
     chain.unshift(cur);
     cur = cur.parent_id >= 0 ? latestState.flat_nodes.find(n => n.id === cur.parent_id) : null;
   }
 
-  let html = `<span class="crumb" data-fly="macro">Macro</span>`;
-  for (const node of chain) {
-    html += `<span>/</span><span class="crumb" data-nid="${node.id}">${node.label}</span>`;
+  let html = `<span class="crumb ${chain.length === 0 ? 'active' : ''}" data-fly="macro">Macro</span>`;
+  for (let i = 0; i < chain.length; i++) {
+    const node = chain[i];
+    const isLast = i === chain.length - 1;
+    html += `<span>/</span><span class="crumb ${isLast ? 'active' : ''}" data-nid="${node.id}">${formatNodeName(node.label)}</span>`;
   }
   bc.innerHTML = html;
 
   bc.querySelectorAll('[data-fly="macro"]').forEach(el => {
-    el.onclick = () => viewport.flyToTarget(new THREE.Vector3(0, 0, 0), 395);
+    el.onclick = () => {
+      closeInspector();
+      if (viewport.zoomToMacro) viewport.zoomToMacro();
+      else viewport.flyToTarget(new THREE.Vector3(0, 0, 0), 395);
+      updateBreadcrumbs(null);
+    };
   });
   bc.querySelectorAll('[data-nid]').forEach(el => {
     el.onclick = async () => {
       const nid = parseInt(el.dataset.nid, 10);
       selectedNeuronId = nid;
       viewport.selectAndFlyTo(nid);
-      await refreshNeuronInspector(nid);
+      await refreshNeuronInspector(nid, false);
       updateBreadcrumbs(nid);
     };
   });
 }
 
-async function refreshNeuronInspector(id) {
+async function refreshNeuronInspector(id, reposition = false) {
   if (id === null) return;
   try {
     const d = await api.getNeuronDetail(id);
     if (d.error) return;
-    const box = document.getElementById('inspector-box');
 
-    const weightsHtml = d.incoming_synapses && d.incoming_synapses.length > 0
-      ? `<div class="weight-table">
-           ${d.incoming_synapses.slice(0, 12).map(s => `
-             <div class="w-row">
-               <span style="color:var(--text-dim);">${s.source_label}</span>
-               <span>${s.weight >= 0 ? '+' : ''}${s.weight.toFixed(3)}</span>
+    const inSyns = d.incoming_synapses || [];
+    const outSyns = d.outgoing_synapses || [];
+    const allConns = [
+      ...inSyns.map(s => ({ dir: 'in', label: formatNodeName(s.source_label), w: s.weight })),
+      ...outSyns.map(s => ({ dir: 'out', label: formatNodeName(s.target_label), w: s.weight }))
+    ];
+
+    const connHtml = allConns.length > 0
+      ? `<div class="conn-list">
+           ${allConns.map(c => `
+             <div class="conn-row">
+               <span style="color:var(--text-dim);">${c.dir === 'in' ? '←' : '→'} ${c.label}</span>
+               <span>${c.w >= 0 ? '+' : ''}${c.w.toFixed(3)}</span>
              </div>
            `).join('')}
          </div>`
-      : `<div style="color:var(--text-dim);">No incoming connections</div>`;
+      : `<div class="dim-label" style="margin-top:4px;">No connections</div>`;
 
-    box.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span>${d.label}</span>
-        <button id="btn-dive-sel" class="btn-sm">Zoom in</button>
+    const canGrow = d.role !== 'RootSensory' && d.role !== 'TerminalReadout';
+
+    popoverEl.innerHTML = `
+      <div class="pop-title-row">
+        <span class="pop-title">${formatNodeName(d.label)}</span>
+        <button class="link-btn" id="pop-close" title="Close (Esc)">Esc</button>
       </div>
-      <div class="insp-meta">
+      <div class="pop-grid">
         <div>role <strong>${d.role}</strong></div>
         <div>depth <strong>${d.depth}</strong></div>
         <div>bias <strong>${d.bias.toFixed(3)}</strong></div>
         <div>voltage <strong>${d.potential.toFixed(3)}</strong></div>
-        <div>act <strong>${d.activation.toFixed(3)}</strong></div>
+        <div>activation <strong>${d.activation.toFixed(3)}</strong></div>
         <div>age <strong>${d.age_ticks}</strong></div>
         <div>children <strong>${d.children.length}</strong></div>
       </div>
-      <div style="color:var(--text-dim);">
-        Connections · ${d.incoming_synapses.length} in, ${d.outgoing_synapses.length} out
+      <div class="pop-links">
+        <button class="link-btn" id="pop-zoom">Zoom in</button>
+        ${canGrow ? `<button class="link-btn" id="pop-add-children">Add 3 children</button>` : ''}
       </div>
-      ${weightsHtml}
-      ${d.role !== 'RootSensory' && d.role !== 'TerminalReadout' ? `
-        <button id="btn-spawn-here" class="btn-sm">Add 3 children</button>
-      ` : ''}
+      <div class="dim-label">Connections · ${inSyns.length} in, ${outSyns.length} out</div>
+      ${connHtml}
     `;
 
-    document.getElementById('btn-dive-sel').onclick = () => viewport.selectAndFlyTo(d.id);
-    const spawnBtn = document.getElementById('btn-spawn-here');
-    if (spawnBtn) {
-      spawnBtn.onclick = async () => {
+    popoverEl.style.display = 'block';
+    if (reposition) {
+      positionPopover(lastAnchorPos.x, lastAnchorPos.y);
+    }
+
+    document.getElementById('pop-close').onclick = closeInspector;
+    document.getElementById('pop-zoom').onclick = () => viewport.selectAndFlyTo(d.id);
+    const addBtn = document.getElementById('pop-add-children');
+    if (addBtn) {
+      addBtn.onclick = async () => {
         const state = await api.addChildSubNetwork(d.id, 3);
         applyIncomingState(state);
-        await refreshNeuronInspector(d.id);
+        await refreshNeuronInspector(d.id, false);
       };
     }
   } catch (_) {}
 }
 
-// Oscilloscope placeholder until Task 7 full 600-tick ring buffer
+// Temporary Trace Draw before Task 7 full 600-tick scrolling oscilloscope
 const oscCanvas = document.getElementById('oscilloscope');
 const oscCtx = oscCanvas.getContext('2d');
 
@@ -418,12 +506,9 @@ function drawOscilloscope(telemetry) {
 
   if (!telemetry || telemetry.length < 2) return;
 
-  oscCtx.strokeStyle = theme.line;
-  oscCtx.lineWidth = 1;
-  oscCtx.beginPath();
-  oscCtx.moveTo(0, h * 0.5);
-  oscCtx.lineTo(w, h * 0.5);
-  oscCtx.stroke();
+  const last = telemetry[telemetry.length - 1];
+  document.getElementById('trace-legend').textContent =
+    `act ${last.a.toFixed(2)}  da ${last.d.toFixed(2)}  fear ${last.f.toFixed(2)}`;
 
   const plotTrace = (getter, color) => {
     oscCtx.strokeStyle = color;
@@ -473,37 +558,34 @@ function applyIncomingState(state) {
     document.getElementById('lbl-curiosity').textContent = e.curiosity.toFixed(2);
   }
 
-  const termContainer = document.getElementById('terminal-container');
+  // Compact Output Table
+  const tbody = document.getElementById('terminal-tbody');
   const terms = state.terminals || [];
   let bestId = -1, bestVal = -1;
   for (const t of terms) {
     if (t.activation > bestVal) { bestVal = t.activation; bestId = t.id; }
   }
 
-  termContainer.innerHTML = terms.map(t => {
+  tbody.innerHTML = terms.map(t => {
     const pct = Math.round(Math.max(0, Math.min(1, t.activation)) * 100);
     const win = t.id === bestId && t.activation > 0.05;
     return `
-      <div class="term-row">
-        <div class="term-hdr">
-          <span style="color:${win ? 'var(--signal)' : 'var(--text)'};">
-            ${formatOutputName(t.label)}
-          </span>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span class="mono" style="color:${win ? 'var(--signal)' : 'var(--text)'};">
-              ${t.activation.toFixed(3)}
-            </span>
-            <button class="btn-sm" data-train-id="${t.id}" title="Train target">Target</button>
+      <tr class="${win ? 'winner-row' : ''}">
+        <td class="out-name">${formatOutputName(t.label)}</td>
+        <td class="out-bar-cell">
+          <div class="out-bar-bg">
+            <div class="out-bar-fill" style="width:${pct}%;"></div>
           </div>
-        </div>
-        <div class="term-track">
-          <div class="term-fill ${win ? 'winner' : ''}" style="width:${pct}%;"></div>
-        </div>
-      </div>
+        </td>
+        <td class="out-val mono">${t.activation.toFixed(3)}</td>
+        <td class="out-target-cell">
+          <button class="out-target-btn" data-train-id="${t.id}" title="Train toward this output">Target</button>
+        </td>
+      </tr>
     `;
   }).join('');
 
-  termContainer.querySelectorAll('[data-train-id]').forEach(btn => {
+  tbody.querySelectorAll('[data-train-id]').forEach(btn => {
     btn.onclick = async () => {
       const tid = parseInt(btn.dataset.trainId, 10);
       const next = await api.sendFeedback({ valence: 1.25, targetId: tid });
@@ -525,7 +607,7 @@ setInterval(async () => {
     applyIncomingState(state);
     pollCount++;
     if (selectedNeuronId !== null && pollCount % 8 === 0) {
-      await refreshNeuronInspector(selectedNeuronId);
+      await refreshNeuronInspector(selectedNeuronId, false);
     }
   } catch (_) {}
   finally {
@@ -533,8 +615,8 @@ setInterval(async () => {
   }
 }, 65);
 
-function renderLoop() {
+function renderLoop(nowMs) {
   requestAnimationFrame(renderLoop);
-  viewport.renderFrame();
+  viewport.renderFrame(nowMs * 0.001);
 }
 requestAnimationFrame(renderLoop);
