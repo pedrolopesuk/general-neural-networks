@@ -122,6 +122,9 @@ const viewport = new BrainViewport(document.getElementById('viewport-root'), {
     }
     const lbl = document.getElementById('lbl-edge-thresh');
     if (lbl) lbl.textContent = val.toFixed(2);
+  },
+  onBreadcrumbChange: (crumbs) => {
+    renderHolonBreadcrumbs(crumbs);
   }
 });
 
@@ -387,37 +390,76 @@ document.getElementById('btn-z-micro').onclick = () => {
   viewport.zoomToMicroDefault();
 };
 
-function updateBreadcrumbs(id) {
+function renderHolonBreadcrumbs(crumbs) {
   const bc = document.getElementById('breadcrumbs');
-  const chain = [];
-  let cur = id !== null ? latestState?.flat_nodes?.find(n => n.id === id) : null;
-  while (cur) {
-    chain.unshift(cur);
-    cur = cur.parent_id >= 0 ? latestState.flat_nodes.find(n => n.id === cur.parent_id) : null;
-  }
+  bc.innerHTML = crumbs.map((c, idx) => {
+    const isLast = idx === crumbs.length - 1;
+    const sep = idx > 0 ? '<span>/</span>' : '';
+    return `${sep}<span class="crumb ${isLast ? 'active' : ''}" data-hkey="${c.key}">${c.label}</span>`;
+  }).join('');
 
-  let html = `<span class="crumb ${chain.length === 0 ? 'active' : ''}" data-fly="macro">Macro</span>`;
-  for (let i = 0; i < chain.length; i++) {
-    const node = chain[i];
-    const isLast = i === chain.length - 1;
-    html += `<span>/</span><span class="crumb ${isLast ? 'active' : ''}" data-nid="${node.id}">${formatNodeName(node.label)}</span>`;
-  }
-  bc.innerHTML = html;
-
-  bc.querySelectorAll('[data-fly="macro"]').forEach(el => {
+  bc.querySelectorAll('[data-hkey]').forEach(el => {
     el.onclick = () => {
-      closeInspector();
-      viewport.zoomToMacro();
-      updateBreadcrumbs(null);
+      const k = el.dataset.hkey;
+      if (k === 'macro') {
+        closeInspector();
+        viewport.zoomToMacro();
+      } else {
+        viewport.zoomToHolon(k);
+      }
     };
   });
-  bc.querySelectorAll('[data-nid]').forEach(el => {
+}
+
+function updateBreadcrumbs(id) {
+  if (id === null) {
+    renderHolonBreadcrumbs([{ label: 'Macro', key: 'macro' }]);
+    return;
+  }
+  const n = latestState?.flat_nodes?.find(d => d.id === id);
+  if (!n) return;
+
+  const chain = [];
+  let cur = n;
+  while (cur) {
+    chain.unshift(cur);
+    cur = cur.parent_id >= 0 ? latestState.flat_nodes.find(d => d.id === cur.parent_id) : null;
+  }
+
+  const crumbs = [{ label: 'Macro', key: 'macro' }];
+  const topNode = chain[0];
+  if (topNode && topNode.role === 'CorticalComposite') {
+    const reg = topNode.label.split('.')[0];
+    crumbs.push({ label: reg, key: `region:${reg}` });
+  }
+  for (const item of chain) {
+    const shortName = item.label.includes('.')
+      ? item.label.split('.').slice(1).join('.').replaceAll('_', ' ')
+      : formatNodeName(item.label);
+    crumbs.push({ label: shortName, key: `node:${item.id}` });
+  }
+
+  const bc = document.getElementById('breadcrumbs');
+  bc.innerHTML = crumbs.map((c, idx) => {
+    const isLast = idx === crumbs.length - 1;
+    const sep = idx > 0 ? '<span>/</span>' : '';
+    return `${sep}<span class="crumb ${isLast ? 'active' : ''}" data-ckey="${c.key}">${c.label}</span>`;
+  }).join('');
+
+  bc.querySelectorAll('[data-ckey]').forEach(el => {
     el.onclick = async () => {
-      const nid = parseInt(el.dataset.nid, 10);
-      selectedNeuronId = nid;
-      viewport.selectAndFlyTo(nid);
-      await refreshNeuronInspector(nid, false);
-      updateBreadcrumbs(nid);
+      const k = el.dataset.ckey;
+      if (k === 'macro') {
+        closeInspector();
+        viewport.zoomToMacro();
+      } else if (k.startsWith('region:')) {
+        viewport.zoomToHolon(k);
+      } else if (k.startsWith('node:')) {
+        const nid = parseInt(k.slice(5), 10);
+        selectedNeuronId = nid;
+        viewport.selectAndFlyTo(nid);
+        await refreshNeuronInspector(nid, false);
+      }
     };
   });
 }
