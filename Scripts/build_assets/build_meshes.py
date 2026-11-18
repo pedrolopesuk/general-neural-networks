@@ -100,6 +100,15 @@ def build_neuron_meshes():
                 full.set_material(idx, mat)
         unreal.EditorAssetLibrary.save_loaded_asset(full)
 
+    # Real human cell types (swc_to_mesh.py). Order must match MetaBrainNeuronVariantsData.h.
+    for variant in ("PyramidalCortex", "PyramidalCA1", "Interneuron", "Purkinje"):
+        mesh = _import_glb(f"SM_Neuron_{variant}")
+        if mesh:
+            _enable_nanite(mesh)
+            if m_neuron:
+                mesh.set_material(0, m_neuron)
+            unreal.EditorAssetLibrary.save_loaded_asset(mesh)
+
     # The glTF placeholder materials in the staging folder are no longer referenced.
     if unreal.EditorAssetLibrary.does_directory_exist(f"{MESH_DIR}/_Import"):
         unreal.EditorAssetLibrary.delete_directory(f"{MESH_DIR}/_Import")

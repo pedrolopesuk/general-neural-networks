@@ -128,7 +128,7 @@ protected:
 	// Real neuron morphology (SM_NeuronSoma, Nanite): soma + dendrites + axon initial segment.
 	// When present, NeuronHISM stays as an invisible sphere proxy for cursor hit-testing.
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
-	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> NeuronMorphHISM;
+	TArray<TObjectPtr<UHierarchicalInstancedStaticMeshComponent>> NeuronMorphHISMs; // one per cell type
 
 	// Brain view: myelin sheath segments laid along each axon (graph edge), leaving
 	// gaps at the nodes of Ranvier.
@@ -172,7 +172,7 @@ protected:
 	TObjectPtr<UStaticMesh> ConeMesh;
 
 	UPROPERTY()
-	TObjectPtr<UStaticMesh> NeuronSomaMesh;
+	TArray<TObjectPtr<UStaticMesh>> NeuronVariantMeshes;
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> MyelinMaterial;
@@ -180,7 +180,13 @@ protected:
 	bool bMorphAssetsLoaded = false;
 	bool bUseMorphMesh = false; // = Brain view && assets loaded
 	EMetaBrainViewMode ViewMode = EMetaBrainViewMode::Brain;
-	TArray<FTransform> NeuronMorphTransforms;
+	// Real human cell types from NeuroMorpho.org (see MetaBrainNeuronVariantsData.h).
+	// Falls back to the single SM_NeuronSoma (variant 0) when the variant meshes are absent.
+	bool bRealVariants = false;
+	TArray<TArray<FTransform>> VariantTransforms;
+	TArray<uint8> NeuronVariant;
+	TArray<int32> NeuronVariantLocalIdx;
+	uint8 PickNeuronVariant(const struct FMetaBrainNeuronSnap& N, const FString& Region) const;
 	void ApplyViewMode();
 
 	UPROPERTY()

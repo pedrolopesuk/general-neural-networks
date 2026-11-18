@@ -25,6 +25,7 @@
 #include "RenderTimer.h"
 #include "Engine/Engine.h"
 #include "MetaBrainNeuronMorphologyData.h"
+#include "MetaBrainNeuronVariantsData.h"
 
 AMetaBrainSceneController::AMetaBrainSceneController()
 {
@@ -41,11 +42,15 @@ AMetaBrainSceneController::AMetaBrainSceneController()
 	NeuronHISM->SetCollisionResponseToAllChannels(ECR_Ignore);
 	NeuronHISM->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
-	NeuronMorphHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("NeuronMorphHISM"));
-	NeuronMorphHISM->SetupAttachment(Root);
-	NeuronMorphHISM->NumCustomDataFloats = 4;
-	NeuronMorphHISM->SetCastShadow(true);
-	NeuronMorphHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	for (int32 v = 0; v < MetaBrainNeuronVariants::NumVariants; ++v)
+	{
+		UHierarchicalInstancedStaticMeshComponent* H = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(*FString::Printf(TEXT("NeuronMorphHISM_%d"), v));
+		H->SetupAttachment(Root);
+		H->NumCustomDataFloats = 4;
+		H->SetCastShadow(true);
+		H->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		NeuronMorphHISMs.Add(H);
+	}
 
 	MyelinHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MyelinHISM"));
 	MyelinHISM->SetupAttachment(Root);
@@ -134,11 +139,21 @@ void AMetaBrainSceneController::BeginPlay()
 
 	// Real neuron morphology (built by Scripts/build_assets/build_meshes.py). Falls back to
 	// the procedural sphere + cylinder arbor when the assets have not been built.
-	NeuronSomaMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/MetaBrain/Meshes/SM_NeuronSoma.SM_NeuronSoma"));
-	bMorphAssetsLoaded = (NeuronSomaMesh != nullptr);
-	if (bMorphAssetsLoaded)
+	NeuronVariantMeshes.Reset();
+	for (int32 v = 0; v < MetaBrainNeuronVariants::NumVariants; ++v)
 	{
-		NeuronMorphHISM->SetStaticMesh(NeuronSomaMesh);
+		NeuronVariantMeshes.Add(LoadObject<UStaticMesh>(nullptr, MetaBrainNeuronVariants::MeshPaths[v]));
+	}
+	bRealVariants = !NeuronVariantMeshes.Contains(nullptr);
+	if (!bRealVariants)
+	{
+		NeuronVariantMeshes.Init(nullptr, MetaBrainNeuronVariants::NumVariants);
+		NeuronVariantMeshes[0] = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/MetaBrain/Meshes/SM_NeuronSoma.SM_NeuronSoma"));
+	}
+	bMorphAssetsLoaded = (NeuronVariantMeshes[0] != nullptr);
+	for (int32 v = 0; v < NeuronMorphHISMs.Num(); ++v)
+	{
+		if (NeuronVariantMeshes[v]) NeuronMorphHISMs[v]->SetStaticMesh(NeuronVariantMeshes[v]);
 	}
 	MyelinMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_Myelin.M_Myelin"));
 	if (MyelinMaterial) MyelinHISM->SetMaterial(0, MyelinMaterial);
@@ -518,8 +533,11 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 		bEdgeFilterDirty = true;
 
 		NeuronHISM->ClearInstances();
-		NeuronMorphHISM->ClearInstances();
-		NeuronMorphTransforms.Reset();
+		for (UHierarchicalInstancedStaticMeshComponent* H : NeuronMorphHISMs) H->ClearInstances();
+		VariantTransforms.Reset();
+		VariantTransforms.SetNum(NeuronMorphHISMs.Num());
+		NeuronVariant.Reset();
+		NeuronVariantLocalIdx.Reset();
 		DendriteArborHISM->ClearInstances();
 		NeuronArborSpans.Reset();
 		NeuronArborSpans.SetNum(Count);
@@ -549,7 +567,8 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 			const bool bBuildDetailedArbors = (ViewMode == EMetaBrainViewMode::Brain) && !bUseMorphMesh && (Count <= 600);
 			if (bUseMorphMesh)
 			{
-				NeuronMorphTransforms.SetNum(Count);
+				NeuronVariant.SetNumZeroed(Count);
+				NeuronVariantLocalIdx.SetNumZeroed(Count);
 			}
 			if (bBuildDetailedArbors)
 			{
@@ -557,6 +576,18 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 			}
 
 			constexpr double GoldenAngle = 2.3999632297;
+
+			// Region (level-1 holon label) per neuron -> anatomical cell type
+			TArray<FString> NeuronRegion;
+			NeuronRegion.SetNum(Count);
+			for (const FMetaBrainHolonSnap& Hol : CurrentSnapshot->Holons)
+			{
+				if (Hol.Level != 1) continue;
+				for (int32 Mi : Hol.MemberNeuronIndices)
+				{
+					if (NeuronRegion.IsValidIndex(Mi)) NeuronRegion[Mi] = Hol.Label;
+				}
+			}
 
 			for (int32 i = 0; i < Count; ++i)
 			{
@@ -585,15 +616,30 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 					// segment along HillockDir, per-neuron roll so no two cells look identical.
 					const FQuat Roll(HillockDir, static_cast<double>(N.Id % 360) * GoldenAngle);
 					const FTransform MorphT(Roll * SomaRot, SomaCenter, FVector(BaseScale));
-					NeuronMorphTransforms[i] = MorphT;
+					const uint8 V = bRealVariants ? PickNeuronVariant(N, NeuronRegion[i]) : 0;
+					NeuronVariant[i] = V;
+					NeuronVariantLocalIdx[i] = VariantTransforms[V].Add(MorphT);
 
-					using namespace MetaBrainNeuronMorphology;
 					const double ToLocal = 50.0; // soma radii -> mesh-local units
-					Span.AxonHillockTipCm = MorphT.TransformPosition(FVector(HillockTip[0], HillockTip[1], HillockTip[2]) * ToLocal);
-					Span.DistalSpineTipsCm.Reserve(NumDendriteTips);
-					for (int32 t = 0; t < NumDendriteTips; ++t)
+					if (bRealVariants)
 					{
-						Span.DistalSpineTipsCm.Add(MorphT.TransformPosition(FVector(DendriteTips[t][0], DendriteTips[t][1], DendriteTips[t][2]) * ToLocal));
+						using namespace MetaBrainNeuronVariants;
+						Span.AxonHillockTipCm = MorphT.TransformPosition(FVector(0.0, 0.0, HillockTipZ[V]) * ToLocal);
+						Span.DistalSpineTipsCm.Reserve(NumTips[V]);
+						for (int32 t = 0; t < NumTips[V]; ++t)
+						{
+							Span.DistalSpineTipsCm.Add(MorphT.TransformPosition(FVector(Tips[V][t][0], Tips[V][t][1], Tips[V][t][2]) * ToLocal));
+						}
+					}
+					else
+					{
+						using namespace MetaBrainNeuronMorphology;
+						Span.AxonHillockTipCm = MorphT.TransformPosition(FVector(HillockTip[0], HillockTip[1], HillockTip[2]) * ToLocal);
+						Span.DistalSpineTipsCm.Reserve(NumDendriteTips);
+						for (int32 t = 0; t < NumDendriteTips; ++t)
+						{
+							Span.DistalSpineTipsCm.Add(MorphT.TransformPosition(FVector(DendriteTips[t][0], DendriteTips[t][1], DendriteTips[t][2]) * ToLocal));
+						}
 					}
 					Span.NumArborSegs = 0;
 					continue;
@@ -663,8 +709,12 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 
 			if (bUseMorphMesh)
 			{
-				NeuronMorphHISM->AddInstances(NeuronMorphTransforms, false, true);
-				NeuronMorphHISM->BuildTreeIfOutdated(false, true);
+				for (int32 v = 0; v < NeuronMorphHISMs.Num(); ++v)
+				{
+					if (VariantTransforms[v].Num() == 0) continue;
+					NeuronMorphHISMs[v]->AddInstances(VariantTransforms[v], false, true);
+					NeuronMorphHISMs[v]->BuildTreeIfOutdated(false, true);
+				}
 			}
 
 			if (ArborTransforms.Num() > 0)
@@ -760,7 +810,10 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 		NeuronHISM->SetCustomData(i, SomaCustom, false);
 		if (bUseMorphMesh)
 		{
-			NeuronMorphHISM->SetCustomData(i, SomaCustom, false);
+			if (NeuronVariant.IsValidIndex(i))
+			{
+				NeuronMorphHISMs[NeuronVariant[i]]->SetCustomData(NeuronVariantLocalIdx[i], SomaCustom, false);
+			}
 		}
 		bAnySomaDirty = true;
 
@@ -780,8 +833,24 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 	}
 
 	if (bAnySomaDirty) NeuronHISM->MarkRenderStateDirty();
-	if (bAnySomaDirty && bUseMorphMesh) NeuronMorphHISM->MarkRenderStateDirty();
+	if (bAnySomaDirty && bUseMorphMesh)
+	{
+		for (UHierarchicalInstancedStaticMeshComponent* H : NeuronMorphHISMs) H->MarkRenderStateDirty();
+	}
 	if (bAnyArborDirty) DendriteArborHISM->MarkRenderStateDirty();
+}
+
+uint8 AMetaBrainSceneController::PickNeuronVariant(const FMetaBrainNeuronSnap& N, const FString& Region) const
+{
+	// Variant order = swc_to_mesh.py VARIANTS: 0 PyramidalCortex, 1 PyramidalCA1, 2 Interneuron, 3 Purkinje
+	const uint64 H = N.Id * 2654435761ULL;
+	if (N.Role == 3) return 3;                     // readout -> Purkinje (cerebellar output cell)
+	if (N.Role == 2) return 2;                     // micro-interneuron
+	if (N.Role == 0) return 0;                     // sensory relay -> cortical pyramidal
+	const bool bLocalInterneuron = (H % 100ULL) < 20ULL; // ~20% of cortical neurons are interneurons
+	if (Region.Contains(TEXT("Hippocampus"))) return bLocalInterneuron ? 2 : 1;
+	if (Region.Contains(TEXT("Amygdala")))    return (H % 2ULL) ? 2 : 0;
+	return bLocalInterneuron ? 2 : 0;              // Prefrontal / Association neocortex
 }
 
 void AMetaBrainSceneController::SetViewMode(EMetaBrainViewMode InMode)
@@ -798,7 +867,7 @@ void AMetaBrainSceneController::ApplyViewMode()
 
 	// NeuronHISM always exists for cursor hit-tests; it is only *drawn* in Net view.
 	NeuronHISM->SetVisibility(!bUseMorphMesh);
-	NeuronMorphHISM->SetVisibility(bUseMorphMesh);
+	for (UHierarchicalInstancedStaticMeshComponent* H : NeuronMorphHISMs) H->SetVisibility(bUseMorphMesh);
 	DendriteArborHISM->SetVisibility(bBrain && !bUseMorphMesh); // procedural fallback arbor
 	MyelinHISM->SetVisibility(bBrain);
 
