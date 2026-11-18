@@ -1,4 +1,5 @@
 #include "MetaBrainSceneController.h"
+#include "MetaBrainCameraPawn.h"
 #include "MetaBrainHolonLabelWidget.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
@@ -8,7 +9,9 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/PostProcessVolume.h"
 #include "Materials/MaterialInterface.h"
+#include "Materials/MaterialParameterCollection.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMaterialLibrary.h"
 #include "Camera/PlayerCameraManager.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Misc/CommandLine.h"
@@ -81,6 +84,8 @@ void AMetaBrainSceneController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	MetaBrainMPC = LoadObject<UMaterialParameterCollection>(nullptr, TEXT("/Game/MetaBrain/Materials/MPC_MetaBrain.MPC_MetaBrain"));
+
 	NeuronMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_Neuron.M_Neuron"));
 	if (NeuronMaterial) NeuronHISM->SetMaterial(0, NeuronMaterial);
 
@@ -120,7 +125,13 @@ void AMetaBrainSceneController::BeginPlay()
 		HolonLabelPool.Add(WC);
 	}
 
+	Breadcrumbs.Reset();
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector::ZeroVector, 680.0f });
+
 	FParse::Value(FCommandLine::Get(), TEXT("AutoShot="), AutoShotPath);
+	FParse::Value(FCommandLine::Get(), TEXT("ShotMode="), AutoShotMode);
+	FParse::Value(FCommandLine::Get(), TEXT("ShotLens="), AutoShotLens);
+	bAutoSelectNeuron = FParse::Param(FCommandLine::Get(), TEXT("ShotSelect"));
 
 	int32 MacroOverride = 0;
 	int32 EdgesOverride = 0;
@@ -130,6 +141,15 @@ void AMetaBrainSceneController::BeginPlay()
 	SimBridge = MakeUnique<FMetaBrainSimBridge>(MacroOverride, EdgesOverride);
 	SimBridge->StartWorker(18);
 	CurrentSnapshot = SimBridge->GetLatestSnapshot();
+
+	if (AutoShotLens.Equals(TEXT("Age"), ESearchCase::IgnoreCase))
+	{
+		SetAgeLensActive(true);
+	}
+	else
+	{
+		SetAgeLensActive(false);
+	}
 
 	CachedPostProcessVolume = Cast<APostProcessVolume>(UGameplayStatics::GetActorOfClass(this, APostProcessVolume::StaticClass()));
 
@@ -185,13 +205,204 @@ float AMetaBrainSceneController::GetEffectiveWeightThreshold() const
 	return ManualWeightThreshold;
 }
 
+void AMetaBrainSceneController::SetAgeLensActive(bool bInAgeLens)
+{
+	bAgeLensActive = bInAgeLens;
+	if (MetaBrainMPC && GetWorld())
+	{
+		UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), MetaBrainMPC, TEXT("LensMode"), bAgeLensActive ? 1.0f : 0.0f);
+	}
+}
+
+void AMetaBrainSceneController::NotifyCameraFlyTo(const FVector& TargetPivotCm, float TargetDistanceCm)
+{
+	FocusedHolonTargetCm = TargetPivotCm;
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+	{
+		if (AMetaBrainCameraPawn* CamPawn = Cast<AMetaBrainCameraPawn>(PC->GetPawn()))
+		{
+			CamPawn->StartFlyTransition(TargetPivotCm, TargetDistanceCm);
+		}
+	}
+	bEdgeFilterDirty = true;
+}
+
+void AMetaBrainSceneController::ZoomToMacro()
+{
+	CurrentZoomLevel = EMetaBrainZoomLevel::Macro;
+	FocusedHolonKey.Empty();
+	Breadcrumbs.Reset();
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector::ZeroVector, 680.0f });
+	NotifyCameraFlyTo(FVector::ZeroVector, 680.0f);
+}
+
+void AMetaBrainSceneController::ZoomIntoHolon(const FString& HolonKey)
+{
+	if (!CurrentSnapshot.IsValid() || HolonKey.IsEmpty()) return;
+
+	const FMetaBrainHolonSnap* TargetH = nullptr;
+	for (const FMetaBrainHolonSnap& H : CurrentSnapshot->Holons)
+	{
+		if (H.Key == HolonKey)
+		{
+			TargetH = &H;
+			break;
+		}
+	}
+	if (!TargetH) return;
+
+	Breadcrumbs.Reset();
+	Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector::ZeroVector, 680.0f });
+
+	if (TargetH->Level == 1)
+	{
+		CurrentZoomLevel = EMetaBrainZoomLevel::Cluster;
+		FocusedHolonKey = TargetH->Key;
+		const float ViewDist = FMath::Max(165.0f, TargetH->RadiusCm * 2.35f);
+		Breadcrumbs.Add({ TargetH->Label, TargetH->Key, TargetH->NeuronId, EMetaBrainZoomLevel::Cluster, FVector(TargetH->CenterCm), ViewDist });
+		NotifyCameraFlyTo(FVector(TargetH->CenterCm), ViewDist);
+	}
+	else
+	{
+		// Rebuild parent region breadcrumb first if available
+		for (const FMetaBrainHolonSnap& ParentH : CurrentSnapshot->Holons)
+		{
+			if (ParentH.Key == TargetH->ParentKey)
+			{
+				const float ParentDist = FMath::Max(165.0f, ParentH.RadiusCm * 2.35f);
+				Breadcrumbs.Add({ ParentH.Label, ParentH.Key, ParentH.NeuronId, EMetaBrainZoomLevel::Cluster, FVector(ParentH.CenterCm), ParentDist });
+				break;
+			}
+		}
+		CurrentZoomLevel = EMetaBrainZoomLevel::Micro;
+		FocusedHolonKey = TargetH->Key;
+		const float ViewDist = FMath::Max(68.0f, TargetH->RadiusCm * 2.65f);
+		Breadcrumbs.Add({ TargetH->Label, TargetH->Key, TargetH->NeuronId, EMetaBrainZoomLevel::Micro, FVector(TargetH->CenterCm), ViewDist });
+		NotifyCameraFlyTo(FVector(TargetH->CenterCm), ViewDist);
+	}
+}
+
+void AMetaBrainSceneController::ZoomIntoNeuron(int64 NeuronId)
+{
+	if (!CurrentSnapshot.IsValid() || NeuronId < 0) return;
+
+	// First check if this composite neuron has its own Holon shell
+	for (const FMetaBrainHolonSnap& H : CurrentSnapshot->Holons)
+	{
+		if (H.NeuronId == NeuronId)
+		{
+			ZoomIntoHolon(H.Key);
+			return;
+		}
+	}
+
+	// Otherwise fly closely to the neuron itself in Micro mode
+	for (const FMetaBrainNeuronSnap& N : CurrentSnapshot->Neurons)
+	{
+		if (static_cast<int64>(N.Id) == NeuronId)
+		{
+			CurrentZoomLevel = EMetaBrainZoomLevel::Micro;
+			const float ViewDist = FMath::Max(52.0f, N.RadiusCm * 8.5f);
+			if (Breadcrumbs.Num() == 0)
+			{
+				Breadcrumbs.Add({ TEXT("/"), TEXT(""), -1, EMetaBrainZoomLevel::Macro, FVector::ZeroVector, 680.0f });
+			}
+			Breadcrumbs.Add({ N.Label, FocusedHolonKey, NeuronId, EMetaBrainZoomLevel::Micro, FVector(N.PositionCm), ViewDist });
+			NotifyCameraFlyTo(FVector(N.PositionCm), ViewDist);
+			return;
+		}
+	}
+}
+
+void AMetaBrainSceneController::ZoomToBreadcrumbIndex(int32 Index)
+{
+	if (!Breadcrumbs.IsValidIndex(Index)) return;
+	if (Index == 0)
+	{
+		ZoomToMacro();
+		return;
+	}
+
+	const FMetaBrainBreadcrumbNode TargetNode = Breadcrumbs[Index];
+	Breadcrumbs.SetNum(Index + 1);
+	CurrentZoomLevel = TargetNode.Level;
+	FocusedHolonKey = TargetNode.HolonKey;
+	NotifyCameraFlyTo(TargetNode.FocusCenterCm, TargetNode.ViewDistanceCm);
+}
+
+void AMetaBrainSceneController::ZoomToLevelSegmented(EMetaBrainZoomLevel RequestedLevel)
+{
+	if (RequestedLevel == EMetaBrainZoomLevel::Macro)
+	{
+		ZoomToMacro();
+		return;
+	}
+	if (!CurrentSnapshot.IsValid()) return;
+
+	if (RequestedLevel == EMetaBrainZoomLevel::Cluster)
+	{
+		// If currently in Micro, step up to parent Cluster breadcrumb
+		if (Breadcrumbs.Num() >= 2 && Breadcrumbs[1].Level == EMetaBrainZoomLevel::Cluster)
+		{
+			ZoomToBreadcrumbIndex(1);
+			return;
+		}
+		// Pick first Level-1 Region Holon (Hippocampus or highest activity)
+		for (const FMetaBrainHolonSnap& H : CurrentSnapshot->Holons)
+		{
+			if (H.Level == 1)
+			{
+				ZoomIntoHolon(H.Key);
+				return;
+			}
+		}
+	}
+	else if (RequestedLevel == EMetaBrainZoomLevel::Micro)
+	{
+		if (SelectedNeuronId >= 0)
+		{
+			ZoomIntoNeuron(SelectedNeuronId);
+			return;
+		}
+		// Pick a Level-2 sub-holon inside focused Cluster (or first Level-2 holon)
+		for (const FMetaBrainHolonSnap& H : CurrentSnapshot->Holons)
+		{
+			if (H.Level >= 2 && (FocusedHolonKey.IsEmpty() || H.ParentKey == FocusedHolonKey))
+			{
+				ZoomIntoHolon(H.Key);
+				return;
+			}
+		}
+	}
+}
+
+void AMetaBrainSceneController::StepUpOrClearSelection()
+{
+	if (SelectedNeuronId >= 0)
+	{
+		SetSelectedNeuronId(-1);
+		return;
+	}
+	if (Breadcrumbs.Num() > 1)
+	{
+		ZoomToBreadcrumbIndex(Breadcrumbs.Num() - 2);
+	}
+}
+
 FVector AMetaBrainSceneController::GetActiveCameraLocation() const
 {
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+	{
+		if (AMetaBrainCameraPawn* CamPawn = Cast<AMetaBrainCameraPawn>(PC->GetPawn()))
+		{
+			return CamPawn->GetCameraWorldLocation();
+		}
+	}
 	if (APlayerCameraManager* CamMgr = UGameplayStatics::GetPlayerCameraManager(this, 0))
 	{
 		return CamMgr->GetCameraLocation();
 	}
-	return FVector(-680.0, 0.0, 22.0);
+	return FVector(-680.0, 0.0, 26.0);
 }
 
 void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector& CamLoc)
@@ -221,9 +432,21 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 
 	if (Count == 0) return;
 
-	const float CamDistOrigin = static_cast<float>(CamLoc.Size());
-	const bool bIsMacro = (CamDistOrigin > 460.0f);
+	const bool bIsMacro = (CurrentZoomLevel == EMetaBrainZoomLevel::Macro) && (CamLoc.Size() > 420.0);
 	const int64 FocusId = (HoveredNeuronId >= 0) ? HoveredNeuronId : SelectedNeuronId;
+
+	TSet<int32> FocusedHolonMemberSet;
+	if (!FocusedHolonKey.IsEmpty())
+	{
+		for (const FMetaBrainHolonSnap& H : CurrentSnapshot->Holons)
+		{
+			if (H.Key == FocusedHolonKey)
+			{
+				for (int32 Idx : H.MemberNeuronIndices) FocusedHolonMemberSet.Add(Idx);
+				break;
+			}
+		}
+	}
 
 	TSet<uint64> IsolatedSet;
 	if (FocusId >= 0)
@@ -252,10 +475,18 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 		float BaseBrightness = 1.0f;
 		if (bIsMacro && N.Role != 0 && N.Role != 3)
 		{
-			BaseBrightness = (N.Depth == 0) ? 0.52f : 0.32f;
+			// Macro: top-level holons dominate, inner neurons faded subtly
+			BaseBrightness = (N.Depth == 0) ? 0.38f : 0.22f;
 		}
+		else if (FocusedHolonMemberSet.Num() > 0)
+		{
+			// Cluster / Micro: inner neurons of focused holon fade in to 100%, external clusters dim
+			BaseBrightness = FocusedHolonMemberSet.Contains(i) ? 1.0f : 0.24f;
+		}
+
 		if (FocusId >= 0)
 		{
+			// Hover / select isolates neuron & incident neighbors, dimming everything else to 20%
 			BaseBrightness = IsolatedSet.Contains(N.Id) ? 1.0f : 0.20f;
 		}
 
@@ -293,28 +524,53 @@ void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)
 		}
 	}
 
-	const float CamDistOrigin = static_cast<float>(CamLoc.Size());
-	const int32 MaxLabelLevel = (CamDistOrigin > 460.0f) ? 1 : ((CamDistOrigin > 210.0f) ? 2 : 4);
+	const int32 MaxLabelLevel = (CurrentZoomLevel == EMetaBrainZoomLevel::Macro) ? 1 : ((CurrentZoomLevel == EMetaBrainZoomLevel::Cluster) ? 2 : 4);
+
+	TSet<FString> FadedAncestorKeys;
+	if (!FocusedHolonKey.IsEmpty())
+	{
+		FadedAncestorKeys.Add(FocusedHolonKey);
+		for (const FMetaBrainBreadcrumbNode& BC : Breadcrumbs)
+		{
+			if (!BC.HolonKey.IsEmpty()) FadedAncestorKeys.Add(BC.HolonKey);
+		}
+	}
 
 	int32 LabelSlot = 0;
 	for (int32 i = 0; i < NumH; ++i)
 	{
 		const FMetaBrainHolonSnap& H = Holons[i];
 		const float DistToShellCenter = FVector::Distance(CamLoc, FVector(H.CenterCm));
-		const float ShellFade = FMath::Clamp((DistToShellCenter - H.RadiusCm * 0.85f) / FMath::Max(12.0f, H.RadiusCm * 0.65f), 0.0f, 1.0f);
+
+		// Outer shell fades out completely when entered (Cluster / Micro)
+		float ShellFade = FMath::Clamp((DistToShellCenter - H.RadiusCm * 0.92f) / FMath::Max(14.0f, H.RadiusCm * 0.55f), 0.0f, 1.0f);
+		if (FadedAncestorKeys.Contains(H.Key))
+		{
+			ShellFade = 0.0f;
+		}
+		else if (!FocusedHolonKey.IsEmpty() && H.ParentKey != FocusedHolonKey && !H.Key.StartsWith(FocusedHolonKey))
+		{
+			ShellFade *= 0.25f;
+		}
+		else if (H.Key == HoveredHolonKey)
+		{
+			ShellFade = FMath::Min(1.55f, ShellFade * 1.45f);
+		}
+
 		HolonShellHISM->SetCustomDataValue(i, 0, ShellFade, false);
 
-		if (H.Level <= MaxLabelLevel && ShellFade > 0.25f && LabelSlot < HolonLabelPool.Num())
+		const bool bShowLabelInScope = (H.Level == 1 && CurrentZoomLevel == EMetaBrainZoomLevel::Macro) ||
+			(H.Level == 2 && CurrentZoomLevel == EMetaBrainZoomLevel::Cluster && H.ParentKey == FocusedHolonKey) ||
+			(H.Level >= 2 && CurrentZoomLevel == EMetaBrainZoomLevel::Micro && DistToShellCenter < H.RadiusCm * 4.0f);
+
+		if (H.Level <= MaxLabelLevel && bShowLabelInScope && ShellFade > 0.22f && LabelSlot < HolonLabelPool.Num())
 		{
-			if (H.Level == 1 || DistToShellCenter < H.RadiusCm * 4.5f)
+			UWidgetComponent* WC = HolonLabelPool[LabelSlot++];
+			WC->SetWorldLocation(FVector(H.CenterCm) + FVector(0.0, 0.0, H.RadiusCm + 6.0));
+			WC->SetVisibility(true);
+			if (UMetaBrainHolonLabelWidget* LW = Cast<UMetaBrainHolonLabelWidget>(WC->GetUserWidgetObject()))
 			{
-				UWidgetComponent* WC = HolonLabelPool[LabelSlot++];
-				WC->SetWorldLocation(FVector(H.CenterCm) + FVector(0.0, 0.0, H.RadiusCm + 6.0));
-				WC->SetVisibility(true);
-				if (UMetaBrainHolonLabelWidget* LW = Cast<UMetaBrainHolonLabelWidget>(WC->GetUserWidgetObject()))
-				{
-					LW->SetHolonText(H.Label, ShellFade);
-				}
+				LW->SetHolonText(H.Label, FMath::Clamp(ShellFade, 0.0f, 1.0f));
 			}
 		}
 	}
@@ -336,7 +592,6 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 	const TArray<FMetaBrainEdgeSnap>& Edges = CurrentSnapshot->Edges;
 	const TArray<FMetaBrainHolonSnap>& Holons = CurrentSnapshot->Holons;
 
-	// 1. Rebuild visible edge geometry only when topology, threshold slider, or focus target changes
 	if (RenderedEdgeTopoRev != CurrentSnapshot->TopologyRevision || bEdgeFilterDirty || LastRenderedFocusId != FocusId)
 	{
 		RenderedEdgeTopoRev = CurrentSnapshot->TopologyRevision;
@@ -346,7 +601,6 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		ActiveEdgeInstances.Reset();
 		EdgeFilamentHISM->ClearInstances();
 
-		// Map Region Name -> Level-1 Holon for clean sensory boundary bundling
 		TMap<FString, const FMetaBrainHolonSnap*> RegionHolonMap;
 		for (const FMetaBrainHolonSnap& H : Holons)
 		{
@@ -359,9 +613,8 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		TArray<FVector> NiagaraEnds;
 		TArray<float> NiagaraWeights;
 
-		// Cap rendered filaments at 4,000 max even at extreme slider 0.0 on 10k-edge benchmark
 		constexpr int32 MaxRenderedEdges = 4000;
-		const float FilamentRadiusCm = (Neurons.Num() > 800) ? 0.25f : 0.38f;
+		const float FilamentRadiusCm = (Neurons.Num() > 800) ? 0.25f : 0.36f;
 
 		for (int32 Idx = 0; Idx < Edges.Num() && ActiveEdgeInstances.Num() < MaxRenderedEdges; ++Idx)
 		{
@@ -386,8 +639,7 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 			FVector StartPos(Src.PositionCm);
 			FVector EndPos(Dst.PositionCm);
 
-			// Bundle root sensory edges to target Region Holon shell perimeter unless inspecting directly
-			if (Src.Role == 0 && Dst.Role == 1 && FocusId < 0)
+			if (CurrentZoomLevel == EMetaBrainZoomLevel::Macro && Src.Role == 0 && Dst.Role == 1 && FocusId < 0)
 			{
 				int32 DotPos = INDEX_NONE;
 				FString RegName = Dst.Label;
@@ -439,7 +691,6 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		}
 	}
 
-	// 2. Update per-filament opacity & brief amber signal flash + spawn traveling pulses on new sim tick
 	const bool bNewSimTick = (CurrentSnapshot->Tick != LastProcessedSimTick);
 	if (bNewSimTick)
 	{
@@ -460,7 +711,6 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		const bool bIsIncident = (FocusId >= 0) &&
 			(static_cast<int64>(E.SourceId) == FocusId || static_cast<int64>(E.TargetId) == FocusId);
 
-		// Opacity proportional to |w|, dimmed to 20% when hovering/isolating another node
 		const float WeightNorm = FMath::Clamp(E.AbsWeight / 3.5f, 0.08f, 1.0f);
 		float Opacity = 0.08f + 0.34f * WeightNorm;
 		if (FocusId >= 0)
@@ -483,7 +733,6 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		EdgeCustom[1] = (FocusId >= 0 && !bIsIncident) ? 0.0f : SignalFlash;
 		EdgeFilamentHISM->SetCustomData(InstIdx, EdgeCustom, false);
 
-		// Spawn traveling amber pulse when source neuron fired this tick (speed scaled by |weight|)
 		if (bNewSimTick && Src.bFiredThisTick && TravelingPulses.Num() < 256 && (FocusId < 0 || bIsIncident))
 		{
 			const float Len = static_cast<float>((Map.EndPos - Map.StartPos).Size());
@@ -501,7 +750,6 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 	}
 	EdgeFilamentHISM->MarkRenderStateDirty();
 
-	// 3. Advance & render traveling amber signal pulses + push to Niagara Pulse Array DI
 	TArray<FTransform> PulseTransforms;
 	TArray<float> PulseEnvelopes;
 	TArray<FVector> NiagaraPulsePositions;
@@ -551,7 +799,7 @@ void AMetaBrainSceneController::UpdatePostProcessFocus(float DeltaSeconds, const
 	}
 
 	FVector FocusPoint = FocusedHolonTargetCm;
-	float TargetFStop = (CamLoc.Size() > 460.0) ? 4.0f : 2.8f;
+	float TargetFStop = (CurrentZoomLevel == EMetaBrainZoomLevel::Macro) ? 4.0f : 2.8f;
 
 	if (SelectedNeuronId >= 0 && CurrentSnapshot.IsValid())
 	{
@@ -579,6 +827,53 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	++FrameCounter;
+
+	// Automated CLI fly-in & selection triggers at Frame 8 so 400 ms ease-out settles smoothly before Frame 75 screenshot
+	if (FrameCounter == 8 && CurrentSnapshot.IsValid())
+	{
+		if (AutoShotMode.Equals(TEXT("Cluster"), ESearchCase::IgnoreCase))
+		{
+			ZoomToLevelSegmented(EMetaBrainZoomLevel::Cluster);
+		}
+		else if (AutoShotMode.Equals(TEXT("Micro"), ESearchCase::IgnoreCase))
+		{
+			ZoomToLevelSegmented(EMetaBrainZoomLevel::Cluster);
+			ZoomToLevelSegmented(EMetaBrainZoomLevel::Micro);
+		}
+
+		if (bAutoSelectNeuron)
+		{
+			// Select an active cortical composite neuron inside the focused cluster for inspector & isolation demo
+			int64 PickedId = -1;
+			for (const FMetaBrainHolonSnap& H : CurrentSnapshot->Holons)
+			{
+				if (H.Key == FocusedHolonKey)
+				{
+					for (int32 MemberIdx : H.MemberNeuronIndices)
+					{
+						if (CurrentSnapshot->Neurons.IsValidIndex(MemberIdx) && CurrentSnapshot->Neurons[MemberIdx].ChildCount > 0)
+						{
+							PickedId = static_cast<int64>(CurrentSnapshot->Neurons[MemberIdx].Id);
+							break;
+						}
+					}
+					break;
+				}
+			}
+			if (PickedId < 0)
+			{
+				for (const FMetaBrainNeuronSnap& N : CurrentSnapshot->Neurons)
+				{
+					if (N.Role == 1 && N.ChildCount > 0)
+					{
+						PickedId = static_cast<int64>(N.Id);
+						break;
+					}
+				}
+			}
+			if (PickedId >= 0) SetSelectedNeuronId(PickedId);
+		}
+	}
 
 	if (SimBridge)
 	{

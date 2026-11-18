@@ -1,9 +1,13 @@
 #include "MetaBrainGameMode.h"
+#include "MetaBrainCameraPawn.h"
+#include "MetaBrainPlayerController.h"
 #include "MetaBrainSceneController.h"
 #include "EngineUtils.h"
 
 AMetaBrainGameMode::AMetaBrainGameMode()
 {
+	DefaultPawnClass = AMetaBrainCameraPawn::StaticClass();
+	PlayerControllerClass = AMetaBrainPlayerController::StaticClass();
 }
 
 void AMetaBrainGameMode::BeginPlay()

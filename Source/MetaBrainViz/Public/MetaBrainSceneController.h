@@ -10,8 +10,27 @@ class UNiagaraComponent;
 class UNiagaraSystem;
 class UWidgetComponent;
 class UMaterialInterface;
+class UMaterialParameterCollection;
 class UStaticMesh;
 class APostProcessVolume;
+
+UENUM(BlueprintType)
+enum class EMetaBrainZoomLevel : uint8
+{
+	Macro = 0,
+	Cluster = 1,
+	Micro = 2
+};
+
+struct FMetaBrainBreadcrumbNode
+{
+	FString Label;
+	FString HolonKey;
+	int64 NeuronId = -1;
+	EMetaBrainZoomLevel Level = EMetaBrainZoomLevel::Macro;
+	FVector FocusCenterCm = FVector::ZeroVector;
+	float ViewDistanceCm = 680.0f;
+};
 
 struct FMetaBrainTravelingPulse
 {
@@ -44,8 +63,27 @@ public:
 	int64 GetHoveredNeuronId() const { return HoveredNeuronId; }
 	int64 GetSelectedNeuronId() const { return SelectedNeuronId; }
 
+	void SetHoveredHolonKey(const FString& InKey) { HoveredHolonKey = InKey; }
+	const FString& GetHoveredHolonKey() const { return HoveredHolonKey; }
+
 	void SetManualWeightThreshold(float InThreshold);
 	float GetEffectiveWeightThreshold() const;
+
+	// Zoom & Breadcrumb Navigation (400 ms ease-out fly-in)
+	EMetaBrainZoomLevel GetZoomLevel() const { return CurrentZoomLevel; }
+	const TArray<FMetaBrainBreadcrumbNode>& GetBreadcrumbs() const { return Breadcrumbs; }
+	const FString& GetFocusedHolonKey() const { return FocusedHolonKey; }
+
+	void ZoomToMacro();
+	void ZoomIntoHolon(const FString& HolonKey);
+	void ZoomIntoNeuron(int64 NeuronId);
+	void ZoomToBreadcrumbIndex(int32 Index);
+	void ZoomToLevelSegmented(EMetaBrainZoomLevel RequestedLevel);
+	void StepUpOrClearSelection();
+
+	// Lens Mode: false = Activity, true = Age (#8FD3A8 -> #5A6B8C)
+	void SetAgeLensActive(bool bInAgeLens);
+	bool IsAgeLensActive() const { return bAgeLensActive; }
 
 	void SetFocusedWorldTarget(const FVector& InTargetCm) { FocusedHolonTargetCm = InTargetCm; }
 	FVector GetFocusedWorldTarget() const { return FocusedHolonTargetCm; }
@@ -91,10 +129,10 @@ protected:
 	TObjectPtr<UMaterialInterface> SignalPulseMaterial;
 
 	UPROPERTY()
-	TObjectPtr<APostProcessVolume> CachedPostProcessVolume;
+	TObjectPtr<UMaterialParameterCollection> MetaBrainMPC;
 
-	FVector FocusedHolonTargetCm = FVector::ZeroVector;
-	float CurrentFocalDistanceCm = 680.0f;
+	UPROPERTY()
+	TObjectPtr<APostProcessVolume> CachedPostProcessVolume;
 
 	TUniquePtr<FMetaBrainSimBridge> SimBridge;
 	TSharedPtr<const FMetaBrainSnapshot, ESPMode::ThreadSafe> CurrentSnapshot;
@@ -107,6 +145,15 @@ protected:
 	int64 HoveredNeuronId = -1;
 	int64 SelectedNeuronId = -1;
 	int64 LastRenderedFocusId = -2;
+	FString HoveredHolonKey;
+
+	EMetaBrainZoomLevel CurrentZoomLevel = EMetaBrainZoomLevel::Macro;
+	FString FocusedHolonKey;
+	TArray<FMetaBrainBreadcrumbNode> Breadcrumbs;
+
+	FVector FocusedHolonTargetCm = FVector::ZeroVector;
+	float CurrentFocalDistanceCm = 680.0f;
+	bool bAgeLensActive = false;
 
 	bool bUseAutoTop20Filter = true;
 	float ManualWeightThreshold = 0.45f;
@@ -122,10 +169,14 @@ protected:
 	TArray<FMetaBrainTravelingPulse> TravelingPulses;
 
 	FString AutoShotPath;
+	FString AutoShotMode;
+	FString AutoShotLens;
+	bool bAutoSelectNeuron = false;
 	int32 FrameCounter = 0;
 	bool bShotRequested = false;
 
 	FVector GetActiveCameraLocation() const;
+	void NotifyCameraFlyTo(const FVector& TargetPivotCm, float TargetDistanceCm);
 	void SyncNeuronHISM(double NowWallSec, const FVector& CamLoc);
 	void SyncHolonShellsAndLabels(const FVector& CamLoc);
 	void SyncEdgesAndPulses(float DeltaSeconds, double NowWallSec);
