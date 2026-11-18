@@ -8,5 +8,7 @@ DerivedDataCache/
 Saved/
 .vs/
 *.sln
+**/__pycache__/
+*.pyc
 Content/**/*.uasset
 Content/**/*.umap
