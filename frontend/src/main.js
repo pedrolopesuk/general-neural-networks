@@ -1,5 +1,6 @@
 import { MetaBrainBackendClient } from './api/backendClient.js';
 import { BrainViewport } from './scene/BrainViewport.js';
+import { Oscilloscope } from './trace/Oscilloscope.js';
 import { getTheme, lerpRgb } from './theme.js';
 
 const api = new MetaBrainBackendClient();
@@ -7,6 +8,7 @@ const theme = getTheme();
 
 let latestState = null;
 let selectedNeuronId = null;
+let selectedNeuronVoltage = null;
 let lastAnchorPos = { x: 240, y: 160 };
 let simRunning = true;
 let is3DMode = false;
@@ -59,6 +61,7 @@ const popoverEl = document.getElementById('inspector-popover');
 
 function closeInspector() {
   selectedNeuronId = null;
+  selectedNeuronVoltage = null;
   popoverEl.style.display = 'none';
   if (viewport.clearSelection) viewport.clearSelection();
   else viewport.selectedId = null;
@@ -512,6 +515,8 @@ async function refreshNeuronInspector(id, reposition = false) {
       ${connHtml}
     `;
 
+    selectedNeuronVoltage = d.potential;
+
     popoverEl.style.display = 'block';
     if (reposition) {
       positionPopover(lastAnchorPos.x, lastAnchorPos.y);
@@ -530,40 +535,11 @@ async function refreshNeuronInspector(id, reposition = false) {
   } catch (_) {}
 }
 
-// Temporary Trace Draw before Task 7 full 600-tick scrolling oscilloscope
-const oscCanvas = document.getElementById('oscilloscope');
-const oscCtx = oscCanvas.getContext('2d');
-
-function drawOscilloscope(telemetry) {
-  const w = oscCanvas.width;
-  const h = oscCanvas.height;
-  oscCtx.fillStyle = theme.bg;
-  oscCtx.fillRect(0, 0, w, h);
-
-  if (!telemetry || telemetry.length < 2) return;
-
-  const last = telemetry[telemetry.length - 1];
-  document.getElementById('trace-legend').textContent =
-    `act ${last.a.toFixed(2)}  da ${last.d.toFixed(2)}  fear ${last.f.toFixed(2)}`;
-
-  const plotTrace = (getter, color) => {
-    oscCtx.strokeStyle = color;
-    oscCtx.lineWidth = 1;
-    oscCtx.beginPath();
-    for (let i = 0; i < telemetry.length; i++) {
-      const x = (i / (telemetry.length - 1)) * w;
-      const val = Math.max(0, Math.min(1, getter(telemetry[i])));
-      const y = h - 4 - val * (h - 8);
-      if (i === 0) oscCtx.moveTo(x, y);
-      else oscCtx.lineTo(x, y);
-    }
-    oscCtx.stroke();
-  };
-
-  plotTrace(s => s.f, theme.danger);
-  plotTrace(s => (s.d + 0.5) / 2.5, theme.young);
-  plotTrace(s => s.a, theme.signal);
-}
+const scope = new Oscilloscope(
+  document.getElementById('oscilloscope'),
+  document.getElementById('trace-legend'),
+  document.getElementById('trace-status')
+);
 
 function applyIncomingState(state) {
   if (!state || !state.metadata) return;
@@ -629,7 +605,7 @@ function applyIncomingState(state) {
     };
   });
 
-  drawOscilloscope(state.telemetry);
+  scope.ingest(state, selectedNeuronVoltage);
 }
 
 let pollInFlight = false;
