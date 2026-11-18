@@ -10,4 +10,5 @@ import build_level
 
 if __name__ == "__main__":
     build_materials.build_neuron_material()
+    build_materials.build_holon_shell_material()
     build_level.build_level()

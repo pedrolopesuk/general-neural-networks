@@ -32,8 +32,8 @@ def build_level():
         ctrl = actor_subsys.spawn_actor_from_class(ctrl_cls, unreal.Vector(0.0, 0.0, 0.0))
         ctrl.set_actor_label("MetaBrainSceneController")
 
-    # 3. Default Macro Camera Start at (-540, 0, 18) looking at (0, 0, 0)
-    ps = actor_subsys.spawn_actor_from_class(unreal.PlayerStart, unreal.Vector(-540.0, 0.0, 18.0))
+    # 3. Default Macro Camera Start at (-680, 0, 22) looking at (0, 0, 0)
+    ps = actor_subsys.spawn_actor_from_class(unreal.PlayerStart, unreal.Vector(-680.0, 0.0, 22.0))
     if ps:
         ps.set_actor_rotation(unreal.Rotator(-1.5, 0.0, 0.0), False)
 

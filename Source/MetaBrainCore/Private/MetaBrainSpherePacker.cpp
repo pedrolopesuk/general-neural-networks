@@ -287,7 +287,7 @@ FMetaBrainPackedLayout FMetaBrainSpherePacker::ComputeLayout(const metabrain::Br
 	}
 
 	// Scale leaf sphere radius smoothly for massive 1k-10k neuron scenes vs interactive ~100 neuron scenes
-	const float BaseLeafRadiusCm = (All.size() > 2500) ? 2.4f : ((All.size() > 400) ? 4.0f : 6.2f);
+	const float BaseLeafRadiusCm = (All.size() > 2500) ? 2.4f : ((All.size() > 400) ? 4.0f : 7.8f);
 
 	TMap<uint64, int32> IdToIndex;
 	TMap<uint64, TSet<uint64>> Adjacency;

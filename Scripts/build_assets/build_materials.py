@@ -140,5 +140,54 @@ def build_neuron_material():
     unreal.log("[MetaBrain] Built MPC_MetaBrain and M_Neuron successfully.")
 
 
+def build_holon_shell_material():
+    mat_dir = "/Game/MetaBrain/Materials"
+    unreal.EditorAssetLibrary.make_directory(mat_dir)
+    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+    mel = unreal.MaterialEditingLibrary
+
+    mat_path = f"{mat_dir}/M_HolonShell"
+    if unreal.EditorAssetLibrary.does_asset_exist(mat_path):
+        unreal.EditorAssetLibrary.delete_asset(mat_path)
+
+    mat_factory = unreal.MaterialFactoryNew()
+    mat = asset_tools.create_asset("M_HolonShell", mat_dir, unreal.Material, mat_factory)
+    mat.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
+    mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    mat.set_editor_property("two_sided", False)
+    mat.set_editor_property("used_with_instanced_static_meshes", True)
+
+    # Neutral cool-warm silver rim (strictly < 1.0 linear so it NEVER blooms at rest)
+    c_rim = mel.create_material_expression(mat, unreal.MaterialExpressionConstant3Vector, -520, -140)
+    c_rim.set_editor_property("constant", unreal.LinearColor(0.42, 0.44, 0.47, 1.0))
+    mel.connect_material_property(c_rim, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+
+    # Thin Fresnel rim: ~0.2% interior fill (no fill glow) -> ~5.5% grazing rim opacity
+    fresnel = mel.create_material_expression(mat, unreal.MaterialExpressionFresnel, -560, 60)
+    fresnel.set_editor_property("exponent", 4.4)
+    fresnel.set_editor_property("base_reflect_fraction", 0.03)
+
+    c_max_op = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -520, 220)
+    c_max_op.set_editor_property("r", 0.058)  # 5.8% peak rim opacity (within 3-6% spec)
+
+    mul_rim = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -320, 100)
+    mel.connect_material_expressions(fresnel, "", mul_rim, "A")
+    mel.connect_material_expressions(c_max_op, "", mul_rim, "B")
+
+    # PerInstanceCustomData[0] = ShellFade (1.0 visible -> 0.0 faded out when camera flies inside)
+    cd_fade = mel.create_material_expression(mat, unreal.MaterialExpressionPerInstanceCustomData, -340, 260)
+    cd_fade.set_editor_property("data_index", 0)
+
+    mul_fade = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -120, 140)
+    mel.connect_material_expressions(mul_rim, "", mul_fade, "A")
+    mel.connect_material_expressions(cd_fade, "", mul_fade, "B")
+    mel.connect_material_property(mul_fade, "", unreal.MaterialProperty.MP_OPACITY)
+
+    mel.recompile_material(mat)
+    unreal.EditorAssetLibrary.save_loaded_asset(mat)
+    unreal.log("[MetaBrain] Built M_HolonShell (3-6% Fresnel rim translucency) successfully.")
+
+
 if __name__ == "__main__":
     build_neuron_material()
+    build_holon_shell_material()
