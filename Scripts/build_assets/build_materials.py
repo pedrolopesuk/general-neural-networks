@@ -193,8 +193,8 @@ def _build_static_tissue_material(name, base_hex, sss_hex, roughness, specular, 
 
 
 def build_hero_neuron_materials():
-    # Myelin: lipid-rich, pale ivory, glossier than membrane, strong scatter
-    _build_static_tissue_material("M_Myelin", "#D9D0BC", "#E8C9A8", 0.36, 0.5, 0.85)
+    # Myelin: lipid-rich dull ivory (kept below bloom threshold), slightly glossy, soft scatter
+    _build_static_tissue_material("M_Myelin", "#5E574C", "#7A6A58", 0.5, 0.3, 0.4)
     # Schwann cell nucleus: hematoxylin-like violet tint, matte
     _build_static_tissue_material("M_SchwannNucleus", "#6E5A86", "#8A6FA8", 0.62, 0.35, 0.6)
     unreal.log("[MetaBrain] Built M_Myelin + M_SchwannNucleus.")

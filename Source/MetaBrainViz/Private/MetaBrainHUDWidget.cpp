@@ -366,6 +366,20 @@ TSharedRef<SWidget> UMetaBrainHUDWidget::RebuildWidget()
 					]
 					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(2.0f, 0.0f)
 					[
+						MakeTextBtn(TEXT("Net"), &DefaultBtnStyle, Style->TextColor, [this]()
+						{
+							if (AMetaBrainSceneController* SC = GetSceneController()) SC->SetViewMode(EMetaBrainViewMode::Net);
+						})
+					]
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(2.0f, 0.0f)
+					[
+						MakeTextBtn(TEXT("Brain"), &DefaultBtnStyle, Style->TextColor, [this]()
+						{
+							if (AMetaBrainSceneController* SC = GetSceneController()) SC->SetViewMode(EMetaBrainViewMode::Brain);
+						})
+					]
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(2.0f, 0.0f)
+					[
 						MakeTextBtn(TEXT("3D"), &ActiveBtnStyle, Style->BgColor, [this]()
 						{
 							if (AMetaBrainSceneController* SC = GetSceneController()) SC->ZoomToMacro();

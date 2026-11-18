@@ -47,11 +47,10 @@ AMetaBrainSceneController::AMetaBrainSceneController()
 	NeuronMorphHISM->SetCastShadow(true);
 	NeuronMorphHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	HeroNeuronISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("HeroNeuronISM"));
-	HeroNeuronISM->SetupAttachment(Root);
-	HeroNeuronISM->NumCustomDataFloats = 4;
-	HeroNeuronISM->SetCastShadow(true);
-	HeroNeuronISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MyelinHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MyelinHISM"));
+	MyelinHISM->SetupAttachment(Root);
+	MyelinHISM->SetCastShadow(false);
+	MyelinHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	DendriteArborHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("DendriteArborHISM"));
 	DendriteArborHISM->SetupAttachment(Root);
@@ -101,6 +100,7 @@ AMetaBrainSceneController::AMetaBrainSceneController()
 		SynapticBoutonHISM->SetStaticMesh(SphereMesh);
 		HolonShellHISM->SetStaticMesh(SphereMesh);
 		SignalPulseHISM->SetStaticMesh(SphereMesh);
+		MyelinHISM->SetStaticMesh(SphereMesh);
 	}
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylFinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -135,18 +135,20 @@ void AMetaBrainSceneController::BeginPlay()
 	// Real neuron morphology (built by Scripts/build_assets/build_meshes.py). Falls back to
 	// the procedural sphere + cylinder arbor when the assets have not been built.
 	NeuronSomaMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/MetaBrain/Meshes/SM_NeuronSoma.SM_NeuronSoma"));
-	NeuronFullMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/MetaBrain/Meshes/SM_NeuronFull.SM_NeuronFull"));
-	bUseMorphMesh = (NeuronSomaMesh != nullptr);
-	if (bUseMorphMesh)
+	bMorphAssetsLoaded = (NeuronSomaMesh != nullptr);
+	if (bMorphAssetsLoaded)
 	{
 		NeuronMorphHISM->SetStaticMesh(NeuronSomaMesh);
-		NeuronHISM->SetVisibility(false); // invisible sphere proxy keeps cursor picking cheap
-		DendriteArborHISM->SetVisibility(false);
 	}
-	if (NeuronFullMesh)
+	MyelinMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_Myelin.M_Myelin"));
+	if (MyelinMaterial) MyelinHISM->SetMaterial(0, MyelinMaterial);
+
 	{
-		HeroNeuronISM->SetStaticMesh(NeuronFullMesh);
+		FString ViewArg;
+		FParse::Value(FCommandLine::Get(), TEXT("View="), ViewArg);
+		ViewMode = ViewArg.Equals(TEXT("Net"), ESearchCase::IgnoreCase) ? EMetaBrainViewMode::Net : EMetaBrainViewMode::Brain;
 	}
+	ApplyViewMode();
 
 	HolonShellMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_HolonShell.M_HolonShell"));
 	if (HolonShellMaterial) HolonShellHISM->SetMaterial(0, HolonShellMaterial);
@@ -517,8 +519,6 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 
 		NeuronHISM->ClearInstances();
 		NeuronMorphHISM->ClearInstances();
-		HeroNeuronISM->ClearInstances();
-		HeroNeuronIndex = INDEX_NONE;
 		NeuronMorphTransforms.Reset();
 		DendriteArborHISM->ClearInstances();
 		NeuronArborSpans.Reset();
@@ -546,7 +546,7 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 			SomaTransforms.SetNumUninitialized(Count);
 
 			TArray<FTransform> ArborTransforms;
-			const bool bBuildDetailedArbors = !bUseMorphMesh && (Count <= 600);
+			const bool bBuildDetailedArbors = (ViewMode == EMetaBrainViewMode::Brain) && !bUseMorphMesh && (Count <= 600);
 			if (bUseMorphMesh)
 			{
 				NeuronMorphTransforms.SetNum(Count);
@@ -572,7 +572,9 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 				}
 				const FQuat SomaRot = FRotationMatrix::MakeFromZ(HillockDir).ToQuat();
 				const double BaseScale = SomaR / 50.0;
-				SomaTransforms[i] = FTransform(SomaRot, SomaCenter, FVector(BaseScale * 0.94, BaseScale * 0.94, BaseScale * 1.16));
+				SomaTransforms[i] = (ViewMode == EMetaBrainViewMode::Net)
+					? FTransform(SomaRot, SomaCenter, FVector(BaseScale))
+					: FTransform(SomaRot, SomaCenter, FVector(BaseScale * 0.94, BaseScale * 0.94, BaseScale * 1.16));
 
 				FDendriteNeuronSpan& Span = NeuronArborSpans[i];
 				Span.FirstArborIdx = ArborTransforms.Num();
@@ -675,8 +677,6 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 
 	if (Count == 0) return;
 
-	UpdateHeroNeuron();
-
 	const int64 FocusId = (HoveredNeuronId >= 0) ? HoveredNeuronId : SelectedNeuronId;
 
 	TSet<int32> FocusedHolonMemberSet;
@@ -761,10 +761,6 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 		if (bUseMorphMesh)
 		{
 			NeuronMorphHISM->SetCustomData(i, SomaCustom, false);
-			if (i == HeroNeuronIndex && HeroNeuronISM->GetInstanceCount() > 0)
-			{
-				HeroNeuronISM->SetCustomData(0, SomaCustom, true);
-			}
 		}
 		bAnySomaDirty = true;
 
@@ -788,39 +784,29 @@ void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector&
 	if (bAnyArborDirty) DendriteArborHISM->MarkRenderStateDirty();
 }
 
-void AMetaBrainSceneController::UpdateHeroNeuron()
+void AMetaBrainSceneController::SetViewMode(EMetaBrainViewMode InMode)
 {
-	// Selected neuron is drawn as the full myelinated cell (SM_NeuronFull); its
-	// SM_NeuronSoma instance is collapsed so the coincident surfaces don't z-fight.
-	if (!bUseMorphMesh || !NeuronFullMesh || !CurrentSnapshot.IsValid()) return;
+	if (ViewMode == InMode) return;
+	ViewMode = InMode;
+	ApplyViewMode();
+}
 
-	int32 Wanted = INDEX_NONE;
-	if (SelectedNeuronId >= 0)
-	{
-		const TArray<FMetaBrainNeuronSnap>& Neurons = CurrentSnapshot->Neurons;
-		for (int32 i = 0; i < Neurons.Num(); ++i)
-		{
-			if (Neurons[i].Id == SelectedNeuronId) { Wanted = i; break; }
-		}
-	}
-	if (Wanted == HeroNeuronIndex) return;
-	if (Wanted != INDEX_NONE && !NeuronMorphTransforms.IsValidIndex(Wanted)) return;
+void AMetaBrainSceneController::ApplyViewMode()
+{
+	const bool bBrain = (ViewMode == EMetaBrainViewMode::Brain);
+	bUseMorphMesh = bBrain && bMorphAssetsLoaded;
 
-	if (NeuronMorphTransforms.IsValidIndex(HeroNeuronIndex))
-	{
-		NeuronMorphHISM->UpdateInstanceTransform(HeroNeuronIndex, NeuronMorphTransforms[HeroNeuronIndex], true, true);
-	}
-	HeroNeuronISM->ClearInstances();
-	HeroNeuronIndex = Wanted;
+	// NeuronHISM always exists for cursor hit-tests; it is only *drawn* in Net view.
+	NeuronHISM->SetVisibility(!bUseMorphMesh);
+	NeuronMorphHISM->SetVisibility(bUseMorphMesh);
+	DendriteArborHISM->SetVisibility(bBrain && !bUseMorphMesh); // procedural fallback arbor
+	MyelinHISM->SetVisibility(bBrain);
 
-	if (HeroNeuronIndex != INDEX_NONE)
-	{
-		FTransform Collapsed = NeuronMorphTransforms[HeroNeuronIndex];
-		Collapsed.SetScale3D(FVector(1e-4));
-		NeuronMorphHISM->UpdateInstanceTransform(HeroNeuronIndex, Collapsed, true, true);
-		HeroNeuronISM->AddInstance(NeuronMorphTransforms[HeroNeuronIndex], true);
-		LastNeuronFullSyncTick = 0; // force custom data push to the hero next sync
-	}
+	// Force a full rebuild of neurons + axons in the new style
+	RenderedNeuronTopoRev = 0;
+	RenderedEdgeTopoRev = 0;
+	bEdgeFilterDirty = true;
+	LastNeuronFullSyncTick = 0;
 }
 
 void AMetaBrainSceneController::SyncHolonShellsAndLabels(const FVector& CamLoc)
@@ -948,7 +934,10 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		ActiveEdgeInstances.Reset();
 		EdgeFilamentHISM->ClearInstances();
 		SynapticBoutonHISM->ClearInstances();
+		MyelinHISM->ClearInstances();
 
+		const bool bBrainView = (ViewMode == EMetaBrainViewMode::Brain);
+		TArray<FTransform> MyelinTransforms;
 		TArray<FTransform> FilamentTransforms;
 		TArray<FTransform> BoutonTransforms;
 		TArray<FVector> NiagaraStarts;
@@ -1059,10 +1048,11 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 			const double BowAngle = static_cast<double>(Hash % 360ULL) * (PI / 180.0);
 			const FVector BowDir = (PerpA * FMath::Cos(BowAngle) + PerpB * FMath::Sin(BowAngle)).GetSafeNormal();
 
-			Curve.CtrlPos = MidLinear + BowDir * FMath::Clamp(Len * 0.19, 4.0, 58.0);
+			// Net view: straight readable lines. Brain view: bowed, tortuous axons.
+			Curve.CtrlPos = bBrainView ? MidLinear + BowDir * FMath::Clamp(Len * 0.19, 4.0, 58.0) : MidLinear;
 			Curve.PerpA = PerpA;
 			Curve.PerpB = PerpB;
-			Curve.WaveAmpCm = bMassiveScale ? 0.0f : FMath::Clamp(Len * 0.042f, 1.2f, 9.5f);
+			Curve.WaveAmpCm = (bMassiveScale || !bBrainView) ? 0.0f : FMath::Clamp(Len * 0.042f, 1.2f, 9.5f);
 			Curve.PhaseA = static_cast<float>((Hash % 628ULL) * 0.01);
 			Curve.PhaseB = static_cast<float>(((Hash >> 8) % 628ULL) * 0.01);
 
@@ -1083,6 +1073,30 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 				const double Taper = 1.15 - 0.32 * T; // Tapers gently from axon hillock to terminal bouton
 				FilamentTransforms.Add(MakeCylinderSegmentTransform(PrevPt, NextPt, BaseAxonR * Taper));
 				PrevPt = NextPt;
+			}
+
+			// Brain view: myelin sheath (internodes) wrapped around the axon, separated by bare
+			// nodes of Ranvier. Starts after the initial segment, stops before the terminal.
+			// At massive scale only the focused neuron's axons are sheathed (perf).
+			if (bBrainView && GrowthFrac >= 0.999 && (!bMassiveScale || bIsIncident))
+			{
+				const double InternodeCm = FMath::Clamp(Len * 0.2, 5.0, 24.0); // long internodes, short nodes (as in vivo)
+				const double NodeGapT = FMath::Clamp(0.9 / Len, 0.004, 0.03); // ~0.9 cm bare node
+				const double SheathR = BaseAxonR * 1.45; // myelinated fibre ~1.5x bare axon (g-ratio ~0.7)
+				double T0 = 0.10;
+				while (T0 < 0.86)
+				{
+					const double T1 = FMath::Min(0.88, T0 + InternodeCm / Len);
+					const FVector A = Curve.Eval(T0);
+					const FVector B = Curve.Eval(T1);
+					const double SegLen = FVector::Distance(A, B);
+					if (SegLen > 0.5)
+					{
+						const FQuat Rot = FRotationMatrix::MakeFromZ((B - A) / SegLen).ToQuat();
+						MyelinTransforms.Add(FTransform(Rot, (A + B) * 0.5, FVector(SheathR / 50.0, SheathR / 50.0, SegLen / 100.0)));
+					}
+					T0 = T1 + NodeGapT;
+				}
 			}
 
 			// Place Synaptic Bouton varicosity right at the axon tip / postsynaptic spine junction
@@ -1111,6 +1125,12 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		{
 			EdgeFilamentHISM->AddInstances(FilamentTransforms, false, true);
 			EdgeFilamentHISM->BuildTreeIfOutdated(false, true);
+		}
+
+		if (MyelinTransforms.Num() > 0)
+		{
+			MyelinHISM->AddInstances(MyelinTransforms, false, true);
+			MyelinHISM->BuildTreeIfOutdated(false, true);
 		}
 
 		if (BoutonTransforms.Num() > 0)

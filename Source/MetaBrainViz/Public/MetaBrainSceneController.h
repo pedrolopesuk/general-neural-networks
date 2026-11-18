@@ -16,6 +16,14 @@ class APostProcessVolume;
 class UPointLightComponent;
 
 UENUM(BlueprintType)
+// Net = abstract graph (spheres + straight synapse lines).
+// Brain = biological look (real neuron meshes, myelinated axons as the connections).
+enum class EMetaBrainViewMode : uint8
+{
+	Net,
+	Brain
+};
+
 enum class EMetaBrainZoomLevel : uint8
 {
 	Macro = 0,
@@ -104,6 +112,9 @@ public:
 	void ZoomToLevelSegmented(EMetaBrainZoomLevel RequestedLevel);
 	void StepUpOrClearSelection();
 
+	void SetViewMode(EMetaBrainViewMode InMode);
+	EMetaBrainViewMode GetViewMode() const { return ViewMode; }
+
 	void SetAgeLensActive(bool bInAgeLens);
 	bool IsAgeLensActive() const { return bAgeLensActive; }
 
@@ -119,9 +130,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> NeuronMorphHISM;
 
-	// Full myelinated cell (SM_NeuronFull) shown in place of the selected neuron.
+	// Brain view: myelin sheath segments laid along each axon (graph edge), leaving
+	// gaps at the nodes of Ranvier.
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
-	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> HeroNeuronISM;
+	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MyelinHISM;
 
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> DendriteArborHISM;
@@ -163,12 +175,13 @@ protected:
 	TObjectPtr<UStaticMesh> NeuronSomaMesh;
 
 	UPROPERTY()
-	TObjectPtr<UStaticMesh> NeuronFullMesh;
+	TObjectPtr<UMaterialInterface> MyelinMaterial;
 
-	bool bUseMorphMesh = false;
+	bool bMorphAssetsLoaded = false;
+	bool bUseMorphMesh = false; // = Brain view && assets loaded
+	EMetaBrainViewMode ViewMode = EMetaBrainViewMode::Brain;
 	TArray<FTransform> NeuronMorphTransforms;
-	int32 HeroNeuronIndex = INDEX_NONE;
-	void UpdateHeroNeuron();
+	void ApplyViewMode();
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> NeuronMaterial;
