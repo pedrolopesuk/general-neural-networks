@@ -26,12 +26,13 @@ def build_neuron_material():
         mpc = asset_tools.create_asset("MPC_MetaBrain", mat_dir, unreal.MaterialParameterCollection, mpc_factory)
 
     scalar_params = list(mpc.get_editor_property("scalar_parameters"))
-    if not any(p.get_editor_property("parameter_name") == "LensMode" for p in scalar_params):
-        sp = unreal.CollectionScalarParameter()
-        sp.set_editor_property("parameter_name", "LensMode")
-        sp.set_editor_property("default_value", 0.0)
-        scalar_params.append(sp)
-        mpc.set_editor_property("scalar_parameters", scalar_params)
+    for pname, default in (("LensMode", 0.0), ("EmissiveScale", 1.0), ("NetGlow", 1.0)):
+        if not any(p.get_editor_property("parameter_name") == pname for p in scalar_params):
+            sp = unreal.CollectionScalarParameter()
+            sp.set_editor_property("parameter_name", pname)
+            sp.set_editor_property("default_value", default)
+            scalar_params.append(sp)
+    mpc.set_editor_property("scalar_parameters", scalar_params)
     unreal.EditorAssetLibrary.save_loaded_asset(mpc)
 
     # 2. Create M_Neuron (Rough Dielectric + Subtle Subsurface, Emissive ONLY while firing)
@@ -145,7 +146,40 @@ def build_neuron_material():
     mul_emissive = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -80, -300)
     mel.connect_material_expressions(c_amber, "", mul_emissive, "A")
     mel.connect_material_expressions(mul_flash_gain, "", mul_emissive, "B")
-    mel.connect_material_property(mul_emissive, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    # EmissiveScale (MPC): 1.0 in Net view, lower in Brain view (calcium-imaging-like glow, no glare)
+    mpc_em = mel.create_material_expression(mat, unreal.MaterialExpressionCollectionParameter, -250, -420)
+    mpc_em.set_editor_property("collection", mpc)
+    mpc_em.set_editor_property("parameter_name", "EmissiveScale")
+    mul_em_scale = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, 40, -300)
+    mel.connect_material_expressions(mul_emissive, "", mul_em_scale, "A")
+    mel.connect_material_expressions(mpc_em, "", mul_em_scale, "B")
+    # Membrane rim: thin cool backlit edge (two-photon / light-sheet microscopy look); lets
+    # fine dendrites read against black without flattening them into grey felt.
+    rim_f = mel.create_material_expression(mat, unreal.MaterialExpressionFresnel, -250, -560)
+    rim_f.set_editor_property("exponent", 3.0)
+    rim_c = mel.create_material_expression(mat, unreal.MaterialExpressionConstant3Vector, -250, -640)
+    rim_c.set_editor_property("constant", unreal.LinearColor(0.10, 0.20, 0.42, 1.0))
+    rim_m = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -60, -600)
+    mel.connect_material_expressions(rim_f, "", rim_m, "A")
+    mel.connect_material_expressions(rim_c, "", rim_m, "B")
+    # Net view (NetGlow=1): strong glowing halo on nodes; Brain view: subtle membrane rim
+    ng = mel.create_material_expression(mat, unreal.MaterialExpressionCollectionParameter, -250, -720)
+    ng.set_editor_property("collection", mpc)
+    ng.set_editor_property("parameter_name", "NetGlow")
+    ng_k = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -100, -720)
+    mel.connect_material_expressions(ng, "", ng_k, "A")
+    ng_k.set_editor_property("const_b", 5.0)
+    ng_1 = mel.create_material_expression(mat, unreal.MaterialExpressionAdd, 20, -720)
+    mel.connect_material_expressions(ng_k, "", ng_1, "A")
+    ng_1.set_editor_property("const_b", 1.0)
+    rim_boost = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, 60, -640)
+    mel.connect_material_expressions(rim_m, "", rim_boost, "A")
+    mel.connect_material_expressions(ng_1, "", rim_boost, "B")
+    rim_m = rim_boost
+    rim_add = mel.create_material_expression(mat, unreal.MaterialExpressionAdd, 160, -420)
+    mel.connect_material_expressions(mul_em_scale, "", rim_add, "A")
+    mel.connect_material_expressions(rim_m, "", rim_add, "B")
+    mel.connect_material_property(rim_add, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
     mel.recompile_material(mat)
     unreal.EditorAssetLibrary.save_loaded_asset(mat)
@@ -248,6 +282,19 @@ def build_holon_shell_material():
     unreal.log("[MetaBrain] Built M_HolonShell (3-6% Fresnel rim translucency) successfully.")
 
 
+def _scale_by_mpc_emissive(mat, src_expr):
+    """Multiply an emissive expression by MPC_MetaBrain.EmissiveScale (Brain view dims glow)."""
+    mel = unreal.MaterialEditingLibrary
+    mpc = unreal.load_asset("/Game/MetaBrain/Materials/MPC_MetaBrain")
+    p = mel.create_material_expression(mat, unreal.MaterialExpressionCollectionParameter, 0, -500)
+    p.set_editor_property("collection", mpc)
+    p.set_editor_property("parameter_name", "EmissiveScale")
+    m = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, 200, -400)
+    mel.connect_material_expressions(src_expr, "", m, "A")
+    mel.connect_material_expressions(p, "", m, "B")
+    return m
+
+
 def build_edge_and_pulse_materials():
     mat_dir = "/Game/MetaBrain/Materials"
     unreal.EditorAssetLibrary.make_directory(mat_dir)
@@ -282,10 +329,21 @@ def build_edge_and_pulse_materials():
     c_amber_hdr.set_editor_property("constant", unreal.LinearColor(col_amber.r * 2.4, col_amber.g * 2.4, 0.0, 1.0))
 
     lerp_col = mel.create_material_expression(edge_mat, unreal.MaterialExpressionLinearInterpolate, -240, -140)
-    mel.connect_material_expressions(c_gray, "", lerp_col, "A")
+    # Net view: luminous cyan filaments (NetGlow=1); Brain view: muted grey axon
+    c_cyan = mel.create_material_expression(edge_mat, unreal.MaterialExpressionConstant3Vector, -540, -340)
+    c_cyan.set_editor_property("constant", unreal.LinearColor(0.10, 0.55, 1.10, 1.0))
+    mpc_e = unreal.load_asset("/Game/MetaBrain/Materials/MPC_MetaBrain")
+    ng_e = mel.create_material_expression(edge_mat, unreal.MaterialExpressionCollectionParameter, -540, -420)
+    ng_e.set_editor_property("collection", mpc_e)
+    ng_e.set_editor_property("parameter_name", "NetGlow")
+    base_col = mel.create_material_expression(edge_mat, unreal.MaterialExpressionLinearInterpolate, -380, -280)
+    mel.connect_material_expressions(c_gray, "", base_col, "A")
+    mel.connect_material_expressions(c_cyan, "", base_col, "B")
+    mel.connect_material_expressions(ng_e, "", base_col, "Alpha")
+    mel.connect_material_expressions(base_col, "", lerp_col, "A")
     mel.connect_material_expressions(c_amber_hdr, "", lerp_col, "B")
     mel.connect_material_expressions(cd_sig, "", lerp_col, "Alpha")
-    mel.connect_material_property(lerp_col, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    mel.connect_material_property(_scale_by_mpc_emissive(edge_mat, lerp_col), "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     mel.connect_material_property(cd_op, "", unreal.MaterialProperty.MP_OPACITY)
 
     mel.recompile_material(edge_mat)
@@ -297,7 +355,8 @@ def build_edge_and_pulse_materials():
         unreal.EditorAssetLibrary.delete_asset(pulse_path)
 
     pulse_mat = asset_tools.create_asset("M_SignalPulse", mat_dir, unreal.Material, unreal.MaterialFactoryNew())
-    pulse_mat.set_editor_property("blend_mode", unreal.BlendMode.BLEND_OPAQUE)
+    # Additive + soft edge: overlapping beads blend into a glowing streak instead of solid balls
+    pulse_mat.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE)
     pulse_mat.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
     pulse_mat.set_editor_property("used_with_instanced_static_meshes", True)
     pulse_mat.set_editor_property("used_with_niagara_sprites", True)
@@ -311,7 +370,18 @@ def build_edge_and_pulse_materials():
     mul_pulse = mel.create_material_expression(pulse_mat, unreal.MaterialExpressionMultiply, -200, -40)
     mel.connect_material_expressions(c_pulse_hdr, "", mul_pulse, "A")
     mel.connect_material_expressions(cd_env, "", mul_pulse, "B")
-    mel.connect_material_property(mul_pulse, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    fres = mel.create_material_expression(pulse_mat, unreal.MaterialExpressionFresnel, -460, 180)
+    fres.set_editor_property("exponent", 1.2)
+    soft = mel.create_material_expression(pulse_mat, unreal.MaterialExpressionOneMinus, -320, 180)
+    mel.connect_material_expressions(fres, "", soft, "")
+    soft2 = mel.create_material_expression(pulse_mat, unreal.MaterialExpressionMultiply, -200, 180)
+    mel.connect_material_expressions(soft, "", soft2, "A")
+    mel.connect_material_expressions(soft, "", soft2, "B")
+    mul_soft = mel.create_material_expression(pulse_mat, unreal.MaterialExpressionMultiply, -100, 60)
+    mel.connect_material_expressions(mul_pulse, "", mul_soft, "A")
+    mel.connect_material_expressions(soft2, "", mul_soft, "B")
+    mul_pulse = mul_soft
+    mel.connect_material_property(_scale_by_mpc_emissive(pulse_mat, mul_pulse), "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
     mel.recompile_material(pulse_mat)
     unreal.EditorAssetLibrary.save_loaded_asset(pulse_mat)

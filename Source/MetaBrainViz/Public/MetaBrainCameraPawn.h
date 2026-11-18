@@ -26,6 +26,7 @@ public:
 	void AddPanInput(float DeltaRightPx, float DeltaUpPx);
 	void AddFreeFlyInput(const FVector& LocalMoveInput, float DeltaSeconds);
 	void AddDollyWheelInput(float WheelDelta);
+	void AddDollyWheelInputTowards(float WheelDelta, const FVector& CursorRayDir);
 
 	FVector GetCameraWorldLocation() const;
 	FVector GetCurrentPivot() const { return CurrentPivotCm; }

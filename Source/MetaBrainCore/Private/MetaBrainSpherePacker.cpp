@@ -314,6 +314,7 @@ FMetaBrainPackedLayout FMetaBrainSpherePacker::ComputeLayout(const metabrain::Br
 	TMap<FString, TArray<std::shared_ptr<metabrain::Neuron>>> RegionGroups;
 	TArray<std::shared_ptr<metabrain::Neuron>> Roots;
 	TArray<std::shared_ptr<metabrain::Neuron>> Terminals;
+	int32 FallbackRegionCursor = 0;
 
 	for (const auto& Top : Engine.GetTopLevelNeurons())
 	{
@@ -341,7 +342,9 @@ FMetaBrainPackedLayout FMetaBrainSpherePacker::ComputeLayout(const metabrain::Br
 				static const TCHAR* kFallbackRegions[4] = {
 					TEXT("Hippocampus"), TEXT("Prefrontal"), TEXT("Association"), TEXT("Amygdala")
 				};
-				RegionName = kFallbackRegions[Top->GetId() % 4];
+				// Round-robin by arrival order: ids are not usable here because every benchmark
+				// macro neuron spawns 3 children, so top-level ids step by 4 (id % 4 is constant).
+				RegionName = kFallbackRegions[FallbackRegionCursor++ % 4];
 			}
 			RegionGroups.FindOrAdd(RegionName).Add(Top);
 		}

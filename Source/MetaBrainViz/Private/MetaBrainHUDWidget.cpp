@@ -380,6 +380,13 @@ TSharedRef<SWidget> UMetaBrainHUDWidget::RebuildWidget()
 					]
 					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(2.0f, 0.0f)
 					[
+						MakeTextBtn(TEXT("Outline"), &DefaultBtnStyle, Style->TextColor, [this]()
+						{
+							if (AMetaBrainSceneController* SC = GetSceneController()) SC->ToggleBrainShell();
+						})
+					]
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(2.0f, 0.0f)
+					[
 						MakeTextBtn(TEXT("3D"), &ActiveBtnStyle, Style->BgColor, [this]()
 						{
 							if (AMetaBrainSceneController* SC = GetSceneController()) SC->ZoomToMacro();

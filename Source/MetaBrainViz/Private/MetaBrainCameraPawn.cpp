@@ -1,4 +1,6 @@
 #include "MetaBrainCameraPawn.h"
+#include "Engine/GameViewportClient.h"
+#include "Engine/Engine.h"
 #include "Camera/CameraComponent.h"
 
 AMetaBrainCameraPawn::AMetaBrainCameraPawn()
@@ -57,8 +59,14 @@ void AMetaBrainCameraPawn::AddPanInput(float DeltaRightPx, float DeltaUpPx)
 	const FVector RightDir = RotMat.GetScaledAxis(EAxis::Y);
 	const FVector UpDir = RotMat.GetScaledAxis(EAxis::Z);
 
-	const float PanScale = FMath::Max(0.10f, CurrentDistanceCm * 0.00135f);
-	TargetPivotCm += (-RightDir * DeltaRightPx + UpDir * DeltaUpPx) * PanScale;
+	// Canvas drag: the point under the cursor stays glued to it. One pixel equals the
+	// world size of a pixel at the pivot's depth (from FOV and viewport width).
+	FVector2D ViewSize(1920.0, 1080.0);
+	if (GEngine && GEngine->GameViewport) GEngine->GameViewport->GetViewportSize(ViewSize);
+	const float FovDeg = CameraComp ? CameraComp->FieldOfView : 90.0f;
+	const float WorldPerPx = 2.0f * CurrentDistanceCm * FMath::Tan(FMath::DegreesToRadians(FovDeg * 0.5f)) / FMath::Max(1.0, ViewSize.X);
+	TargetPivotCm += (-RightDir * DeltaRightPx - UpDir * DeltaUpPx) * WorldPerPx;
+	CurrentPivotCm = TargetPivotCm; // no lag: content moves exactly with the hand
 }
 
 void AMetaBrainCameraPawn::AddFreeFlyInput(const FVector& LocalMoveInput, float DeltaSeconds)
@@ -82,6 +90,19 @@ void AMetaBrainCameraPawn::AddDollyWheelInput(float WheelDelta)
 	bIsFlying = false;
 	const float Factor = FMath::Pow(0.86f, WheelDelta);
 	TargetDistanceCm = FMath::Clamp(TargetDistanceCm * Factor, 28.0f, 2600.0f);
+}
+
+void AMetaBrainCameraPawn::AddDollyWheelInputTowards(float WheelDelta, const FVector& CursorRayDir)
+{
+	if (FMath::IsNearlyZero(WheelDelta)) return;
+	const float OldDist = TargetDistanceCm;
+	AddDollyWheelInput(WheelDelta);
+	// Keep the point under the cursor fixed on screen: slide the pivot toward the cursor ray
+	// by the same fraction the distance shrank (and away from it when zooming out).
+	const FVector CamPos = TargetPivotCm - FRotator(TargetPitchDeg, TargetYawDeg, 0.0f).Vector() * OldDist;
+	const FVector CursorPt = CamPos + CursorRayDir.GetSafeNormal() * OldDist;
+	const float Frac = 1.0f - TargetDistanceCm / FMath::Max(1.0f, OldDist);
+	TargetPivotCm += (CursorPt - TargetPivotCm) * Frac;
 }
 
 FVector AMetaBrainCameraPawn::GetCameraWorldLocation() const

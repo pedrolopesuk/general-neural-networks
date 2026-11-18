@@ -116,6 +116,21 @@ def taubin_smooth(v, f, iters=12, lam=0.5, mu=-0.53):
     return v
 
 
+def outer_envelope(v, f, bins=(48, 96), keep=0.86):
+    """Lobes are separate closed meshes, so a translucent render shows their shared inner
+    walls as crinkled lines. Keep only triangles near the outer envelope: per direction from
+    the brain centre, triangles within `keep` x the max radius in that direction."""
+    c = (v.min(0) + v.max(0)) / 2
+    tc = v[f].mean(1) - c
+    r = np.linalg.norm(tc, axis=1)
+    th = np.clip((np.arccos(np.clip(tc[:, 2] / np.maximum(r, 1e-9), -1, 1)) / np.pi * bins[0]).astype(int), 0, bins[0] - 1)
+    ph = np.clip(((np.arctan2(tc[:, 1], tc[:, 0]) + np.pi) / (2 * np.pi) * bins[1]).astype(int), 0, bins[1] - 1)
+    cell = th * bins[1] + ph
+    rmax = np.zeros(bins[0] * bins[1])
+    np.maximum.at(rmax, cell, r)
+    return f[r >= keep * rmax[cell]]
+
+
 def normals(v, f):
     n = np.zeros_like(v)
     fn = np.cross(v[f[:, 1]] - v[f[:, 0]], v[f[:, 2]] - v[f[:, 0]])
@@ -183,6 +198,8 @@ def main(src_dir):
         v, f = gather(z, by_concept, concepts, cache)
         v, f = decimate(v, f, int(TARGET_TRIS * budget[name]))
         v = taubin_smooth(v, f)
+        if name == "Cerebrum":
+            f = outer_envelope(v, f)
         p = to_ue(v) / 100.0                      # cm -> m for glTF
         p = p * np.array([1.0, -1.0, 1.0])        # pre-undo the importer's Y mirror
         f = f[:, ::-1]                            # mirror flips winding

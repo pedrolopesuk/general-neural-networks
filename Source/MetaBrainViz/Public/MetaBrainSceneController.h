@@ -115,6 +115,9 @@ public:
 
 	void SetViewMode(EMetaBrainViewMode InMode);
 	EMetaBrainViewMode GetViewMode() const { return ViewMode; }
+	void ToggleBrainShell();
+	bool IsBrainShellOn() const { return bShowBrainShell; }
+	bool bShowBrainShell = true;
 
 	void SetAgeLensActive(bool bInAgeLens);
 	bool IsAgeLensActive() const { return bAgeLensActive; }
@@ -139,6 +142,12 @@ protected:
 	// Brain view: translucent human brain (BodyParts3D) that the regions sit inside.
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
 	TObjectPtr<UStaticMeshComponent> BrainShellComp;
+
+	// Brain view: glial nuclei scattered through the tissue (as seen in a Nissl stain)
+	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
+	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> GliaHISM;
+	uint64 RenderedGliaTopoRev = MAX_uint64;
+	void SyncGlia();
 
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> DendriteArborHISM;

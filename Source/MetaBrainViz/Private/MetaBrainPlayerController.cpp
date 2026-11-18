@@ -103,7 +103,16 @@ void AMetaBrainPlayerController::OnZoomWheel(const FInputActionValue& Value)
 	if (IsCursorOverUIWidget()) return;
 	if (AMetaBrainCameraPawn* CamPawn = GetMetaBrainPawn())
 	{
-		CamPawn->AddDollyWheelInput(Value.Get<float>());
+		// Zoom toward whatever is under the cursor (like map / model viewers)
+		FVector RayOrigin, RayDir;
+		if (DeprojectMousePositionToWorld(RayOrigin, RayDir))
+		{
+			CamPawn->AddDollyWheelInputTowards(Value.Get<float>(), RayDir);
+		}
+		else
+		{
+			CamPawn->AddDollyWheelInput(Value.Get<float>());
+		}
 	}
 }
 
@@ -221,7 +230,7 @@ void AMetaBrainPlayerController::ProcessPointerAndKeyboardCamera(float DeltaTime
 		}
 		if (bLmbDragged && !ScreenDelta.IsNearlyZero())
 		{
-			CamPawn->AddOrbitInput(static_cast<float>(ScreenDelta.X) * 0.28f, static_cast<float>(-ScreenDelta.Y) * 0.24f);
+			CamPawn->AddOrbitInput(static_cast<float>(ScreenDelta.X) * 0.28f, static_cast<float>(ScreenDelta.Y) * 0.24f);
 		}
 	}
 	else if (!bOrbitBtnNow && bPrevLmbDown)
@@ -238,11 +247,7 @@ void AMetaBrainPlayerController::ProcessPointerAndKeyboardCamera(float DeltaTime
 	bPrevPanBtnDown = bPanBtnNow;
 
 	// 3. Direct Mouse Wheel Backup (in case Slate window holds focus outside SViewport)
-	const float RawWheel = GetInputAnalogKeyState(EKeys::MouseWheelAxis);
-	if (!FMath::IsNearlyZero(RawWheel) && !IsCursorOverUIWidget())
-	{
-		CamPawn->AddDollyWheelInput(RawWheel * 0.35f);
-	}
+	// (removed: raw wheel backup double-applied every zoom notch)
 
 	// 4. Keyboard 3D Free-Fly / Pan (WASD + QE + Arrow Keys) when not typing in text box
 	if (!IsTextBoxFocused())

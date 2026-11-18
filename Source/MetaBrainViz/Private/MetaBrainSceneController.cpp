@@ -59,6 +59,11 @@ AMetaBrainSceneController::AMetaBrainSceneController()
 	MyelinHISM->SetCastShadow(false);
 	MyelinHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+	GliaHISM = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("GliaHISM"));
+	GliaHISM->SetupAttachment(Root);
+	GliaHISM->SetCastShadow(false);
+	GliaHISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
 	BrainShellComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BrainShellComp"));
 	BrainShellComp->SetupAttachment(Root);
 	BrainShellComp->SetCastShadow(false);
@@ -114,6 +119,7 @@ AMetaBrainSceneController::AMetaBrainSceneController()
 		HolonShellHISM->SetStaticMesh(SphereMesh);
 		SignalPulseHISM->SetStaticMesh(SphereMesh);
 		MyelinHISM->SetStaticMesh(SphereMesh);
+		GliaHISM->SetStaticMesh(SphereMesh);
 	}
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylFinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -170,6 +176,10 @@ void AMetaBrainSceneController::BeginPlay()
 
 	MyelinMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_Myelin.M_Myelin"));
 	if (MyelinMaterial) MyelinHISM->SetMaterial(0, MyelinMaterial);
+	if (UMaterialInterface* NucleusMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/MetaBrain/Materials/M_SchwannNucleus.M_SchwannNucleus")))
+	{
+		GliaHISM->SetMaterial(0, NucleusMat);
+	}
 
 	{
 		FString ViewArg;
@@ -533,7 +543,7 @@ static FTransform MakeCylinderSegmentTransform(const FVector& A, const FVector& 
 	const double Len = FMath::Max(0.1, Delta.Size());
 	const FQuat Rot = FRotationMatrix::MakeFromZ(Delta).ToQuat();
 	const FVector Mid = (A + B) * 0.5;
-	return FTransform(Rot, Mid, FVector(RadiusCm / 50.0, RadiusCm / 50.0, (Len * 1.03) / 100.0));
+	return FTransform(Rot, Mid, FVector(RadiusCm / 50.0, RadiusCm / 50.0, (Len + 2.0 * RadiusCm) / 100.0));
 }
 
 void AMetaBrainSceneController::SyncNeuronHISM(double NowWallSec, const FVector& CamLoc)
@@ -1045,6 +1055,47 @@ void AMetaBrainSceneController::RebuildAtlasMapping(const FMetaBrainSnapshot& Sr
 	}
 }
 
+void AMetaBrainSceneController::SyncGlia()
+{
+	if (!GliaHISM || !CurrentSnapshot.IsValid()) return;
+	if (ViewMode != EMetaBrainViewMode::Brain)
+	{
+		if (GliaHISM->GetInstanceCount() > 0) GliaHISM->ClearInstances();
+		return;
+	}
+	if (RenderedGliaTopoRev == CurrentSnapshot->TopologyRevision) return;
+	RenderedGliaTopoRev = CurrentSnapshot->TopologyRevision;
+
+	// Glia outnumber neurons ~1:1 in human cortex. Scatter nuclei around each neuron at
+	// 1-3 soma radii, deterministic per neuron id; capped for very large brains.
+	const TArray<FMetaBrainNeuronSnap>& Neurons = CurrentSnapshot->Neurons;
+	const int32 PerNeuron = (Neurons.Num() > 8000) ? 1 : 3;
+	TArray<FTransform> T;
+	T.Reserve(Neurons.Num() * PerNeuron);
+	for (const FMetaBrainNeuronSnap& N : Neurons)
+	{
+		FRandomStream Rng(static_cast<int32>(N.Id * 2654435761ULL));
+		const double R = FMath::Max(1.0, static_cast<double>(N.RadiusCm));
+		for (int32 k = 0; k < PerNeuron; ++k)
+		{
+			const FVector Dir = Rng.GetUnitVector();
+			const FVector Pos = FVector(N.PositionCm) + Dir * R * Rng.FRandRange(1.6, 3.4);
+			const double NucR = R * Rng.FRandRange(0.16, 0.28); // glial nuclei are much smaller than neuronal somata
+			const FVector Scale(NucR / 50.0, NucR / 50.0, NucR * Rng.FRandRange(1.0, 1.5) / 50.0);
+			T.Add(FTransform(FRotationMatrix::MakeFromZ(Rng.GetUnitVector()).ToQuat(), Pos, Scale));
+		}
+	}
+	GliaHISM->ClearInstances();
+	GliaHISM->AddInstances(T, false, true);
+	GliaHISM->BuildTreeIfOutdated(false, true);
+}
+
+void AMetaBrainSceneController::ToggleBrainShell()
+{
+	bShowBrainShell = !bShowBrainShell;
+	ApplyViewMode();
+}
+
 void AMetaBrainSceneController::SetViewMode(EMetaBrainViewMode InMode)
 {
 	if (ViewMode == InMode) return;
@@ -1063,7 +1114,15 @@ void AMetaBrainSceneController::ApplyViewMode()
 	for (UHierarchicalInstancedStaticMeshComponent* H : NeuronMorphHISMs) H->SetVisibility(bUseMorphMesh);
 	DendriteArborHISM->SetVisibility(bBrain && !bUseMorphMesh); // procedural fallback arbor
 	MyelinHISM->SetVisibility(bBrain);
-	BrainShellComp->SetVisibility(bBrain && BrainShellComp->GetStaticMesh() != nullptr);
+	BrainShellComp->SetVisibility(bBrain && bShowBrainShell && BrainShellComp->GetStaticMesh() != nullptr);
+	GliaHISM->SetVisibility(bBrain);
+	RenderedGliaTopoRev = MAX_uint64;
+	if (MetaBrainMPC && GetWorld())
+	{
+		// Brain view: soft calcium-imaging-like flashes instead of blown-out amber glare
+		UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), MetaBrainMPC, TEXT("EmissiveScale"), bBrain ? 0.32f : 1.0f);
+		UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), MetaBrainMPC, TEXT("NetGlow"), bBrain ? 0.0f : 1.0f);
+	}
 	LastSourceSnapshot.Reset(); // re-map positions for the new view on the next tick
 	AtlasTopoRev = MAX_uint64;
 	if (SimBridge) CurrentSnapshot = MapSnapshotForView(SimBridge->GetLatestSnapshot());
@@ -1214,8 +1273,27 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		const int32 MaxRenderedEdges = bMassiveScale ? 3200 : 1200;
 		const float EffectiveCutoff = GetEffectiveWeightThreshold();
 
-		for (int32 Idx = 0; Idx < Edges.Num() && ActiveEdgeInstances.Num() < MaxRenderedEdges; ++Idx)
+		// The edge list is ordered by source neuron, so taking the first N drew only one hub's
+		// fan and everything else vanished. Visit edges spread evenly over the whole list
+		// (focused neuron's edges first) so the budget covers the entire brain.
+		TArray<int32> EdgeOrder;
+		EdgeOrder.Reserve(Edges.Num());
+		for (int32 i = 0; i < Edges.Num(); ++i)
 		{
+			if (FocusId >= 0 && (static_cast<int64>(Edges[i].SourceId) == FocusId || static_cast<int64>(Edges[i].TargetId) == FocusId)) EdgeOrder.Add(i);
+		}
+		const int32 Stride = FMath::Max(1, Edges.Num() / FMath::Max(1, MaxRenderedEdges * 3));
+		for (int32 Phase = 0; Phase < Stride; ++Phase)
+		{
+			for (int32 i = Phase; i < Edges.Num(); i += Stride)
+			{
+				const bool bInc = FocusId >= 0 && (static_cast<int64>(Edges[i].SourceId) == FocusId || static_cast<int64>(Edges[i].TargetId) == FocusId);
+				if (!bInc) EdgeOrder.Add(i);
+			}
+		}
+		for (int32 OrderIdx = 0; OrderIdx < EdgeOrder.Num() && ActiveEdgeInstances.Num() < MaxRenderedEdges; ++OrderIdx)
+		{
+			const int32 Idx = EdgeOrder[OrderIdx];
 			const FMetaBrainEdgeSnap& E = Edges[Idx];
 			const bool bIsIncident = (FocusId >= 0) &&
 				(static_cast<int64>(E.SourceId) == FocusId || static_cast<int64>(E.TargetId) == FocusId);
@@ -1316,6 +1394,24 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 
 			// Net view: straight readable lines. Brain view: bowed, tortuous axons.
 			Curve.CtrlPos = bBrainView ? MidLinear + BowDir * FMath::Clamp(Len * 0.19, 4.0, 58.0) : MidLinear;
+
+			// Brain view, long-range: axons between two structures travel together as a white-matter
+			// tract. All fibres of a structure pair share one deep waypoint (pulled toward the brain
+			// core, like the corpus callosum / internal capsule), so they converge into a bundle.
+			if (bBrainView && NeuronAtlasGroup.IsValidIndex(E.SourceIndex) && NeuronAtlasGroup.IsValidIndex(E.TargetIndex))
+			{
+				const int32 GA = NeuronAtlasGroup[E.SourceIndex];
+				const int32 GB = NeuronAtlasGroup[E.TargetIndex];
+				if (GA != GB && AtlasGroups.IsValidIndex(GA) && AtlasGroups.IsValidIndex(GB))
+				{
+					const FVector TractMid = (AtlasGroups[GA].Anchor + AtlasGroups[GB].Anchor) * 0.5 * 0.62;
+					const double Spread = FMath::Clamp(Len * 0.012, 0.6, 5.0); // keep the bundle tight
+					// Pull only halfway toward the tract waypoint: bundles still converge, but the
+					// quadratic curve stays gentle instead of forming a sharp elbow.
+					Curve.CtrlPos = FMath::Lerp(MidLinear, TractMid, 0.5) + BowDir * Spread;
+					Curve.WaveAmpCm = 0.0f;
+				}
+			}
 			Curve.PerpA = PerpA;
 			Curve.PerpB = PerpB;
 			Curve.WaveAmpCm = (bMassiveScale || !bBrainView) ? 0.0f : FMath::Clamp(Len * 0.042f, 1.2f, 9.5f);
@@ -1326,17 +1422,20 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 			const double AgeSec = NowWallSec - BirthSec;
 			const double GrowthFrac = (AgeSec >= 0.85) ? 1.0 : FMath::Clamp(AgeSec / 0.85, 0.06, 1.0);
 
-			const int32 SubSegs = bMassiveScale ? 1 : 7;
+			const int32 SubSegs = bMassiveScale ? (bBrainView ? 14 : 1) : (bBrainView ? 28 : 7); // enough segments that bends read as a smooth string
 			const int32 FirstSegIdx = FilamentTransforms.Num();
 			const float WeightNorm = FMath::Clamp(E.AbsWeight / 2.2f, 0.10f, 1.0f);
-			const double BaseAxonR = bMassiveScale ? 0.26 : (0.36 + 0.34 * WeightNorm);
+			// Brain view: real axons are ~1/20 of a soma's diameter, so draw them hair-thin.
+			const double BaseAxonR = bBrainView
+				? (bMassiveScale ? 0.05 : (0.06 + 0.05 * WeightNorm))
+				: (bMassiveScale ? 0.26 : (0.36 + 0.34 * WeightNorm));
 
 			FVector PrevPt = StartPos;
 			for (int32 s = 1; s <= SubSegs; ++s)
 			{
 				const double T = (static_cast<double>(s) / static_cast<double>(SubSegs)) * GrowthFrac;
 				const FVector NextPt = (SubSegs == 1 && GrowthFrac >= 0.999) ? EndPos : Curve.Eval(T);
-				const double Taper = 1.15 - 0.32 * T; // Tapers gently from axon hillock to terminal bouton
+				const double Taper = bBrainView ? 1.0 : (1.15 - 0.32 * T); // Brain view: uniform calibre (no stepped joints) // Tapers gently from axon hillock to terminal bouton
 				FilamentTransforms.Add(MakeCylinderSegmentTransform(PrevPt, NextPt, BaseAxonR * Taper));
 				PrevPt = NextPt;
 			}
@@ -1347,8 +1446,8 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 			if (bBrainView && GrowthFrac >= 0.999 && (!bMassiveScale || bIsIncident))
 			{
 				const double InternodeCm = FMath::Clamp(Len * 0.2, 5.0, 24.0); // long internodes, short nodes (as in vivo)
-				const double NodeGapT = FMath::Clamp(0.9 / Len, 0.004, 0.03); // ~0.9 cm bare node
-				const double SheathR = BaseAxonR * 1.45; // myelinated fibre ~1.5x bare axon (g-ratio ~0.7)
+				const double NodeGapT = FMath::Clamp(0.35 / Len, 0.002, 0.012); // short bare node (reads as a continuous fibre)
+				const double SheathR = BaseAxonR * 1.18; // myelinated fibre ~1.5x bare axon (g-ratio ~0.7)
 				double T0 = 0.10;
 				while (T0 < 0.86)
 				{
@@ -1456,7 +1555,19 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 			const float Envelope = FMath::Sin(BeadT * PI) * TailFalloff;
 			const float RadiusCm = (1.75f * TailFalloff) * (0.65f + 0.35f * FMath::Sin(BeadT * PI));
 
-			PulseTransforms.Add(FTransform(FRotator::ZeroRotator, Pos, FVector(RadiusCm / 50.0f)));
+			if (ViewMode == EMetaBrainViewMode::Brain)
+			{
+				// Action potential as a soft streak of light running along the axon (not a ball)
+				const FVector Tan = (P.Curve.Eval(FMath::Min(1.0f, BeadT + 0.01f)) - P.Curve.Eval(FMath::Max(0.0f, BeadT - 0.01f))).GetSafeNormal();
+				const float StreakR = 0.22f * (0.6f + 0.4f * TailFalloff);
+				const float StreakLen = 3.2f * TailFalloff + 1.0f;
+				PulseTransforms.Add(FTransform(FRotationMatrix::MakeFromZ(Tan.IsNearlyZero() ? FVector::UpVector : Tan).ToQuat(), Pos,
+					FVector(StreakR / 50.0f, StreakR / 50.0f, StreakLen / 50.0f)));
+			}
+			else
+			{
+				PulseTransforms.Add(FTransform(FRotator::ZeroRotator, Pos, FVector(RadiusCm / 50.0f)));
+			}
 			PulseEnvelopes.Add(Envelope);
 			if (b == 0) NiagaraPulsePositions.Add(Pos);
 		}
@@ -1484,7 +1595,7 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 		float Opacity = 0.22f + 0.46f * WeightNorm;
 		if (FocusId >= 0)
 		{
-			Opacity = bIsIncident ? FMath::Max(0.75f, Opacity * 1.45f) : (Opacity * 0.16f);
+			Opacity = bIsIncident ? FMath::Max(0.75f, Opacity * 1.45f) : (Opacity * 0.45f);
 		}
 
 		float SignalFlash = 0.0f;
@@ -1608,7 +1719,7 @@ void AMetaBrainSceneController::SyncFiringPointLights(double NowWallSec)
 		if (i < ActiveCount)
 		{
 			PL->SetWorldLocation(Candidates[i].Pos);
-			PL->SetIntensity(Candidates[i].Flash * 1650.0f);
+			PL->SetIntensity(Candidates[i].Flash * ((ViewMode == EMetaBrainViewMode::Brain) ? 420.0f : 1650.0f));
 			PL->SetVisibility(true);
 		}
 		else
@@ -1627,7 +1738,12 @@ void AMetaBrainSceneController::UpdatePostProcessFocus(float DeltaSeconds, const
 		if (!CachedPostProcessVolume) return;
 	}
 
+	// Focus where the user orbits around (the camera pivot) unless a neuron is selected
 	FVector FocusPoint = FocusedHolonTargetCm;
+	if (const AMetaBrainCameraPawn* Pawn = Cast<AMetaBrainCameraPawn>(UGameplayStatics::GetPlayerPawn(this, 0)))
+	{
+		FocusPoint = Pawn->GetCurrentPivot();
+	}
 	float TargetFStop = (CurrentZoomLevel == EMetaBrainZoomLevel::Macro) ? 4.2f : 2.8f;
 
 	if (SelectedNeuronId >= 0 && CurrentSnapshot.IsValid())
@@ -1650,6 +1766,30 @@ void AMetaBrainSceneController::UpdatePostProcessFocus(float DeltaSeconds, const
 	CachedPostProcessVolume->Settings.DepthOfFieldFocalDistance = CurrentFocalDistanceCm;
 	CachedPostProcessVolume->Settings.bOverride_DepthOfFieldFstop = true;
 	CachedPostProcessVolume->Settings.DepthOfFieldFstop = TargetFStop;
+
+	// Brain view cinematic grade (state-of-the-art scientific-visualisation look):
+	// shallow macro-lens depth of field, soft wide bloom so action potentials glow,
+	// cool teal shadows / warm highlights, gentle vignette, fine sensor grain.
+	FPostProcessSettings& S = CachedPostProcessVolume->Settings;
+	const bool bBrain = (ViewMode == EMetaBrainViewMode::Brain);
+	const float CamDist = static_cast<float>(FVector::Distance(CamLoc, FocusPoint));
+	if (bBrain)
+	{
+		// Shallower the closer we are (macro photography): f/1.4 inside tissue, f/5 whole brain
+		S.DepthOfFieldFstop = FMath::GetMappedRangeValueClamped(FVector2f(60.0f, 1600.0f), FVector2f(3.5f, 9.0f), CamDist); // gentle: keeps nearby fibres readable
+	}
+	S.bOverride_BloomIntensity = true;            S.BloomIntensity = bBrain ? 1.35f : 0.88f;
+	S.bOverride_BloomThreshold = true;            S.BloomThreshold = bBrain ? 0.55f : 1.25f;
+	S.bOverride_BloomSizeScale = true;            S.BloomSizeScale = bBrain ? 6.0f : 4.0f;
+	S.bOverride_VignetteIntensity = true;         S.VignetteIntensity = bBrain ? 0.55f : 0.4f;
+	S.bOverride_FilmGrainIntensity = true;        S.FilmGrainIntensity = bBrain ? 0.10f : 0.0f;
+	S.bOverride_SceneFringeIntensity = true;      S.SceneFringeIntensity = bBrain ? 0.35f : 0.0f;
+	S.bOverride_ColorSaturation = true;           S.ColorSaturation = bBrain ? FVector4(1.08, 1.08, 1.08, 1.0) : FVector4(1, 1, 1, 1);
+	S.bOverride_ColorContrast = true;             S.ColorContrast = bBrain ? FVector4(1.12, 1.12, 1.12, 1.0) : FVector4(1, 1, 1, 1);
+	S.bOverride_ColorGainShadows = true;          S.ColorGainShadows = bBrain ? FVector4(0.86, 0.98, 1.12, 1.0) : FVector4(1, 1, 1, 1);
+	S.bOverride_ColorGainHighlights = true;       S.ColorGainHighlights = bBrain ? FVector4(1.06, 1.0, 0.92, 1.0) : FVector4(1, 1, 1, 1);
+	S.bOverride_AmbientOcclusionIntensity = true; S.AmbientOcclusionIntensity = bBrain ? 0.75f : 0.5f;
+	S.bOverride_AmbientOcclusionRadius = true;    S.AmbientOcclusionRadius = bBrain ? 40.0f : 80.0f;
 }
 
 void AMetaBrainSceneController::Tick(float DeltaSeconds)
@@ -1728,6 +1868,14 @@ void AMetaBrainSceneController::Tick(float DeltaSeconds)
 		const FVector CamLoc = GetActiveCameraLocation();
 		const double NowSec = FPlatformTime::Seconds();
 		SyncNeuronHISM(NowSec, CamLoc);
+		SyncGlia();
+		// Brain outline only from outside: hide once the camera dives into the tissue
+		if (ViewMode == EMetaBrainViewMode::Brain && BrainShellComp->GetStaticMesh())
+		{
+			const double D = CamLoc.Size();
+			const bool bWant = bShowBrainShell && (BrainShellComp->IsVisible() ? D > 1150.0 : D > 1300.0);
+			if (BrainShellComp->IsVisible() != bWant) BrainShellComp->SetVisibility(bWant);
+		}
 		SyncHolonShellsAndLabels(CamLoc);
 		SyncEdgesAndPulses(DeltaSeconds, NowSec);
 		SyncFiringPointLights(NowSec);

@@ -40,9 +40,9 @@ VARIANTS = [
 
 SOMA_R = 0.5          # m, mesh-local
 ARBOR_REACH = 6.0     # soma radii (95th percentile dendrite reach)
-THICKEN = 3.5         # branch radius exaggeration vs true proportion
-MIN_R, MAX_R = 0.022, 0.2
-SIDES = 7
+THICKEN = 1.8         # branch radius exaggeration vs true proportion
+MIN_R, MAX_R = 0.009, 0.16
+SIDES = 10
 MIN_SPACING = 0.09    # m between kept nodes along unbranched chains
 HILLOCK_LEN = 1.6     # m of axon kept (initial segment); edges take over after
 MAX_TIPS = 24
@@ -129,7 +129,7 @@ def build(name, path):
     # Synthetic initial segment for reconstructions without an axon
     extra_seg = None
     if not axon.any():
-        extra_seg = [(np.array([0, 0, SOMA_R * 0.8]), 0.16), (np.array([0, 0, SOMA_R + HILLOCK_LEN]), 0.06)]
+        extra_seg = [(np.array([0, 0, SOMA_R * 0.8]), 0.09), (np.array([0, 0, SOMA_R + HILLOCK_LEN]), 0.03)]
 
     # Build chains (branch point -> branch point/tip) over kept nodes, resampled
     P_all, N_all, I_all = [], [], []
