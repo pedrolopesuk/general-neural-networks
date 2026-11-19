@@ -121,15 +121,23 @@ def build_neuron_material():
     mul_sss = mel.create_material_expression(mat, unreal.MaterialExpressionMultiply, -60, 180)
     mel.connect_material_expressions(mul_iso, "", mul_sss, "A")
     mel.connect_material_expressions(c_sss_scale, "", mul_sss, "B")
-    mel.connect_material_property(mul_sss, "", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
+    # Living membrane: light scatters through the cytoplasm with a warm, slightly red tint
+    # (haemoglobin-free tissue under a lamp), so thin dendrites glow softly at their edges.
+    c_tissue = mel.create_material_expression(mat, unreal.MaterialExpressionConstant3Vector, -260, 220)
+    c_tissue.set_editor_property("constant", unreal.LinearColor(0.85, 0.42, 0.36, 1.0))
+    sss_mix = mel.create_material_expression(mat, unreal.MaterialExpressionLinearInterpolate, 60, 200)
+    mel.connect_material_expressions(mul_sss, "", sss_mix, "A")
+    mel.connect_material_expressions(c_tissue, "", sss_mix, "B")
+    sss_mix.set_editor_property("const_alpha", 0.6)
+    mel.connect_material_property(sss_mix, "", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
 
     c_opacity = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -60, 270)
-    c_opacity.set_editor_property("r", 0.72)
+    c_opacity.set_editor_property("r", 0.55)  # subsurface "thickness": lower = more translucent
     mel.connect_material_property(c_opacity, "", unreal.MaterialProperty.MP_OPACITY)
 
     # Roughness (0.58 satin dielectric so 3D spheres catch key + rim + neighbor firing bounce highlights) & Specular (0.42)
     c_rough = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -60, 340)
-    c_rough.set_editor_property("r", 0.58)
+    c_rough.set_editor_property("r", 0.46)  # wet membrane sheen
     mel.connect_material_property(c_rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
 
     c_spec = mel.create_material_expression(mat, unreal.MaterialExpressionConstant, -60, 410)
@@ -326,12 +334,22 @@ def build_edge_and_pulse_materials():
     c_gray.set_editor_property("constant", col_gray)
 
     c_amber_hdr = mel.create_material_expression(edge_mat, unreal.MaterialExpressionConstant3Vector, -540, -150)
-    c_amber_hdr.set_editor_property("constant", unreal.LinearColor(col_amber.r * 2.4, col_amber.g * 2.4, 0.0, 1.0))
+    # Very hot HDR so the travelling impulse blooms into a halo (reads as light, not paint)
+    c_amber_hdr.set_editor_property("constant", unreal.LinearColor(col_amber.r * 8.0, col_amber.g * 6.5, col_amber.r * 1.6, 1.0))
 
     lerp_col = mel.create_material_expression(edge_mat, unreal.MaterialExpressionLinearInterpolate, -240, -140)
     # Net view: luminous cyan filaments (NetGlow=1); Brain view: muted grey axon
-    c_cyan = mel.create_material_expression(edge_mat, unreal.MaterialExpressionConstant3Vector, -540, -340)
-    c_cyan.set_editor_property("constant", unreal.LinearColor(0.10, 0.55, 1.10, 1.0))
+    # Excitatory synapses cyan, inhibitory magenta (CustomData[2] = 1 excitatory / 0 inhibitory)
+    c_exc = mel.create_material_expression(edge_mat, unreal.MaterialExpressionConstant3Vector, -760, -380)
+    c_exc.set_editor_property("constant", unreal.LinearColor(0.08, 0.50, 1.05, 1.0))
+    c_inh = mel.create_material_expression(edge_mat, unreal.MaterialExpressionConstant3Vector, -760, -300)
+    c_inh.set_editor_property("constant", unreal.LinearColor(0.95, 0.12, 0.55, 1.0))
+    cd_sign = mel.create_material_expression(edge_mat, unreal.MaterialExpressionPerInstanceCustomData, -760, -220)
+    cd_sign.set_editor_property("data_index", 2)
+    c_cyan = mel.create_material_expression(edge_mat, unreal.MaterialExpressionLinearInterpolate, -560, -340)
+    mel.connect_material_expressions(c_inh, "", c_cyan, "A")
+    mel.connect_material_expressions(c_exc, "", c_cyan, "B")
+    mel.connect_material_expressions(cd_sign, "", c_cyan, "Alpha")
     mpc_e = unreal.load_asset("/Game/MetaBrain/Materials/MPC_MetaBrain")
     ng_e = mel.create_material_expression(edge_mat, unreal.MaterialExpressionCollectionParameter, -540, -420)
     ng_e.set_editor_property("collection", mpc_e)
@@ -342,9 +360,92 @@ def build_edge_and_pulse_materials():
     mel.connect_material_expressions(ng_e, "", base_col, "Alpha")
     mel.connect_material_expressions(base_col, "", lerp_col, "A")
     mel.connect_material_expressions(c_amber_hdr, "", lerp_col, "B")
+    # Per-pixel travelling impulse. CustomData[3..5] = segment t0, t1 along the axon and the
+    # pulse front position (-10 = none). Position along the axon is reconstructed per pixel
+    # from the cylinder's local Z, so the spark is a smooth hot point with a fading tail.
+    cd_t0 = mel.create_material_expression(edge_mat, unreal.MaterialExpressionPerInstanceCustomData, -900, 420)
+    cd_t0.set_editor_property("data_index", 3)
+    cd_t1 = mel.create_material_expression(edge_mat, unreal.MaterialExpressionPerInstanceCustomData, -900, 500)
+    cd_t1.set_editor_property("data_index", 4)
+    cd_pp = mel.create_material_expression(edge_mat, unreal.MaterialExpressionPerInstanceCustomData, -900, 580)
+    cd_pp.set_editor_property("data_index", 5)
+    wpos = mel.create_material_expression(edge_mat, unreal.MaterialExpressionWorldPosition, -1100, 660)
+    to_local = mel.create_material_expression(edge_mat, unreal.MaterialExpressionTransformPosition, -950, 660)
+    to_local.set_editor_property("transform_source_type", unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_WORLD)
+    to_local.set_editor_property("transform_type", unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_LOCAL)
+    mel.connect_material_expressions(wpos, "", to_local, "")
+    spark = mel.create_material_expression(edge_mat, unreal.MaterialExpressionCustom, -700, 520)
+    spark.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    spark.set_editor_property("code",
+        "float t = lerp(T0, T1, saturate(LocalPos.z / 100.0 + 0.5));\n"
+        "float d = Pulse - t;\n"
+        "float head = exp(-(d * d) / 0.00006);\n"
+        "float tail = (d >= 0.0) ? exp(-d / 0.03) : 0.0;\n"
+        "float g = max(head, tail * 0.7);\n"
+        "return g * g;")
+    ins = []
+    for nm in ("T0", "T1", "Pulse", "LocalPos"):
+        ci = unreal.CustomInput()
+        ci.set_editor_property("input_name", nm)
+        ins.append(ci)
+    spark.set_editor_property("inputs", ins)
+    mel.connect_material_expressions(cd_t0, "", spark, "T0")
+    mel.connect_material_expressions(cd_t1, "", spark, "T1")
+    mel.connect_material_expressions(cd_pp, "", spark, "Pulse")
+    mel.connect_material_expressions(to_local, "", spark, "LocalPos")
+    # Spike strength (presynaptic voltage x weight) scales the light
+    cd_amp = mel.create_material_expression(edge_mat, unreal.MaterialExpressionPerInstanceCustomData, -900, 740)
+    cd_amp.set_editor_property("data_index", 6)
+    spark_raw = spark
+    spark = mel.create_material_expression(edge_mat, unreal.MaterialExpressionMultiply, -560, 600)
+    mel.connect_material_expressions(spark_raw, "", spark, "A")
+    mel.connect_material_expressions(cd_amp, "", spark, "B")
+    sig_max = mel.create_material_expression(edge_mat, unreal.MaterialExpressionMax, -420, 0)
+    mel.connect_material_expressions(cd_sig, "", sig_max, "A")
+    mel.connect_material_expressions(spark, "", sig_max, "B")
     mel.connect_material_expressions(cd_sig, "", lerp_col, "Alpha")
-    mel.connect_material_property(_scale_by_mpc_emissive(edge_mat, lerp_col), "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
-    mel.connect_material_property(cd_op, "", unreal.MaterialProperty.MP_OPACITY)
+    # Spark colour follows its energy like a hot filament: white-hot head -> amber -> deep red
+    # ember at the end of the tail; brightness falls off quadratically so the tail dissolves.
+    spark_col = mel.create_material_expression(edge_mat, unreal.MaterialExpressionCustom, -300, 560)
+    spark_col.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT3)
+    spark_col.set_editor_property("code",
+        "float e = saturate(G);\n"
+        "float3 ember = float3(1.0, 0.16, 0.02);\n"
+        "float3 amber = float3(1.0, 0.55, 0.12);\n"
+        "float3 white = float3(1.0, 0.93, 0.80);\n"
+        "float3 c = lerp(ember, amber, saturate(e * 2.0));\n"
+        "c = lerp(c, white, saturate(e * 2.0 - 1.0));\n"
+        "return c * e * 9.0;")
+    gin = unreal.CustomInput(); gin.set_editor_property("input_name", "G")
+    spark_col.set_editor_property("inputs", [gin])
+    mel.connect_material_expressions(spark, "", spark_col, "G")
+    em_base = _scale_by_mpc_emissive(edge_mat, lerp_col)
+    em_sum = mel.create_material_expression(edge_mat, unreal.MaterialExpressionAdd, 360, -200)
+    mel.connect_material_expressions(em_base, "", em_sum, "A")
+    mel.connect_material_expressions(spark_col, "", em_sum, "B")
+    mel.connect_material_property(em_sum, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    # Atmospheric depth fade: far filaments recede instead of piling up into solid wedges
+    depth = mel.create_material_expression(edge_mat, unreal.MaterialExpressionPixelDepth, -540, 260)
+    d_div = mel.create_material_expression(edge_mat, unreal.MaterialExpressionDivide, -400, 260)
+    mel.connect_material_expressions(depth, "", d_div, "A")
+    d_div.set_editor_property("const_b", 2600.0)
+    d_sub = mel.create_material_expression(edge_mat, unreal.MaterialExpressionOneMinus, -280, 260)
+    mel.connect_material_expressions(d_div, "", d_sub, "")
+    d_sat = mel.create_material_expression(edge_mat, unreal.MaterialExpressionSaturate, -180, 260)
+    mel.connect_material_expressions(d_sub, "", d_sat, "")
+    d_min = mel.create_material_expression(edge_mat, unreal.MaterialExpressionMax, -80, 260)
+    mel.connect_material_expressions(d_sat, "", d_min, "A")
+    d_min.set_editor_property("const_b", 0.25)
+    op_f = mel.create_material_expression(edge_mat, unreal.MaterialExpressionMultiply, 40, 200)
+    mel.connect_material_expressions(cd_op, "", op_f, "A")
+    mel.connect_material_expressions(d_min, "", op_f, "B")
+    op_spark = mel.create_material_expression(edge_mat, unreal.MaterialExpressionMultiply, 40, 330)
+    mel.connect_material_expressions(spark, "", op_spark, "A")
+    op_spark.set_editor_property("const_b", 0.45)
+    op_max = mel.create_material_expression(edge_mat, unreal.MaterialExpressionMax, 160, 260)
+    mel.connect_material_expressions(op_f, "", op_max, "A")
+    mel.connect_material_expressions(op_spark, "", op_max, "B")
+    mel.connect_material_property(op_max, "", unreal.MaterialProperty.MP_OPACITY)
 
     mel.recompile_material(edge_mat)
     unreal.EditorAssetLibrary.save_loaded_asset(edge_mat)

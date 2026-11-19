@@ -46,6 +46,9 @@ ANCHOR_PARTS = {
 }
 
 
+SHEET_N = 640
+
+
 def load_elements(src_dir):
     rows = [l.rstrip("\n").split("\t") for l in open(os.path.join(src_dir, "partof_element_parts.txt"), encoding="utf-8")][1:]
     by_concept = {}
@@ -193,6 +196,7 @@ def main(src_dir):
     # ---- shell mesh ----
     os.makedirs(OUT_DIR, exist_ok=True)
     prims = []
+    shells = {}
     budget = {"Cerebrum": 0.72, "Cerebellum": 0.18, "Brainstem": 0.10}
     for name, concepts in (("Cerebrum", CEREBRUM), ("Cerebellum", CEREBELLUM), ("Brainstem", BRAINSTEM)):
         v, f = gather(z, by_concept, concepts, cache)
@@ -200,6 +204,7 @@ def main(src_dir):
         v = taubin_smooth(v, f)
         if name == "Cerebrum":
             f = outer_envelope(v, f)
+        shells[name] = (to_ue(v), f)
         p = to_ue(v) / 100.0                      # cm -> m for glTF
         p = p * np.array([1.0, -1.0, 1.0])        # pre-undo the importer's Y mirror
         f = f[:, ::-1]                            # mirror flips winding
@@ -222,6 +227,42 @@ def main(src_dir):
          "\tstatic const FAnchor Anchors[] = {"]
     for name, l, r, rad in anchors:
         L.append(f'\t\t{{ TEXT("{name}"), {{ {l[0]:.1f}, {l[1]:.1f}, {l[2]:.1f} }}, {{ {r[0]:.1f}, {r[1]:.1f}, {r[2]:.1f} }}, {rad:.1f} }},')
+    L += ["\t};"]
+
+    # ---- cortical sheets: neurons of cortical structures live ON the folded surface ----
+    # Per (anchor, side): SHEET_N surface samples (position cm + inward unit normal), taken
+    # from the pial envelope nearest the anchor (cerebellum: its own folia surface).
+    rng = np.random.default_rng(7)
+
+    def sheet(name, anchor_pt, side):
+        v, f = shells["Cerebellum" if name == "Cerebellum" else "Cerebrum"]
+        n = normals(v, f)
+        c = v.mean(0)
+        n[np.sum(n * (v - c), axis=1) < 0] *= -1      # outward
+        used = np.unique(f)
+        v, n = v[used], n[used]
+        keep = (v[:, 1] * side) > 2.0
+        v, n = v[keep], n[keep]
+        d = np.linalg.norm(v - anchor_pt, axis=1)
+        idx = rng.choice(np.argsort(d)[: SHEET_N * 3], SHEET_N, replace=False)
+        return v[idx], -n[idx]
+
+    sheets = []
+    for name, l, r, rad in anchors:
+        sheets.append((sheet(name, l, -1), sheet(name, r, +1)) if name in ("Prefrontal", "Association", "Cerebellum") else None)
+    L.append(f"\tstatic constexpr int32 SheetN = {SHEET_N};")
+    L.append("\t// [anchor][side L/R][sample] = position cm xyz + inward unit normal xyz")
+    L.append("\tstatic constexpr bool HasSheet[] = { " + ", ".join("true" if x else "false" for x in sheets) + " };")
+    L.append(f"\tstatic const float Sheet[{len(anchors)}][2][{SHEET_N}][6] = {{")
+    for x in sheets:
+        L.append("\t\t{")
+        for side in range(2):
+            if x is None:
+                L.append("\t\t\t{ { 0 } },")
+                continue
+            pts, nn = x[side]
+            L.append("\t\t\t{ " + ", ".join("{%.1ff,%.1ff,%.1ff,%.3ff,%.3ff,%.3ff}" % (*a, *b) for a, b in zip(pts, nn)) + " },")
+        L.append("\t\t},")
     L += ["\t};", "}", ""]
     open(HEADER, "w", newline="\n").write("\n".join(L))
     for name, l, r, rad in anchors:

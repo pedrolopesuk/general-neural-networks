@@ -749,6 +749,44 @@ TSharedRef<SWidget> UMetaBrainHUDWidget::RebuildWidget()
 		]
 	]
 
+	// 3b. Top-Right drawer: Views (camera bookmarks) | Events (what is happening now)
+	+ SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Top).Padding(0.0f, 44.0f, 12.0f, 0.0f)
+	[
+		SNew(SBorder).BorderImage(&PanelBrush).Padding(FMargin(8.0f, 6.0f))
+		[
+			SNew(SBox).WidthOverride(250.0f)
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(0.0f, 0.0f, 2.0f, 0.0f)
+					[
+						MakeTextBtn(TEXT("Views"), &DefaultBtnStyle, Style->TextColor, [this]()
+						{
+							DrawerTab = (DrawerTab == 1) ? 0 : 1; RebuildDrawerList();
+						})
+					]
+					+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2.0f, 0.0f, 0.0f, 0.0f)
+					[
+						MakeTextBtn(TEXT("Events"), &DefaultBtnStyle, Style->TextColor, [this]()
+						{
+							DrawerTab = (DrawerTab == 2) ? 0 : 2; RebuildDrawerList();
+						})
+					]
+				]
+				+ SVerticalBox::Slot().AutoHeight().MaxHeight(420.0f).Padding(0.0f, 4.0f, 0.0f, 0.0f)
+				[
+					SNew(SScrollBox)
+					+ SScrollBox::Slot()
+					[
+						SAssignNew(DrawerList, SVerticalBox)
+					]
+				]
+			]
+		]
+	]
+
 	// 4. Bottom-Right Canvas Overlay: Output Table + Reward / Punish
 	+ SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Bottom).Padding(0.0f, 0.0f, 12.0f, 12.0f)
 	[
@@ -961,12 +999,58 @@ void UMetaBrainHUDWidget::NativeConstruct()
 	Super::NativeConstruct();
 }
 
+void UMetaBrainHUDWidget::RebuildDrawerList()
+{
+	if (!DrawerList.IsValid()) return;
+	DrawerList->ClearChildren();
+	AMetaBrainSceneController* SC = GetSceneController();
+	if (!SC || DrawerTab == 0) return;
+
+	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", 9);
+	auto AddRow = [&](const FString& Text, const FVector& Pivot, float Dist, const FLinearColor& Col)
+	{
+		TWeakObjectPtr<AMetaBrainSceneController> WeakSC(SC);
+		DrawerList->AddSlot().AutoHeight().Padding(0.0f, 1.0f)
+		[
+			SNew(SButton)
+			.ButtonStyle(FCoreStyle::Get(), "NoBorder")
+			.OnClicked_Lambda([WeakSC, Pivot, Dist]() { if (WeakSC.IsValid()) WeakSC->FlyCameraTo(Pivot, Dist); return FReply::Handled(); })
+			[
+				SNew(STextBlock).Text(FText::FromString(Text)).Font(Font).ColorAndOpacity(Col).AutoWrapText(true)
+			]
+		];
+	};
+
+	if (DrawerTab == 1)
+	{
+		for (const auto& B : SC->GetViewBookmarks()) AddRow(B.Label, B.PivotCm, B.DistanceCm, FLinearColor(0.85f, 0.88f, 0.92f));
+	}
+	else
+	{
+		const double Now = FPlatformTime::Seconds();
+		const auto& Ev = SC->GetRecentEvents();
+		if (Ev.Num() == 0) AddRow(TEXT("Waiting for activity\u2026"), FVector::ZeroVector, 2050.0f, FLinearColor(0.5f, 0.5f, 0.55f));
+		for (const auto& E : Ev)
+		{
+			const float Age = static_cast<float>(Now - E.WallSec);
+			const FLinearColor Col = FMath::Lerp(FLinearColor(1.0f, 0.72f, 0.2f), FLinearColor(0.55f, 0.58f, 0.62f), FMath::Clamp(Age / 6.0f, 0.0f, 1.0f));
+			AddRow(FString::Printf(TEXT("%3.0fs  %s"), Age, *E.Text), E.PivotCm, E.DistanceCm, Col);
+		}
+	}
+}
+
 void UMetaBrainHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
 
 	AMetaBrainSceneController* SC = GetSceneController();
 	if (!SC) return;
+
+	if (DrawerTab == 2)
+	{
+		DrawerRefreshAccum += InDeltaTime;
+		if (DrawerRefreshAccum > 0.5f) { DrawerRefreshAccum = 0.0f; RebuildDrawerList(); }
+	}
 
 	const TSharedPtr<const FMetaBrainSnapshot, ESPMode::ThreadSafe> Snap = SC->GetCurrentSnapshot();
 	if (!Snap.IsValid()) return;

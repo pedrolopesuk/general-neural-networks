@@ -65,3 +65,32 @@ gray at rest → amber emissive while firing; the Age lens switches it via `MPC_
 ## 5. Files touched
 - New: `Scripts/build_assets/prepare_neuron_mesh.py`, `build_meshes.py`, `meshes/*.glb`, `MetaBrainNeuronMorphologyData.h`
 - Changed: `build_materials.py`, `build_all.py`, `MetaBrainSceneController.{h,cpp}`, `README.md` (CC-BY credit, required by the model's license)
+
+## 6. Update: Net / Brain views (later the same day)
+Sections 2–3 describe the first pass. Since then, the app has two view modes (HUD **Net** / **Brain**, or `-View=Net|Brain`):
+
+**Brain view now has**
+- A translucent human brain from BodyParts3D. The outline hides automatically once the camera goes inside, and the HUD **Outline** button turns it off.
+- 4 real human cell types from NeuroMorpho.org: L5 pyramidal, CA1 pyramidal, interneuron and Purkinje. Each cell gets ±25% width/depth variation.
+- Anatomical placement:
+  - Prefrontal, parietal and cerebellar neurons lie **on the folded cortical surface**, as a layer about 7 cm deep at scene scale.
+  - Hippocampus, amygdala and thalamus are compact nuclei.
+- Hair-thin myelinated axons that bundle into white-matter tracts between structures, with glial nuclei around each cell.
+- Action potentials are soft light streaks.
+- A warm subsurface membrane with a cool rim.
+- Cinematic post-processing: depth of field that follows the orbit pivot, wide bloom, a teal/warm grade, vignette and grain.
+
+**Net view now has** thin connections whose width scales with |w|: cyan for excitatory, magenta for inhibitory. They fade with depth, and nodes have a glowing halo.
+
+**Controls**
+- Left-drag orbits the brain.
+- Right-drag, middle-drag or Shift + left-drag pans like a canvas: the point under the cursor stays under it.
+- The wheel zooms toward the cursor.
+
+**Still missing**
+| Gap | Effort |
+|---|---|
+| More than one reconstruction per cell type. Variation is procedural only. | 2 h (more SWC downloads) |
+| Connection budget capped at 3,200 drawn. Raising it needs GPU-instanced spline curves. | about 1 day |
+| Impulse spark particles (Niagara). Impulses are mesh streaks today. | about 1 h |
+| Web frontend (three.js) still draws spheres | about 1 day |

@@ -72,6 +72,7 @@ struct FMetaBrainTravelingPulse
 	float SpeedCmPerSec = 340.0f;
 	float Progress = 0.0f;
 	bool bTriggeredBouton = false;
+	float Amp = 1.0f; // spike strength: presynaptic voltage x synaptic weight
 };
 
 UCLASS()
@@ -116,6 +117,20 @@ public:
 	void SetViewMode(EMetaBrainViewMode InMode);
 	EMetaBrainViewMode GetViewMode() const { return ViewMode; }
 	void ToggleBrainShell();
+
+	// Drawers: camera bookmarks + live event feed (click = fly camera there)
+	struct FVizBookmark { FString Label; FVector PivotCm; float DistanceCm; };
+	struct FVizEvent { double WallSec; FString Text; FVector PivotCm; float DistanceCm; };
+	TArray<FVizBookmark> GetViewBookmarks() const;
+	const TArray<FVizEvent>& GetRecentEvents() const { return RecentEvents; }
+	void FlyCameraTo(const FVector& PivotCm, float DistanceCm) { NotifyCameraFlyTo(PivotCm, DistanceCm); }
+	TArray<FVizEvent> RecentEvents;
+	double LastEventScanSec = 0.0;
+	int32 LastEventNeuronCount = -1;
+	TMap<FString, double> LastBurstSecByRegion;
+	FString RegionNameForNeuron(int32 Index) const;
+	void ScanForEvents(double NowSec);
+	void PushEvent(const FString& Text, const FVector& PivotCm, float DistanceCm);
 	bool IsBrainShellOn() const { return bShowBrainShell; }
 	bool bShowBrainShell = true;
 
@@ -148,6 +163,9 @@ protected:
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> GliaHISM;
 	uint64 RenderedGliaTopoRev = MAX_uint64;
 	void SyncGlia();
+
+	// Brain view: cached folded-cortex positions (NaN = not on a sheet)
+	TArray<FVector> NeuronSheetPosCm;
 
 	UPROPERTY(VisibleAnywhere, Category = "MetaBrain|Rendering")
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> DendriteArborHISM;
@@ -248,6 +266,7 @@ protected:
 	int64 HoveredNeuronId = -1;
 	int64 SelectedNeuronId = -1;
 	int64 LastRenderedFocusId = -2;
+	FVector LastEdgeCamLoc = FVector(1e9);
 	FString HoveredHolonKey;
 
 	EMetaBrainZoomLevel CurrentZoomLevel = EMetaBrainZoomLevel::Macro;

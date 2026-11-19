@@ -137,6 +137,12 @@ protected:
 	TSharedPtr<STextBlock> InspAgeTxt;
 	TSharedPtr<STextBlock> InspChildrenTxt;
 	TSharedPtr<SVerticalBox> InspConnList;
+
+	// Right-side drawer: 0 = closed, 1 = Views (camera bookmarks), 2 = Events (live feed)
+	int32 DrawerTab = 0;
+	float DrawerRefreshAccum = 0.0f;
+	TSharedPtr<SVerticalBox> DrawerList;
+	void RebuildDrawerList();
 	int64 LastInspectedConnNeuronId = -1;
 	uint64 LastInspectedConnTick = 0;
 
