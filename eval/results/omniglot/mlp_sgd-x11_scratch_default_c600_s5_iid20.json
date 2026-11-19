@@ -1,0 +1,125 @@
+{
+ "benchmark": "omniglot_continual_fewshot",
+ "learner": "mlp_sgd-x11",
+ "track": "scratch",
+ "classes": 600,
+ "shots": 5,
+ "seeds": 5,
+ "hp": {
+  "lr": 0.001,
+  "steps_per_example": 11
+ },
+ "params": 420952,
+ "flops_per_example": 27782832,
+ "encoder_budget": null,
+ "tuning": "100 held-out background classes, seed 0",
+ "summary": {
+  "final_acc": [
+   0.1902222222222222,
+   0.002417783905220994
+  ],
+  "forgetting": [
+   0.0,
+   0.0
+  ],
+  "acc_new_k1": [
+   NaN,
+   NaN
+  ],
+  "acc_new_k3": [
+   NaN,
+   NaN
+  ],
+  "acc_new_k5": [
+   NaN,
+   NaN
+  ]
+ },
+ "runs": [
+  {
+   "acc_new": {
+    "k1": NaN,
+    "k3": NaN,
+    "k5": NaN
+   },
+   "curve": [
+    [
+     600,
+     0.18833333333333332
+    ]
+   ],
+   "final_acc": 0.18833333333333332,
+   "forgetting": 0.0,
+   "wall_s": 508.2453010082245,
+   "seed": 0
+  },
+  {
+   "acc_new": {
+    "k1": NaN,
+    "k3": NaN,
+    "k5": NaN
+   },
+   "curve": [
+    [
+     600,
+     0.19044444444444444
+    ]
+   ],
+   "final_acc": 0.19044444444444444,
+   "forgetting": 0.0,
+   "wall_s": 595.8165390491486,
+   "seed": 1
+  },
+  {
+   "acc_new": {
+    "k1": NaN,
+    "k3": NaN,
+    "k5": NaN
+   },
+   "curve": [
+    [
+     600,
+     0.1942222222222222
+    ]
+   ],
+   "final_acc": 0.1942222222222222,
+   "forgetting": 0.0,
+   "wall_s": 578.5292811393738,
+   "seed": 2
+  },
+  {
+   "acc_new": {
+    "k1": NaN,
+    "k3": NaN,
+    "k5": NaN
+   },
+   "curve": [
+    [
+     600,
+     0.18833333333333332
+    ]
+   ],
+   "final_acc": 0.18833333333333332,
+   "forgetting": 0.0,
+   "wall_s": 613.181972026825,
+   "seed": 3
+  },
+  {
+   "acc_new": {
+    "k1": NaN,
+    "k3": NaN,
+    "k5": NaN
+   },
+   "curve": [
+    [
+     600,
+     0.18977777777777777
+    ]
+   ],
+   "final_acc": 0.18977777777777777,
+   "forgetting": 0.0,
+   "wall_s": 627.9475908279419,
+   "seed": 4
+  }
+ ]
+}

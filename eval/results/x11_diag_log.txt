@@ -1,0 +1,83 @@
+﻿===== --learner mlp_sgd --hp {\"steps_per_example\": 11} --variant x11 --track scratch --tune
+  tune mlp_sgd {'lr': 0.0001, 'steps_per_example': 11}: final 0.011
+  tune mlp_sgd {'lr': 0.0003, 'steps_per_example': 11}: final 0.013
+  tune mlp_sgd {'lr': 0.001, 'steps_per_example': 11}: final 0.020
+  tune mlp_sgd {'lr': 0.003, 'steps_per_example': 11}: final 0.010
+  tune mlp_sgd {'lr': 0.01, 'steps_per_example': 11}: final 0.010
+seed 0: final 0.002  forgetting +0.735  new@1/3/5 0.006/0.251/0.736  26s
+seed 1: final 0.002  forgetting +0.774  new@1/3/5 0.006/0.246/0.776  26s
+seed 2: final 0.002  forgetting +0.750  new@1/3/5 0.006/0.254/0.751  27s
+seed 3: final 0.002  forgetting +0.757  new@1/3/5 0.005/0.253/0.759  26s
+seed 4: final 0.002  forgetting +0.755  new@1/3/5 0.004/0.262/0.757  26s
+{"learner": "mlp_sgd", "track": "scratch", "final_acc": [0.0016666666666666666, 2.42434975903054e-19], "forgetting": [0.7541333333333333, 0.014296982328579113], "acc_new_k1": [0.005466666666666667, 0.0009667305215180534], "acc_new_k3": [0.2531777777777778, 0.005843430414777408], "acc_new_k5": [0.7557999999999999, 0.01429698232857915]}
+===== --learner mlp_sgd --hp {\"steps_per_example\": 11} --variant x11 --track scratch --iid 20
+seed 0: final 0.188  forgetting +0.000  new@1/3/5 nan/nan/nan  508s
+seed 1: final 0.190  forgetting +0.000  new@1/3/5 nan/nan/nan  596s
+seed 2: final 0.194  forgetting +0.000  new@1/3/5 nan/nan/nan  579s
+seed 3: final 0.188  forgetting +0.000  new@1/3/5 nan/nan/nan  613s
+seed 4: final 0.190  forgetting +0.000  new@1/3/5 nan/nan/nan  628s
+{"learner": "mlp_sgd", "track": "scratch", "final_acc": [0.1902222222222222, 0.002417783905220994], "forgetting": [0.0, 0.0], "acc_new_k1": [NaN, NaN], "acc_new_k3": [NaN, NaN], "acc_new_k5": [NaN, NaN]}
+===== --learner mlp_sgd --hp {\"steps_per_example\": 11} --variant x11 --track scratch --protocol anml --tune
+  tune mlp_sgd {'lr': 0.0001, 'steps_per_example': 11}: final 0.012
+  tune mlp_sgd {'lr': 0.0003, 'steps_per_example': 11}: final 0.018
+  tune mlp_sgd {'lr': 0.001, 'steps_per_example': 11}: final 0.010
+  tune mlp_sgd {'lr': 0.003, 'steps_per_example': 11}: final 0.010
+  tune mlp_sgd {'lr': 0.01, 'steps_per_example': 11}: final 0.010
+seed 0: final 0.002  forgetting +0.704  new@1/3/5 0.005/0.006/0.009  95s
+seed 1: final 0.002  forgetting +0.748  new@1/3/5 0.004/0.006/0.017  98s
+seed 2: final 0.002  forgetting +0.724  new@1/3/5 0.005/0.007/0.013  101s
+seed 3: final 0.002  forgetting +0.728  new@1/3/5 0.004/0.006/0.016  95s
+seed 4: final 0.002  forgetting +0.736  new@1/3/5 0.003/0.004/0.010  95s
+{"learner": "mlp_sgd", "track": "scratch", "final_acc": [0.0016666666666666666, 2.42434975903054e-19], "forgetting": [0.728, 0.01604507539541165], "acc_new_k1": [0.004333333333333334, 0.0009428090415820635], "acc_new_k3": [0.0058000000000000005, 0.001069787102392081], "acc_new_k5": [0.013000000000000001, 0.0037785946829182113]}
+===== --learner mlp_sgd --hp {\"steps_per_example\": 11} --variant x11 --track pretrained --tune
+  tune mlp_sgd {'lr': 0.0001, 'steps_per_example': 11}: final 0.043
+  tune mlp_sgd {'lr': 0.0003, 'steps_per_example': 11}: final 0.042
+  tune mlp_sgd {'lr': 0.001, 'steps_per_example': 11}: final 0.050
+  tune mlp_sgd {'lr': 0.003, 'steps_per_example': 11}: final 0.049
+  tune mlp_sgd {'lr': 0.01, 'steps_per_example': 11}: final 0.031
+seed 0: final 0.005  forgetting +0.995  new@1/3/5 0.974/1.000/1.000  50s
+seed 1: final 0.005  forgetting +0.995  new@1/3/5 0.985/0.999/1.000  52s
+seed 2: final 0.007  forgetting +0.993  new@1/3/5 0.974/1.000/1.000  51s
+seed 3: final 0.005  forgetting +0.995  new@1/3/5 0.979/0.999/1.000  48s
+seed 4: final 0.006  forgetting +0.993  new@1/3/5 0.990/0.999/0.999  51s
+{"learner": "mlp_sgd", "track": "pretrained", "final_acc": [0.0054444444444444445, 0.0008202679477907447], "forgetting": [0.9942, 0.0008656689413681386], "acc_new_k1": [0.9803777777777778, 0.007024911580657012], "acc_new_k3": [0.9993777777777779, 0.000230404903925815], "acc_new_k5": [0.9996444444444444, 0.00018257418583501498]}
+===== --learner mlp_sgd --hp {\"steps_per_example\": 11} --variant x11 --track pretrained --iid 20
+seed 0: final 0.002  forgetting +0.000  new@1/3/5 nan/nan/nan  778s
+seed 1: final 0.002  forgetting +0.000  new@1/3/5 nan/nan/nan  887s
+seed 2: final 0.002  forgetting +0.000  new@1/3/5 nan/nan/nan  945s
+seed 3: final 0.002  forgetting +0.000  new@1/3/5 nan/nan/nan  1025s
+seed 4: final 0.002  forgetting +0.000  new@1/3/5 nan/nan/nan  1045s
+{"learner": "mlp_sgd", "track": "pretrained", "final_acc": [0.001688888888888889, 4.969039949999532e-05], "forgetting": [0.0, 0.0], "acc_new_k1": [NaN, NaN], "acc_new_k3": [NaN, NaN], "acc_new_k5": [NaN, NaN]}
+===== --learner mlp_sgd --hp {\"steps_per_example\": 11} --variant x11 --track pretrained --protocol anml --tune
+  tune mlp_sgd {'lr': 0.0001, 'steps_per_example': 11}: final 0.030
+  tune mlp_sgd {'lr': 0.0003, 'steps_per_example': 11}: final 0.032
+  tune mlp_sgd {'lr': 0.001, 'steps_per_example': 11}: final 0.030
+  tune mlp_sgd {'lr': 0.003, 'steps_per_example': 11}: final 0.040
+  tune mlp_sgd {'lr': 0.01, 'steps_per_example': 11}: final 0.038
+seed 0: final 0.006  forgetting +0.994  new@1/3/5 0.974/0.998/0.999  173s
+seed 1: final 0.005  forgetting +0.995  new@1/3/5 0.985/1.000/1.000  165s
+seed 2: final 0.006  forgetting +0.994  new@1/3/5 0.970/0.999/1.000  175s
+seed 3: final 0.007  forgetting +0.993  new@1/3/5 0.985/0.999/0.999  172s
+seed 4: final 0.006  forgetting +0.993  new@1/3/5 0.981/0.998/0.999  174s
+{"learner": "mlp_sgd", "track": "pretrained", "final_acc": [0.005733333333333333, 0.0007226494462892933], "forgetting": [0.9939333333333333, 0.0008944271909999809], "acc_new_k1": [0.9790000000000001, 0.006704061787039544], "acc_new_k3": [0.9988666666666667, 0.0006912147117776297], "acc_new_k5": [0.9991999999999999, 0.0004472135954998963]}
+===== --learner slda --track pretrained --hp {\"shrinkage\": 0.1} --variant diag_shr0.1
+seed 0: final 0.673  forgetting +0.083  new@1/3/5 0.132/0.576/0.756  10s
+seed 1: final 0.663  forgetting +0.079  new@1/3/5 0.109/0.547/0.741  9s
+seed 2: final 0.665  forgetting +0.088  new@1/3/5 0.114/0.556/0.753  8s
+seed 3: final 0.671  forgetting +0.084  new@1/3/5 0.123/0.548/0.756  9s
+seed 4: final 0.663  forgetting +0.090  new@1/3/5 0.116/0.550/0.753  8s
+{"learner": "slda", "track": "pretrained", "final_acc": [0.667111111111111, 0.004556233011958368], "forgetting": [0.08475555555555556, 0.004383893077906722], "acc_new_k1": [0.11897777777777778, 0.00877686352482101], "acc_new_k3": [0.5554888888888889, 0.012181396461534568], "acc_new_k5": [0.7517555555555556, 0.0059878477759253215]}
+===== --learner slda --track pretrained --hp {\"shrinkage\": 0.3} --variant diag_shr0.3
+seed 0: final 0.690  forgetting +0.090  new@1/3/5 0.167/0.625/0.780  9s
+seed 1: final 0.686  forgetting +0.081  new@1/3/5 0.146/0.599/0.767  8s
+seed 2: final 0.693  forgetting +0.084  new@1/3/5 0.148/0.605/0.777  12s
+seed 3: final 0.698  forgetting +0.084  new@1/3/5 0.156/0.608/0.782  14s
+seed 4: final 0.686  forgetting +0.091  new@1/3/5 0.148/0.604/0.778  13s
+{"learner": "slda", "track": "pretrained", "final_acc": [0.6906444444444444, 0.004844113138518312], "forgetting": [0.08606666666666665, 0.004378398151193011], "acc_new_k1": [0.1528888888888889, 0.008856538353382676], "acc_new_k3": [0.6082666666666666, 0.009662706724027595], "acc_new_k5": [0.7767333333333333, 0.0058036812498088]}
+===== --learner slda --track pretrained --hp {\"shrinkage\": 0.5} --variant diag_shr0.5
+seed 0: final 0.704  forgetting +0.088  new@1/3/5 0.203/0.655/0.792  13s
+seed 1: final 0.701  forgetting +0.081  new@1/3/5 0.177/0.631/0.782  13s
+seed 2: final 0.705  forgetting +0.087  new@1/3/5 0.180/0.640/0.792  13s
+seed 3: final 0.713  forgetting +0.081  new@1/3/5 0.192/0.641/0.795  15s
+seed 4: final 0.699  forgetting +0.093  new@1/3/5 0.179/0.635/0.792  14s
+{"learner": "slda", "track": "pretrained", "final_acc": [0.7044222222222223, 0.005438432054358763], "forgetting": [0.08597777777777779, 0.005160629686911486], "acc_new_k1": [0.18639999999999998, 0.010789684145081226], "acc_new_k3": [0.6404888888888889, 0.008775527137625992], "acc_new_k5": [0.7904222222222222, 0.004957473470415821]}

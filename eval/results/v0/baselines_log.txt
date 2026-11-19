@@ -1,0 +1,29 @@
+﻿===== --learner ncm --track scratch --tune
+  tune ncm {}: final 0.359
+seed 0: final 0.161  forgetting +0.074  new@1/3/5 0.068/0.163/0.235  2s
+seed 1: final 0.162  forgetting +0.077  new@1/3/5 0.073/0.170/0.239  1s
+seed 2: final 0.170  forgetting +0.080  new@1/3/5 0.074/0.173/0.250  2s
+seed 3: final 0.157  forgetting +0.078  new@1/3/5 0.069/0.166/0.235  2s
+seed 4: final 0.162  forgetting +0.071  new@1/3/5 0.075/0.164/0.233  2s
+{"learner": "ncm", "track": "scratch", "final_acc": [0.1623111111111111, 0.004607696191973908], "forgetting": [0.076, 0.0035162760885437015], "acc_new_k1": [0.07193333333333332, 0.0032361766803085433], "acc_new_k3": [0.1670444444444444, 0.004208750437708751], "acc_new_k5": [0.23831111111111108, 0.0067879704779762046]}
+===== --learner ncm --track scratch --protocol anml --tune
+  tune ncm {}: final 0.436
+seed 0: final 0.224  forgetting +0.101  new@1/3/5 0.062/0.134/0.199  3s
+seed 1: final 0.229  forgetting +0.081  new@1/3/5 0.059/0.139/0.193  3s
+seed 2: final 0.225  forgetting +0.095  new@1/3/5 0.063/0.139/0.198  3s
+seed 3: final 0.221  forgetting +0.092  new@1/3/5 0.063/0.146/0.194  3s
+seed 4: final 0.218  forgetting +0.092  new@1/3/5 0.062/0.135/0.195  3s
+{"learner": "ncm", "track": "scratch", "final_acc": [0.22333333333333333, 0.00417665469538055], "forgetting": [0.09213333333333333, 0.0070023805475947516], "acc_new_k1": [0.06173333333333333, 0.0016055459438389732], "acc_new_k3": [0.13866666666666666, 0.004612784167699335], "acc_new_k5": [0.19573333333333334, 0.0023021728866442544]}
+===== --learner mlp_sgd --track scratch --tune
+  tune mlp_sgd {'lr': 0.0001}: final 0.005
+  tune mlp_sgd {'lr': 0.0003}: final 0.005
+  tune mlp_sgd {'lr': 0.001}: final 0.005
+  tune mlp_sgd {'lr': 0.003}: final 0.007
+  tune mlp_sgd {'lr': 0.01}: final 0.018
+seed 0: final 0.002  forgetting +0.284  new@1/3/5 0.007/0.010/0.286  4s
+seed 1: final 0.002  forgetting +0.275  new@1/3/5 0.006/0.017/0.277  4s
+seed 2: final 0.002  forgetting +0.293  new@1/3/5 0.007/0.011/0.295  4s
+seed 3: final 0.002  forgetting +0.291  new@1/3/5 0.006/0.014/0.293  4s
+seed 4: final 0.002  forgetting +0.295  new@1/3/5 0.004/0.015/0.297  4s
+{"learner": "mlp_sgd", "track": "scratch", "final_acc": [0.0016666666666666666, 2.42434975903054e-19], "forgetting": [0.2876222222222222, 0.008274458693272126], "acc_new_k1": [0.0058, 0.0012156388352540315], "acc_new_k3": [0.013488888888888889, 0.0027594953913378465], "acc_new_k5": [0.2892888888888889, 0.008274458693272126]}
+===== --learner mlp_sgd --track scratch --iid 20

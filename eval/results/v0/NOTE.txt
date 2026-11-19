@@ -1,0 +1,1 @@
+﻿v0: superseded. Tuning stream = random 100 background classes; pretrained-track encoder was trained on those same classes. Not in the official table.

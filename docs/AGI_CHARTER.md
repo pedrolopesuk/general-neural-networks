@@ -28,6 +28,24 @@ This applies to everything inherited from the bio fork: spiking, Dale's law, pop
    - Benchmark 1 (continual few-shot classification) is solved, meaning baselines are beaten on both accuracy and forgetting.
    - Then Benchmark 2 (sample-efficient reinforcement learning) beats PPO on sample efficiency.
 
+## Pretraining (decided)
+Two tracks, reported separately and never mixed in one comparison:
+
+| Track | Pretraining | Budget |
+|---|---|---|
+| **scratch** | None; learners start from random weights on pixels | n/a |
+| **pretrained** | Allowed only on Omniglot's **background** alphabets (964 classes) | Identical for every model: a 3000 × 256 supervised encoder step budget today. A meta-learning method (OML/ANML-style) gets the same number of background examples |
+
+- The continual stream always uses the **evaluation** alphabets.
+- Hyper-parameters are selected on streams built from background alphabets only.
+
+## External reference
+ANML (Beaulieu et al. 2020) and OML (Javed & White 2019), with the protocol from ANML §4.1:
+- 600 classes, 15 training instances per class seen once, 5 held out per class.
+- ANML reaches **63.8%** test accuracy. OML reaches 18.2%; OML-OLFT 44.2%; the ANML i.i.d. upper bound 71%.
+
+The harness runs this protocol with `--shots 15 --test-per-class 5`. Its headline comparison uses the pretrained track, since both methods meta-train on background alphabets.
+
 ## How we work
 - **Harness first.** No new learning code before the evaluation harness and the baseline numbers exist.
 - One command per run; JSON logs; fixed seeds; learning-curve plots; results tables committed under `eval/results/`.

@@ -1,0 +1,143 @@
+﻿===== --dataset kkanji --track pretrained --learner neuromod --tune
+  tune neuromod {'lr': 1e-05, 'tau': 10.0, 'k': 5.0, 'beta': 0.0}: final 0.231
+  tune neuromod {'lr': 1e-05, 'tau': 10.0, 'k': 5.0, 'beta': 0.5}: final 0.167
+  tune neuromod {'lr': 1e-05, 'tau': 10.0, 'k': 20.0, 'beta': 0.0}: final 0.173
+  tune neuromod {'lr': 1e-05, 'tau': 10.0, 'k': 20.0, 'beta': 0.5}: final 0.132
+  tune neuromod {'lr': 1e-05, 'tau': 30.0, 'k': 5.0, 'beta': 0.0}: final 0.119
+  tune neuromod {'lr': 1e-05, 'tau': 30.0, 'k': 5.0, 'beta': 0.5}: final 0.057
+  tune neuromod {'lr': 1e-05, 'tau': 30.0, 'k': 20.0, 'beta': 0.0}: final 0.047
+  tune neuromod {'lr': 1e-05, 'tau': 30.0, 'k': 20.0, 'beta': 0.5}: final 0.083
+  tune neuromod {'lr': 3e-05, 'tau': 10.0, 'k': 5.0, 'beta': 0.0}: final 0.071
+  tune neuromod {'lr': 3e-05, 'tau': 10.0, 'k': 5.0, 'beta': 0.5}: final 0.128
+  tune neuromod {'lr': 3e-05, 'tau': 10.0, 'k': 20.0, 'beta': 0.0}: final 0.088
+  tune neuromod {'lr': 3e-05, 'tau': 10.0, 'k': 20.0, 'beta': 0.5}: final 0.139
+  tune neuromod {'lr': 3e-05, 'tau': 30.0, 'k': 5.0, 'beta': 0.0}: final 0.080
+  tune neuromod {'lr': 3e-05, 'tau': 30.0, 'k': 5.0, 'beta': 0.5}: final 0.059
+  tune neuromod {'lr': 3e-05, 'tau': 30.0, 'k': 20.0, 'beta': 0.0}: final 0.056
+  tune neuromod {'lr': 3e-05, 'tau': 30.0, 'k': 20.0, 'beta': 0.5}: final 0.039
+  tune neuromod {'lr': 0.0001, 'tau': 10.0, 'k': 5.0, 'beta': 0.0}: final 0.033
+  tune neuromod {'lr': 0.0001, 'tau': 10.0, 'k': 5.0, 'beta': 0.5}: final 0.065
+  tune neuromod {'lr': 0.0001, 'tau': 10.0, 'k': 20.0, 'beta': 0.0}: final 0.049
+  tune neuromod {'lr': 0.0001, 'tau': 10.0, 'k': 20.0, 'beta': 0.5}: final 0.026
+  tune neuromod {'lr': 0.0001, 'tau': 30.0, 'k': 5.0, 'beta': 0.0}: final 0.037
+  tune neuromod {'lr': 0.0001, 'tau': 30.0, 'k': 5.0, 'beta': 0.5}: final 0.046
+  tune neuromod {'lr': 0.0001, 'tau': 30.0, 'k': 20.0, 'beta': 0.0}: final 0.026
+  tune neuromod {'lr': 0.0001, 'tau': 30.0, 'k': 20.0, 'beta': 0.5}: final 0.033
+  tune neuromod {'lr': 0.0003, 'tau': 10.0, 'k': 5.0, 'beta': 0.0}: final 0.021
+  tune neuromod {'lr': 0.0003, 'tau': 10.0, 'k': 5.0, 'beta': 0.5}: final 0.030
+  tune neuromod {'lr': 0.0003, 'tau': 10.0, 'k': 20.0, 'beta': 0.0}: final 0.026
+  tune neuromod {'lr': 0.0003, 'tau': 10.0, 'k': 20.0, 'beta': 0.5}: final 0.019
+  tune neuromod {'lr': 0.0003, 'tau': 30.0, 'k': 5.0, 'beta': 0.0}: final 0.031
+  tune neuromod {'lr': 0.0003, 'tau': 30.0, 'k': 5.0, 'beta': 0.5}: final 0.017
+  tune neuromod {'lr': 0.0003, 'tau': 30.0, 'k': 20.0, 'beta': 0.0}: final 0.020
+  tune neuromod {'lr': 0.0003, 'tau': 30.0, 'k': 20.0, 'beta': 0.5}: final 0.016
+seed 0: final 0.199  forgetting +0.273  new@1/3/5 0.192/0.393/0.473  15s
+seed 1: final 0.186  forgetting +0.289  new@1/3/5 0.177/0.395/0.475  14s
+seed 2: final 0.151  forgetting +0.348  new@1/3/5 0.220/0.419/0.499  14s
+seed 3: final 0.215  forgetting +0.244  new@1/3/5 0.181/0.374/0.460  15s
+seed 4: final 0.110  forgetting +0.381  new@1/3/5 0.207/0.407/0.492  14s
+{"learner": "neuromod", "track": "pretrained", "final_acc": [0.17222222222222222, 0.04214078403414376], "forgetting": [0.3072666666666667, 0.056114334340866226], "oracle_final_acc": [0.33384444444444444, 0.014254217482884936], "omniglot_retention": [0.7000444444444444, 0.022042971500970378], "g_mean": [0.5566350491334278, 0.0023511142626848882], "g_surprise_corr": [-0.07876820188001235, 0.09786968577438811], "acc_new_k1": [0.19548888888888888, 0.017966120379243864], "acc_new_k3": [0.39784444444444444, 0.01689192224221497], "acc_new_k5": [0.47953333333333326, 0.015561189455949335]}
+===== --dataset kkanji --track pretrained --learner neuromod --hp {\"refresh\":\"exemplar\"} --variant v2 --tune
+  tune neuromod {'lr': 1e-05, 'tau': 10.0, 'k': 5.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.336
+  tune neuromod {'lr': 1e-05, 'tau': 10.0, 'k': 5.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.331
+  tune neuromod {'lr': 1e-05, 'tau': 10.0, 'k': 20.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.335
+  tune neuromod {'lr': 1e-05, 'tau': 10.0, 'k': 20.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.328
+  tune neuromod {'lr': 1e-05, 'tau': 30.0, 'k': 5.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.339
+  tune neuromod {'lr': 1e-05, 'tau': 30.0, 'k': 5.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.334
+  tune neuromod {'lr': 1e-05, 'tau': 30.0, 'k': 20.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.340
+  tune neuromod {'lr': 1e-05, 'tau': 30.0, 'k': 20.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.334
+  tune neuromod {'lr': 3e-05, 'tau': 10.0, 'k': 5.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.323
+  tune neuromod {'lr': 3e-05, 'tau': 10.0, 'k': 5.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.324
+  tune neuromod {'lr': 3e-05, 'tau': 10.0, 'k': 20.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.328
+  tune neuromod {'lr': 3e-05, 'tau': 10.0, 'k': 20.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.326
+  tune neuromod {'lr': 3e-05, 'tau': 30.0, 'k': 5.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.356
+  tune neuromod {'lr': 3e-05, 'tau': 30.0, 'k': 5.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.354
+  tune neuromod {'lr': 3e-05, 'tau': 30.0, 'k': 20.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.363
+  tune neuromod {'lr': 3e-05, 'tau': 30.0, 'k': 20.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.363
+  tune neuromod {'lr': 0.0001, 'tau': 10.0, 'k': 5.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.328
+  tune neuromod {'lr': 0.0001, 'tau': 10.0, 'k': 5.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.313
+  tune neuromod {'lr': 0.0001, 'tau': 10.0, 'k': 20.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.334
+  tune neuromod {'lr': 0.0001, 'tau': 10.0, 'k': 20.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.349
+  tune neuromod {'lr': 0.0001, 'tau': 30.0, 'k': 5.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.369
+  tune neuromod {'lr': 0.0001, 'tau': 30.0, 'k': 5.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.354
+  tune neuromod {'lr': 0.0001, 'tau': 30.0, 'k': 20.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.368
+  tune neuromod {'lr': 0.0001, 'tau': 30.0, 'k': 20.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.366
+  tune neuromod {'lr': 0.0003, 'tau': 10.0, 'k': 5.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.290
+  tune neuromod {'lr': 0.0003, 'tau': 10.0, 'k': 5.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.281
+  tune neuromod {'lr': 0.0003, 'tau': 10.0, 'k': 20.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.249
+  tune neuromod {'lr': 0.0003, 'tau': 10.0, 'k': 20.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.299
+  tune neuromod {'lr': 0.0003, 'tau': 30.0, 'k': 5.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.349
+  tune neuromod {'lr': 0.0003, 'tau': 30.0, 'k': 5.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.343
+  tune neuromod {'lr': 0.0003, 'tau': 30.0, 'k': 20.0, 'beta': 0.0, 'refresh': 'exemplar'}: final 0.277
+  tune neuromod {'lr': 0.0003, 'tau': 30.0, 'k': 20.0, 'beta': 0.5, 'refresh': 'exemplar'}: final 0.307
+seed 0: final 0.382  forgetting +0.292  new@1/3/5 0.323/0.597/0.674  15s
+seed 1: final 0.357  forgetting +0.342  new@1/3/5 0.326/0.621/0.699  16s
+seed 2: final 0.393  forgetting +0.259  new@1/3/5 0.314/0.572/0.652  15s
+seed 3: final 0.374  forgetting +0.235  new@1/3/5 0.255/0.524/0.608  14s
+seed 4: final 0.322  forgetting +0.367  new@1/3/5 0.322/0.600/0.689  14s
+{"learner": "neuromod", "track": "pretrained", "final_acc": [0.36575555555555556, 0.02775036425075142], "forgetting": [0.29893333333333333, 0.055260192624428016], "oracle_final_acc": [0.41175555555555554, 0.013513002426104327], "omniglot_retention": [0.6476, 0.02249164453911886], "g_mean": [0.5636492989045585, 0.012368527157248704], "g_surprise_corr": [0.9589774408867136, 0.016112261542295652], "acc_new_k1": [0.3082222222222222, 0.0298395917292429], "acc_new_k3": [0.5827111111111112, 0.03706347574861134], "acc_new_k5": [0.6646666666666666, 0.03598636573090591]}
+===== --dataset kkanji --track pretrained --learner neuromod --hp {\"gate\":\"one\"} --variant g1 --tune
+  tune neuromod {'lr': 1e-05, 'tau': 10.0, 'gate': 'one'}: final 0.110
+  tune neuromod {'lr': 1e-05, 'tau': 30.0, 'gate': 'one'}: final 0.116
+  tune neuromod {'lr': 3e-05, 'tau': 10.0, 'gate': 'one'}: final 0.057
+  tune neuromod {'lr': 3e-05, 'tau': 30.0, 'gate': 'one'}: final 0.070
+  tune neuromod {'lr': 0.0001, 'tau': 10.0, 'gate': 'one'}: final 0.025
+  tune neuromod {'lr': 0.0001, 'tau': 30.0, 'gate': 'one'}: final 0.036
+  tune neuromod {'lr': 0.0003, 'tau': 10.0, 'gate': 'one'}: final 0.022
+  tune neuromod {'lr': 0.0003, 'tau': 30.0, 'gate': 'one'}: final 0.014
+seed 0: final 0.080  forgetting +0.508  new@1/3/5 0.252/0.500/0.588  17s
+seed 1: final 0.127  forgetting +0.438  new@1/3/5 0.222/0.483/0.565  15s
+seed 2: final 0.082  forgetting +0.496  new@1/3/5 0.259/0.491/0.578  15s
+seed 3: final 0.099  forgetting +0.454  new@1/3/5 0.226/0.466/0.553  14s
+seed 4: final 0.082  forgetting +0.507  new@1/3/5 0.253/0.497/0.588  14s
+{"learner": "neuromod", "track": "pretrained", "final_acc": [0.09402222222222223, 0.019856491304195215], "forgetting": [0.4804222222222222, 0.032363903074601845], "oracle_final_acc": [0.3325333333333333, 0.014578311304599962], "omniglot_retention": [0.6556, 0.03433087010221719], "g_mean": [1.0, 0.0], "g_surprise_corr": [NaN, NaN], "acc_new_k1": [0.2421333333333333, 0.01714955997707834], "acc_new_k3": [0.4873555555555556, 0.013760158985587393], "acc_new_k5": [0.5744222222222222, 0.015611091340438277]}
+===== --dataset kkanji --track pretrained --learner neuromod --hp {\"beta\":0} --variant surprise --tune
+  tune neuromod {'lr': 1e-05, 'tau': 10.0, 'k': 5.0, 'beta': 0}: final 0.231
+  tune neuromod {'lr': 1e-05, 'tau': 10.0, 'k': 20.0, 'beta': 0}: final 0.173
+  tune neuromod {'lr': 1e-05, 'tau': 30.0, 'k': 5.0, 'beta': 0}: final 0.119
+  tune neuromod {'lr': 1e-05, 'tau': 30.0, 'k': 20.0, 'beta': 0}: final 0.047
+  tune neuromod {'lr': 3e-05, 'tau': 10.0, 'k': 5.0, 'beta': 0}: final 0.071
+  tune neuromod {'lr': 3e-05, 'tau': 10.0, 'k': 20.0, 'beta': 0}: final 0.088
+  tune neuromod {'lr': 3e-05, 'tau': 30.0, 'k': 5.0, 'beta': 0}: final 0.080
+  tune neuromod {'lr': 3e-05, 'tau': 30.0, 'k': 20.0, 'beta': 0}: final 0.056
+  tune neuromod {'lr': 0.0001, 'tau': 10.0, 'k': 5.0, 'beta': 0}: final 0.033
+  tune neuromod {'lr': 0.0001, 'tau': 10.0, 'k': 20.0, 'beta': 0}: final 0.049
+  tune neuromod {'lr': 0.0001, 'tau': 30.0, 'k': 5.0, 'beta': 0}: final 0.037
+  tune neuromod {'lr': 0.0001, 'tau': 30.0, 'k': 20.0, 'beta': 0}: final 0.025
+  tune neuromod {'lr': 0.0003, 'tau': 10.0, 'k': 5.0, 'beta': 0}: final 0.021
+  tune neuromod {'lr': 0.0003, 'tau': 10.0, 'k': 20.0, 'beta': 0}: final 0.026
+  tune neuromod {'lr': 0.0003, 'tau': 30.0, 'k': 5.0, 'beta': 0}: final 0.033
+  tune neuromod {'lr': 0.0003, 'tau': 30.0, 'k': 20.0, 'beta': 0}: final 0.018
+seed 0: final 0.199  forgetting +0.273  new@1/3/5 0.192/0.393/0.473  12s
+seed 1: final 0.186  forgetting +0.289  new@1/3/5 0.177/0.395/0.475  12s
+seed 2: final 0.151  forgetting +0.348  new@1/3/5 0.220/0.419/0.499  12s
+seed 3: final 0.215  forgetting +0.244  new@1/3/5 0.181/0.374/0.460  11s
+seed 4: final 0.110  forgetting +0.381  new@1/3/5 0.207/0.407/0.492  12s
+{"learner": "neuromod", "track": "pretrained", "final_acc": [0.17222222222222222, 0.04214078403414376], "forgetting": [0.3072666666666667, 0.056114334340866226], "oracle_final_acc": [0.33384444444444444, 0.014254217482884936], "omniglot_retention": [0.7000888888888889, 0.02197970444313133], "g_mean": [0.5566350546272172, 0.002351119815207006], "g_surprise_corr": [-0.07876817240147395, 0.09786975101767757], "acc_new_k1": [0.19548888888888888, 0.017966120379243864], "acc_new_k3": [0.39784444444444444, 0.01689192224221497], "acc_new_k5": [0.47953333333333326, 0.015561189455949335]}
+===== --dataset kkanji --track pretrained --learner neuromod --hp {\"beta\":0.0,\"gate\":\"const\",\"lr\":1E-05,\"k\":5.0,\"gate_from\":\"C:\\Users\\main\\Documents\\metabrain-agi\\eval\\results\\omniglot\\neuromod-kkanji_pretrained_default_c600_s5.json\",\"tau\":10.0} --variant const
+seed 0: final 0.183  forgetting +0.292  new@1/3/5 0.194/0.395/0.475  12s
+seed 1: final 0.169  forgetting +0.309  new@1/3/5 0.179/0.398/0.478  12s
+seed 2: final 0.136  forgetting +0.367  new@1/3/5 0.222/0.425/0.503  11s
+seed 3: final 0.200  forgetting +0.262  new@1/3/5 0.182/0.377/0.462  12s
+seed 4: final 0.104  forgetting +0.389  new@1/3/5 0.209/0.411/0.493  13s
+{"learner": "neuromod", "track": "pretrained", "final_acc": [0.1584, 0.03825931662539172], "forgetting": [0.3237777777777778, 0.05280169048921182], "oracle_final_acc": [0.333, 0.013483414594819915], "omniglot_retention": [0.6950000000000001, 0.024115846949134358], "g_mean": [0.5566350386666666, 0.0023510782987806824], "g_surprise_corr": [NaN, NaN], "acc_new_k1": [0.19708888888888892, 0.018183461485782582], "acc_new_k3": [0.40108888888888894, 0.017917919852813605], "acc_new_k5": [0.4822222222222223, 0.016016966313148806]}
+===== --dataset kkanji --track pretrained --learner neuromod --hp {\"beta\":0.0,\"gate\":\"shuffled\",\"lr\":1E-05,\"k\":5.0,\"gate_from\":\"C:\\Users\\main\\Documents\\metabrain-agi\\eval\\results\\omniglot\\neuromod-kkanji_pretrained_default_c600_s5.json\",\"tau\":10.0} --variant shuffled
+seed 0: final 0.183  forgetting +0.293  new@1/3/5 0.194/0.395/0.475  13s
+seed 1: final 0.169  forgetting +0.309  new@1/3/5 0.180/0.397/0.478  10s
+seed 2: final 0.136  forgetting +0.367  new@1/3/5 0.221/0.425/0.503  10s
+seed 3: final 0.200  forgetting +0.261  new@1/3/5 0.182/0.377/0.462  10s
+seed 4: final 0.104  forgetting +0.389  new@1/3/5 0.208/0.411/0.494  11s
+{"learner": "neuromod", "track": "pretrained", "final_acc": [0.1584, 0.03827617316423842], "forgetting": [0.3238666666666667, 0.05294333098980735], "oracle_final_acc": [0.3330888888888889, 0.013964107429273669], "omniglot_retention": [0.6949777777777777, 0.024461534429930334], "g_mean": [0.5566350386666666, 0.0023510782987807774], "g_surprise_corr": [-0.012801424487989026, 0.02000818339067478], "acc_new_k1": [0.1970444444444444, 0.017753733740495128], "acc_new_k3": [0.4011111111111111, 0.017980957004976532], "acc_new_k5": [0.48228888888888893, 0.016149685621677387]}
+===== --dataset kkanji --track pretrained --learner replay_full --tune
+  tune replay_full {'lr': 1e-05}: final 0.001
+  tune replay_full {'lr': 3e-05}: final 0.001
+  tune replay_full {'lr': 0.0001}: final 0.002
+  tune replay_full {'lr': 0.0003}: final 0.005
+  tune replay_full {'lr': 0.001}: final 0.014
+  tune replay_full {'lr': 0.003}: final 0.061
+seed 0: final 0.032  forgetting +0.834  new@1/3/5 0.013/0.459/0.866  11s
+seed 1: final 0.071  forgetting +0.850  new@1/3/5 0.058/0.627/0.921  11s
+seed 2: final 0.061  forgetting +0.841  new@1/3/5 0.032/0.566/0.902  10s
+seed 3: final 0.076  forgetting +0.844  new@1/3/5 0.060/0.651/0.920  10s
+seed 4: final 0.103  forgetting +0.827  new@1/3/5 0.049/0.623/0.930  10s
+{"learner": "replay_full", "track": "pretrained", "final_acc": [0.06868888888888888, 0.025635791916000836], "forgetting": [0.839088888888889, 0.00901076174141195], "omniglot_retention": [0.4550222222222223, 0.08451018639748865], "acc_new_k1": [0.04206666666666667, 0.01979721267324341], "acc_new_k3": [0.5852444444444445, 0.07714598154885192], "acc_new_k5": [0.9077111111111111, 0.02554789740327754]}

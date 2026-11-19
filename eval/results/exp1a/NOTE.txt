@@ -1,0 +1,1 @@
+Experiment 1, first pass: grid edges hit (lr 1e-5, tau 30, replay_full lr 3e-3); superseded by the extended-grid rerun.

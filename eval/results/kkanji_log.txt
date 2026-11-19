@@ -1,0 +1,148 @@
+﻿===== --dataset kkanji --learner ncm --track pretrained --tune
+  tune ncm {}: final 0.353
+seed 0: final 0.348  forgetting +0.100  new@1/3/5 0.173/0.371/0.448  5s
+seed 1: final 0.346  forgetting +0.103  new@1/3/5 0.164/0.372/0.449  6s
+seed 2: final 0.376  forgetting +0.094  new@1/3/5 0.195/0.391/0.470  5s
+seed 3: final 0.335  forgetting +0.098  new@1/3/5 0.166/0.353/0.433  5s
+seed 4: final 0.349  forgetting +0.103  new@1/3/5 0.183/0.370/0.452  6s
+{"learner": "ncm", "track": "pretrained", "final_acc": [0.35077777777777774, 0.015296856773876585], "forgetting": [0.09962222222222221, 0.003925698805449933], "acc_new_k1": [0.17635555555555554, 0.012841964389559564], "acc_new_k3": [0.37124444444444443, 0.013574531344932975], "acc_new_k5": [0.4504444444444444, 0.013015897212521069]}
+===== --dataset kkanji --learner slda --track pretrained --tune
+  tune slda {'shrinkage': 0.0001}: final 0.588
+  tune slda {'shrinkage': 0.01}: final 0.593
+  tune slda {'shrinkage': 0.1}: final 0.612
+  tune slda {'shrinkage': 0.3}: final 0.628
+  tune slda {'shrinkage': 0.5}: final 0.634
+  tune slda {'shrinkage': 0.7}: final 0.632
+  tune slda {'shrinkage': 0.9}: final 0.615
+  tune slda {'shrinkage': 0.99}: final 0.536
+seed 0: final 0.602  forgetting +0.076  new@1/3/5 0.088/0.477/0.678  8s
+seed 1: final 0.616  forgetting +0.072  new@1/3/5 0.077/0.477/0.688  7s
+seed 2: final 0.616  forgetting +0.072  new@1/3/5 0.095/0.489/0.688  8s
+seed 3: final 0.601  forgetting +0.075  new@1/3/5 0.075/0.461/0.677  11s
+seed 4: final 0.599  forgetting +0.078  new@1/3/5 0.087/0.472/0.677  10s
+{"learner": "slda", "track": "pretrained", "final_acc": [0.6068, 0.008114306828598601], "forgetting": [0.07457777777777777, 0.002635699827417172], "acc_new_k1": [0.08439999999999999, 0.008348726523722129], "acc_new_k3": [0.4751777777777778, 0.010051288228964873], "acc_new_k5": [0.6814, 0.005635863994363529]}
+===== --dataset kkanji --learner mlp_replay --track pretrained --tune
+  tune mlp_replay {'lr': 0.0001}: final 0.002
+  tune mlp_replay {'lr': 0.0003}: final 0.009
+  tune mlp_replay {'lr': 0.001}: final 0.060
+  tune mlp_replay {'lr': 0.003}: final 0.088
+  tune mlp_replay {'lr': 0.01}: final 0.116
+seed 0: final 0.112  forgetting +0.604  new@1/3/5 0.063/0.683/0.716  9s
+seed 1: final 0.117  forgetting +0.597  new@1/3/5 0.065/0.668/0.714  9s
+seed 2: final 0.088  forgetting +0.597  new@1/3/5 0.054/0.683/0.685  9s
+seed 3: final 0.106  forgetting +0.583  new@1/3/5 0.033/0.655/0.688  9s
+seed 4: final 0.086  forgetting +0.601  new@1/3/5 0.034/0.617/0.687  9s
+{"learner": "mlp_replay", "track": "pretrained", "final_acc": [0.10173333333333331, 0.014099645385611653], "forgetting": [0.5962, 0.008167762587086659], "acc_new_k1": [0.04971111111111111, 0.015522305734285802], "acc_new_k3": [0.6614444444444445, 0.027318650076006867], "acc_new_k5": [0.6979111111111111, 0.015350915845119809]}
+===== --dataset kkanji --learner mlp_sgd --track pretrained --tune
+  tune mlp_sgd {'lr': 0.0001}: final 0.002
+  tune mlp_sgd {'lr': 0.0003}: final 0.002
+  tune mlp_sgd {'lr': 0.001}: final 0.004
+  tune mlp_sgd {'lr': 0.003}: final 0.004
+  tune mlp_sgd {'lr': 0.01}: final 0.003
+seed 0: final 0.002  forgetting +0.905  new@1/3/5 0.028/0.397/0.907  7s
+seed 1: final 0.002  forgetting +0.911  new@1/3/5 0.039/0.440/0.914  7s
+seed 2: final 0.002  forgetting +0.936  new@1/3/5 0.029/0.388/0.938  8s
+seed 3: final 0.003  forgetting +0.935  new@1/3/5 0.034/0.441/0.938  9s
+seed 4: final 0.002  forgetting +0.904  new@1/3/5 0.034/0.394/0.906  8s
+{"learner": "mlp_sgd", "track": "pretrained", "final_acc": [0.0020666666666666667, 0.0005698169513314703], "forgetting": [0.9182888888888889, 0.01610336978767232], "acc_new_k1": [0.03284444444444444, 0.004286499046316712], "acc_new_k3": [0.41233333333333333, 0.026300729934009996], "acc_new_k5": [0.9203555555555557, 0.016340021306482315]}
+===== --dataset kkanji --learner linear --track pretrained --iid 20 --tune
+  tune linear {'lr': 0.0001, 'wd': 0.0}: final 0.343
+  tune linear {'lr': 0.0001, 'wd': 0.0001}: final 0.343
+  tune linear {'lr': 0.0001, 'wd': 0.001}: final 0.343
+  tune linear {'lr': 0.0001, 'wd': 0.01}: final 0.344
+  tune linear {'lr': 0.0001, 'wd': 0.1}: final 0.315
+  tune linear {'lr': 0.0003, 'wd': 0.0}: final 0.250
+  tune linear {'lr': 0.0003, 'wd': 0.0001}: final 0.291
+  tune linear {'lr': 0.0003, 'wd': 0.001}: final 0.299
+  tune linear {'lr': 0.0003, 'wd': 0.01}: final 0.271
+  tune linear {'lr': 0.0003, 'wd': 0.1}: final 0.191
+  tune linear {'lr': 0.001, 'wd': 0.0}: final 0.228
+  tune linear {'lr': 0.001, 'wd': 0.0001}: final 0.235
+  tune linear {'lr': 0.001, 'wd': 0.001}: final 0.265
+  tune linear {'lr': 0.001, 'wd': 0.01}: final 0.190
+  tune linear {'lr': 0.001, 'wd': 0.1}: final 0.090
+  tune linear {'lr': 0.003, 'wd': 0.0}: final 0.285
+  tune linear {'lr': 0.003, 'wd': 0.0001}: final 0.235
+  tune linear {'lr': 0.003, 'wd': 0.001}: final 0.219
+  tune linear {'lr': 0.003, 'wd': 0.01}: final 0.173
+  tune linear {'lr': 0.003, 'wd': 0.1}: final 0.026
+seed 0: final 0.341  forgetting +0.000  new@1/3/5 nan/nan/nan  98s
+seed 1: final 0.328  forgetting +0.000  new@1/3/5 nan/nan/nan  95s
+seed 2: final 0.348  forgetting +0.000  new@1/3/5 nan/nan/nan  99s
+seed 3: final 0.315  forgetting +0.000  new@1/3/5 nan/nan/nan  99s
+seed 4: final 0.305  forgetting +0.000  new@1/3/5 nan/nan/nan  97s
+{"learner": "linear", "track": "pretrained", "final_acc": [0.32753333333333334, 0.01764733393636921], "forgetting": [0.0, 0.0], "acc_new_k1": [NaN, NaN], "acc_new_k3": [NaN, NaN], "acc_new_k5": [NaN, NaN]}
+===== --dataset kkanji --learner ncm --track scratch --tune
+  tune ncm {}: final 0.436
+seed 0: final 0.396  forgetting +0.094  new@1/3/5 0.118/0.354/0.490  2s
+seed 1: final 0.405  forgetting +0.089  new@1/3/5 0.111/0.355/0.494  3s
+seed 2: final 0.415  forgetting +0.090  new@1/3/5 0.126/0.356/0.505  3s
+seed 3: final 0.401  forgetting +0.089  new@1/3/5 0.107/0.339/0.490  3s
+seed 4: final 0.405  forgetting +0.083  new@1/3/5 0.122/0.354/0.488  4s
+{"learner": "ncm", "track": "scratch", "final_acc": [0.40457777777777776, 0.006828317942650732], "forgetting": [0.08884444444444445, 0.003854290538549942], "acc_new_k1": [0.11684444444444445, 0.007696640280339094], "acc_new_k3": [0.3514444444444444, 0.0070928585193353825], "acc_new_k5": [0.4934222222222222, 0.006755610379894489]}
+===== --dataset kkanji --learner slda --track scratch --tune
+  tune slda {'shrinkage': 0.0001}: final 0.092
+  tune slda {'shrinkage': 0.01}: final 0.208
+  tune slda {'shrinkage': 0.1}: final 0.325
+  tune slda {'shrinkage': 0.3}: final 0.388
+  tune slda {'shrinkage': 0.5}: final 0.416
+  tune slda {'shrinkage': 0.7}: final 0.426
+  tune slda {'shrinkage': 0.9}: final 0.430
+  tune slda {'shrinkage': 0.99}: final 0.424
+seed 0: final 0.393  forgetting +0.088  new@1/3/5 0.061/0.316/0.481  9s
+seed 1: final 0.404  forgetting +0.085  new@1/3/5 0.057/0.331/0.489  8s
+seed 2: final 0.406  forgetting +0.090  new@1/3/5 0.064/0.326/0.496  10s
+seed 3: final 0.399  forgetting +0.084  new@1/3/5 0.060/0.306/0.483  8s
+seed 4: final 0.397  forgetting +0.083  new@1/3/5 0.055/0.320/0.479  8s
+{"learner": "slda", "track": "scratch", "final_acc": [0.3997333333333334, 0.005190565991165318], "forgetting": [0.08595555555555554, 0.0029235104891631464], "acc_new_k1": [0.059422222222222223, 0.003561973374547825], "acc_new_k3": [0.31995555555555555, 0.00966558103737813], "acc_new_k5": [0.48568888888888895, 0.006742348200683448]}
+===== --dataset kkanji --learner mlp_replay --track scratch --tune
+  tune mlp_replay {'lr': 0.0001}: final 0.001
+  tune mlp_replay {'lr': 0.0003}: final 0.001
+  tune mlp_replay {'lr': 0.001}: final 0.001
+  tune mlp_replay {'lr': 0.003}: final 0.004
+  tune mlp_replay {'lr': 0.01}: final 0.027
+seed 0: final 0.026  forgetting +0.033  new@1/3/5 0.006/0.015/0.059  7s
+seed 1: final 0.024  forgetting +0.058  new@1/3/5 0.010/0.020/0.081  7s
+seed 2: final 0.021  forgetting +0.052  new@1/3/5 0.012/0.021/0.073  6s
+seed 3: final 0.022  forgetting +0.042  new@1/3/5 0.013/0.020/0.063  7s
+seed 4: final 0.028  forgetting +0.044  new@1/3/5 0.008/0.017/0.072  7s
+{"learner": "mlp_replay", "track": "scratch", "final_acc": [0.02408888888888889, 0.0027793328980215176], "forgetting": [0.045755555555555556, 0.00944228733535772], "acc_new_k1": [0.009644444444444445, 0.002739063550887871], "acc_new_k3": [0.018688888888888887, 0.0027648588471103626], "acc_new_k5": [0.06984444444444446, 0.008740638731357034]}
+===== --dataset kkanji --learner mlp_sgd --track scratch --tune
+  tune mlp_sgd {'lr': 0.0001}: final 0.001
+  tune mlp_sgd {'lr': 0.0003}: final 0.002
+  tune mlp_sgd {'lr': 0.001}: final 0.002
+  tune mlp_sgd {'lr': 0.003}: final 0.002
+  tune mlp_sgd {'lr': 0.01}: final 0.002
+seed 0: final 0.001  forgetting +0.017  new@1/3/5 0.009/0.012/0.018  6s
+seed 1: final 0.001  forgetting +0.017  new@1/3/5 0.010/0.013/0.018  5s
+seed 2: final 0.002  forgetting +0.022  new@1/3/5 0.017/0.020/0.024  5s
+seed 3: final 0.002  forgetting +0.023  new@1/3/5 0.017/0.021/0.026  6s
+seed 4: final 0.002  forgetting +0.021  new@1/3/5 0.013/0.018/0.023  6s
+{"learner": "mlp_sgd", "track": "scratch", "final_acc": [0.0018, 0.0006592176432973923], "forgetting": [0.020066666666666667, 0.003155046907361968], "acc_new_k1": [0.013199999999999998, 0.0036804454910167694], "acc_new_k3": [0.016933333333333335, 0.0038478790053100907], "acc_new_k5": [0.021866666666666666, 0.0037846343007116876]}
+===== --dataset kkanji --learner linear --track scratch --iid 20 --tune
+  tune linear {'lr': 0.0001, 'wd': 0.0}: final 0.407
+  tune linear {'lr': 0.0001, 'wd': 0.0001}: final 0.407
+  tune linear {'lr': 0.0001, 'wd': 0.001}: final 0.408
+  tune linear {'lr': 0.0001, 'wd': 0.01}: final 0.408
+  tune linear {'lr': 0.0001, 'wd': 0.1}: final 0.410
+  tune linear {'lr': 0.0003, 'wd': 0.0}: final 0.416
+  tune linear {'lr': 0.0003, 'wd': 0.0001}: final 0.416
+  tune linear {'lr': 0.0003, 'wd': 0.001}: final 0.416
+  tune linear {'lr': 0.0003, 'wd': 0.01}: final 0.414
+  tune linear {'lr': 0.0003, 'wd': 0.1}: final 0.402
+  tune linear {'lr': 0.001, 'wd': 0.0}: final 0.421
+  tune linear {'lr': 0.001, 'wd': 0.0001}: final 0.423
+  tune linear {'lr': 0.001, 'wd': 0.001}: final 0.411
+  tune linear {'lr': 0.001, 'wd': 0.01}: final 0.396
+  tune linear {'lr': 0.001, 'wd': 0.1}: final 0.352
+  tune linear {'lr': 0.003, 'wd': 0.0}: final 0.365
+  tune linear {'lr': 0.003, 'wd': 0.0001}: final 0.373
+  tune linear {'lr': 0.003, 'wd': 0.001}: final 0.368
+  tune linear {'lr': 0.003, 'wd': 0.01}: final 0.323
+  tune linear {'lr': 0.003, 'wd': 0.1}: final 0.221
+seed 0: final 0.384  forgetting +0.000  new@1/3/5 nan/nan/nan  70s
+seed 1: final 0.385  forgetting +0.000  new@1/3/5 nan/nan/nan  70s
+seed 2: final 0.397  forgetting +0.000  new@1/3/5 nan/nan/nan  71s
+seed 3: final 0.388  forgetting +0.000  new@1/3/5 nan/nan/nan  70s
+seed 4: final 0.394  forgetting +0.000  new@1/3/5 nan/nan/nan  71s
+{"learner": "linear", "track": "scratch", "final_acc": [0.3896, 0.005800489549369577], "forgetting": [0.0, 0.0], "acc_new_k1": [NaN, NaN], "acc_new_k3": [NaN, NaN], "acc_new_k5": [NaN, NaN]}

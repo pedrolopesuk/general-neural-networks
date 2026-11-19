@@ -1,0 +1,126 @@
+﻿===== --dataset kkanji --track stream_enc --learner ncm --hp {\"enc_steps\":100} --variant steps100
+seed 0: final 0.447  forgetting +0.105  new@1/3/5 0.229/0.474/0.552  7s
+seed 1: final 0.432  forgetting +0.106  new@1/3/5 0.219/0.457/0.538  6s
+seed 2: final 0.433  forgetting +0.103  new@1/3/5 0.249/0.455/0.536  6s
+seed 3: final 0.391  forgetting +0.100  new@1/3/5 0.205/0.418/0.491  6s
+seed 4: final 0.395  forgetting +0.109  new@1/3/5 0.207/0.421/0.504  6s
+{"learner": "ncm", "track": "stream_enc", "final_acc": [0.41966666666666674, 0.025157773753790566], "forgetting": [0.10468888888888887, 0.003334629377669994], "acc_new_k1": [0.22175555555555554, 0.018035013956053975], "acc_new_k3": [0.4451777777777778, 0.024530983180510068], "acc_new_k5": [0.5242888888888888, 0.025623532779434775]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.0001,\"enc_steps\":100} --variant oracle_shr0.0001-steps100
+seed 0: final 0.562  forgetting +0.021  new@1/3/5 0.050/0.354/0.583  8s
+seed 1: final 0.577  forgetting +0.018  new@1/3/5 0.043/0.364/0.595  8s
+seed 2: final 0.570  forgetting +0.019  new@1/3/5 0.049/0.359/0.589  8s
+seed 3: final 0.550  forgetting +0.019  new@1/3/5 0.044/0.337/0.568  8s
+seed 4: final 0.536  forgetting +0.025  new@1/3/5 0.040/0.325/0.560  8s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.5587777777777777, 0.016453450987033578], "forgetting": [0.020422222222222224, 0.0027637423188384023], "acc_new_k1": [0.04535555555555555, 0.004192438814088586], "acc_new_k3": [0.3479555555555556, 0.016396627175003082], "acc_new_k5": [0.5792444444444445, 0.01454376112476826]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.01,\"enc_steps\":100} --variant oracle_shr0.01-steps100
+seed 0: final 0.571  forgetting +0.049  new@1/3/5 0.056/0.387/0.620  8s
+seed 1: final 0.586  forgetting +0.047  new@1/3/5 0.050/0.399/0.633  8s
+seed 2: final 0.579  forgetting +0.052  new@1/3/5 0.057/0.398/0.632  8s
+seed 3: final 0.558  forgetting +0.053  new@1/3/5 0.052/0.375/0.611  8s
+seed 4: final 0.546  forgetting +0.056  new@1/3/5 0.047/0.362/0.602  8s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.5681555555555555, 0.01606134074934801], "forgetting": [0.051511111111111105, 0.003453035880225317], "acc_new_k1": [0.05231111111111111, 0.004174732932982464], "acc_new_k3": [0.38408888888888887, 0.015744369951991882], "acc_new_k5": [0.6196666666666666, 0.013264870527956801]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.1,\"enc_steps\":100} --variant oracle_shr0.1-steps100
+seed 0: final 0.598  forgetting +0.064  new@1/3/5 0.072/0.448/0.662  8s
+seed 1: final 0.600  forgetting +0.068  new@1/3/5 0.063/0.461/0.668  8s
+seed 2: final 0.601  forgetting +0.067  new@1/3/5 0.078/0.452/0.669  8s
+seed 3: final 0.588  forgetting +0.066  new@1/3/5 0.069/0.430/0.654  8s
+seed 4: final 0.574  forgetting +0.073  new@1/3/5 0.063/0.419/0.647  8s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.5921111111111111, 0.011440128636072059], "forgetting": [0.06760000000000001, 0.003330183697153969], "acc_new_k1": [0.06868888888888888, 0.006312050008407886], "acc_new_k3": [0.4418666666666667, 0.016996804347426356], "acc_new_k5": [0.6598222222222222, 0.009513992294652964]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.3,\"enc_steps\":100} --variant oracle_shr0.3-steps100
+seed 0: final 0.607  forgetting +0.072  new@1/3/5 0.090/0.484/0.680  8s
+seed 1: final 0.613  forgetting +0.075  new@1/3/5 0.085/0.501/0.688  8s
+seed 2: final 0.615  forgetting +0.074  new@1/3/5 0.099/0.491/0.689  8s
+seed 3: final 0.592  forgetting +0.076  new@1/3/5 0.088/0.465/0.668  8s
+seed 4: final 0.581  forgetting +0.083  new@1/3/5 0.082/0.458/0.663  8s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.6014444444444444, 0.014706385612303884], "forgetting": [0.07606666666666666, 0.003993513258792081], "acc_new_k1": [0.08868888888888889, 0.006764741561586941], "acc_new_k3": [0.48004444444444444, 0.017828504019001608], "acc_new_k5": [0.6775111111111111, 0.011444066876188153]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.5,\"enc_steps\":100} --variant oracle_shr0.5-steps100
+seed 0: final 0.608  forgetting +0.076  new@1/3/5 0.106/0.504/0.684  8s
+seed 1: final 0.613  forgetting +0.076  new@1/3/5 0.103/0.520/0.688  8s
+seed 2: final 0.616  forgetting +0.078  new@1/3/5 0.119/0.509/0.693  8s
+seed 3: final 0.591  forgetting +0.079  new@1/3/5 0.104/0.483/0.671  8s
+seed 4: final 0.579  forgetting +0.087  new@1/3/5 0.100/0.480/0.667  8s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.6013111111111111, 0.015601400696851014], "forgetting": [0.0792, 0.00481215025985856], "acc_new_k1": [0.10644444444444445, 0.007265256404097786], "acc_new_k3": [0.4992, 0.01709548348411228], "acc_new_k5": [0.6805111111111111, 0.01154716575775357]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.7,\"enc_steps\":100} --variant oracle_shr0.7-steps100
+seed 0: final 0.604  forgetting +0.079  new@1/3/5 0.128/0.522/0.683  8s
+seed 1: final 0.606  forgetting +0.083  new@1/3/5 0.124/0.538/0.689  8s
+seed 2: final 0.610  forgetting +0.084  new@1/3/5 0.143/0.526/0.693  8s
+seed 3: final 0.582  forgetting +0.085  new@1/3/5 0.125/0.498/0.668  8s
+seed 4: final 0.574  forgetting +0.089  new@1/3/5 0.119/0.495/0.663  8s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.5952444444444444, 0.016036493874986155], "forgetting": [0.08386666666666667, 0.003451963120126874], "acc_new_k1": [0.12762222222222222, 0.009077716578061085], "acc_new_k3": [0.5157555555555555, 0.01847978541909515], "acc_new_k5": [0.6790666666666667, 0.013380149291458962]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.9,\"enc_steps\":100} --variant oracle_shr0.9-steps100
+seed 0: final 0.583  forgetting +0.088  new@1/3/5 0.164/0.537/0.671  7s
+seed 1: final 0.587  forgetting +0.085  new@1/3/5 0.157/0.544/0.672  6s
+seed 2: final 0.584  forgetting +0.091  new@1/3/5 0.183/0.537/0.674  6s
+seed 3: final 0.555  forgetting +0.089  new@1/3/5 0.160/0.506/0.644  6s
+seed 4: final 0.553  forgetting +0.088  new@1/3/5 0.154/0.500/0.641  6s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.5724222222222223, 0.016958991933703132], "forgetting": [0.08793333333333334, 0.0021979227005358686], "acc_new_k1": [0.1636, 0.011501637027875105], "acc_new_k3": [0.5247111111111111, 0.02036542700961486], "acc_new_k5": [0.6604444444444445, 0.016540261391936355]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.99,\"enc_steps\":100} --variant oracle_shr0.99-steps100
+seed 0: final 0.517  forgetting +0.102  new@1/3/5 0.203/0.516/0.619  7s
+seed 1: final 0.515  forgetting +0.099  new@1/3/5 0.198/0.509/0.614  6s
+seed 2: final 0.511  forgetting +0.098  new@1/3/5 0.227/0.506/0.609  6s
+seed 3: final 0.470  forgetting +0.098  new@1/3/5 0.194/0.467/0.568  6s
+seed 4: final 0.470  forgetting +0.105  new@1/3/5 0.194/0.470/0.575  6s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.49655555555555553, 0.024525496936861443], "forgetting": [0.1003111111111111, 0.0031352240158606854], "acc_new_k1": [0.20344444444444446, 0.013824294235551803], "acc_new_k3": [0.4937333333333333, 0.02316188333245323], "acc_new_k5": [0.5969333333333333, 0.023689295389466184]}
+===== --dataset kkanji --track stream_enc --learner ncm --hp {\"enc_steps\":250} --variant steps250
+seed 0: final 0.511  forgetting +0.103  new@1/3/5 0.277/0.539/0.614  5s
+seed 1: final 0.517  forgetting +0.099  new@1/3/5 0.270/0.537/0.616  5s
+seed 2: final 0.513  forgetting +0.103  new@1/3/5 0.302/0.536/0.616  5s
+seed 3: final 0.498  forgetting +0.100  new@1/3/5 0.274/0.526/0.597  5s
+seed 4: final 0.484  forgetting +0.106  new@1/3/5 0.260/0.512/0.590  5s
+{"learner": "ncm", "track": "stream_enc", "final_acc": [0.5044888888888889, 0.013755268350977654], "forgetting": [0.10197777777777779, 0.002685581069156605], "acc_new_k1": [0.2767777777777778, 0.015385178052388732], "acc_new_k3": [0.5299555555555555, 0.011501637027875081], "acc_new_k5": [0.6065777777777777, 0.012364175650085728]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.0001,\"enc_steps\":250} --variant oracle_shr0.0001-steps250
+seed 0: final 0.586  forgetting +0.009  new@1/3/5 0.045/0.362/0.595  7s
+seed 1: final 0.597  forgetting +0.020  new@1/3/5 0.044/0.380/0.616  6s
+seed 2: final 0.594  forgetting +0.015  new@1/3/5 0.049/0.379/0.609  6s
+seed 3: final 0.574  forgetting +0.013  new@1/3/5 0.043/0.364/0.588  6s
+seed 4: final 0.566  forgetting +0.016  new@1/3/5 0.042/0.350/0.582  6s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.5834, 0.013094763820175315], "forgetting": [0.01451111111111111, 0.003960140912818975], "acc_new_k1": [0.04466666666666666, 0.002824058894919739], "acc_new_k3": [0.3672, 0.012467587607101111], "acc_new_k5": [0.5979555555555556, 0.014357129256708236]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.01,\"enc_steps\":250} --variant oracle_shr0.01-steps250
+seed 0: final 0.592  forgetting +0.046  new@1/3/5 0.057/0.400/0.638  7s
+seed 1: final 0.600  forgetting +0.045  new@1/3/5 0.053/0.415/0.646  6s
+seed 2: final 0.602  forgetting +0.047  new@1/3/5 0.059/0.422/0.649  6s
+seed 3: final 0.579  forgetting +0.046  new@1/3/5 0.051/0.394/0.625  6s
+seed 4: final 0.571  forgetting +0.046  new@1/3/5 0.052/0.390/0.618  6s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.5890444444444445, 0.013524691639760876], "forgetting": [0.04602222222222222, 0.0006106058517348494], "acc_new_k1": [0.05446666666666666, 0.0033512481551700754], "acc_new_k3": [0.40422222222222215, 0.0137443591122834], "acc_new_k5": [0.6351333333333333, 0.013588166602045253]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.1,\"enc_steps\":250} --variant oracle_shr0.1-steps250
+seed 0: final 0.614  forgetting +0.068  new@1/3/5 0.072/0.458/0.681  7s
+seed 1: final 0.622  forgetting +0.065  new@1/3/5 0.066/0.470/0.687  6s
+seed 2: final 0.622  forgetting +0.065  new@1/3/5 0.076/0.473/0.687  6s
+seed 3: final 0.604  forgetting +0.067  new@1/3/5 0.069/0.446/0.671  6s
+seed 4: final 0.593  forgetting +0.069  new@1/3/5 0.068/0.440/0.662  6s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.6109555555555556, 0.012596197741019496], "forgetting": [0.06671111111111111, 0.001740228451016819], "acc_new_k1": [0.07033333333333333, 0.003977560515481946], "acc_new_k3": [0.4575333333333333, 0.014499978714330898], "acc_new_k5": [0.6777333333333333, 0.010990624511850736]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.3,\"enc_steps\":250} --variant oracle_shr0.3-steps250
+seed 0: final 0.629  forgetting +0.072  new@1/3/5 0.093/0.500/0.702  7s
+seed 1: final 0.635  forgetting +0.071  new@1/3/5 0.085/0.515/0.706  6s
+seed 2: final 0.638  forgetting +0.071  new@1/3/5 0.099/0.516/0.709  6s
+seed 3: final 0.621  forgetting +0.072  new@1/3/5 0.090/0.490/0.693  6s
+seed 4: final 0.607  forgetting +0.078  new@1/3/5 0.088/0.481/0.684  6s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.6258666666666668, 0.012428412291952903], "forgetting": [0.07277777777777779, 0.0027464904654018354], "acc_new_k1": [0.09115555555555556, 0.005305831871804063], "acc_new_k3": [0.5005111111111111, 0.015366831364104959], "acc_new_k5": [0.6986222222222223, 0.009872833408205196]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.5,\"enc_steps\":250} --variant oracle_shr0.5-steps250
+seed 0: final 0.634  forgetting +0.075  new@1/3/5 0.111/0.531/0.709  7s
+seed 1: final 0.641  forgetting +0.071  new@1/3/5 0.104/0.541/0.711  6s
+seed 2: final 0.644  forgetting +0.074  new@1/3/5 0.119/0.540/0.718  6s
+seed 3: final 0.625  forgetting +0.076  new@1/3/5 0.110/0.515/0.701  6s
+seed 4: final 0.614  forgetting +0.080  new@1/3/5 0.104/0.507/0.694  6s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.6315333333333333, 0.012471300386620993], "forgetting": [0.07511111111111113, 0.0035546873940103096], "acc_new_k1": [0.10977777777777778, 0.0061116161407480255], "acc_new_k3": [0.5266444444444445, 0.015257946725283992], "acc_new_k5": [0.7065111111111111, 0.009294097423288615]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.7,\"enc_steps\":250} --variant oracle_shr0.7-steps250
+seed 0: final 0.635  forgetting +0.076  new@1/3/5 0.135/0.551/0.711  7s
+seed 1: final 0.640  forgetting +0.074  new@1/3/5 0.128/0.562/0.714  6s
+seed 2: final 0.647  forgetting +0.074  new@1/3/5 0.147/0.558/0.721  6s
+seed 3: final 0.625  forgetting +0.078  new@1/3/5 0.134/0.536/0.703  6s
+seed 4: final 0.614  forgetting +0.083  new@1/3/5 0.124/0.527/0.697  6s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.6322222222222222, 0.012945278943057963], "forgetting": [0.07691111111111111, 0.003862929228218165], "acc_new_k1": [0.13357777777777777, 0.008642559063176467], "acc_new_k3": [0.5468444444444445, 0.014901860021445862], "acc_new_k5": [0.7091777777777777, 0.009388593026239076]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.9,\"enc_steps\":250} --variant oracle_shr0.9-steps250
+seed 0: final 0.625  forgetting +0.082  new@1/3/5 0.177/0.573/0.707  7s
+seed 1: final 0.630  forgetting +0.079  new@1/3/5 0.173/0.577/0.709  6s
+seed 2: final 0.630  forgetting +0.082  new@1/3/5 0.198/0.579/0.713  6s
+seed 3: final 0.611  forgetting +0.085  new@1/3/5 0.180/0.557/0.696  6s
+seed 4: final 0.604  forgetting +0.085  new@1/3/5 0.171/0.548/0.689  6s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.6198888888888888, 0.012017733809913021], "forgetting": [0.08264444444444445, 0.002594390910701557], "acc_new_k1": [0.17979999999999996, 0.010563272033294546], "acc_new_k3": [0.566688888888889, 0.013411668035936923], "acc_new_k5": [0.7026, 0.009939508396318932]}
+===== --dataset kkanji --track stream_enc --learner slda --hp {\"shrinkage\":0.99,\"enc_steps\":250} --variant oracle_shr0.99-steps250
+seed 0: final 0.573  forgetting +0.096  new@1/3/5 0.238/0.571/0.669  7s
+seed 1: final 0.583  forgetting +0.091  new@1/3/5 0.231/0.573/0.673  6s
+seed 2: final 0.578  forgetting +0.095  new@1/3/5 0.264/0.570/0.673  7s
+seed 3: final 0.561  forgetting +0.094  new@1/3/5 0.241/0.558/0.654  7s
+seed 4: final 0.551  forgetting +0.095  new@1/3/5 0.229/0.542/0.647  6s
+{"learner": "slda", "track": "stream_enc", "final_acc": [0.5692444444444444, 0.012822241478899456], "forgetting": [0.09406666666666667, 0.0019854408348379403], "acc_new_k1": [0.24077777777777776, 0.01390066167711912], "acc_new_k3": [0.5630444444444445, 0.012964005249102784], "acc_new_k5": [0.6633111111111111, 0.012118855831581935]}

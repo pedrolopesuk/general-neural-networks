@@ -1,0 +1,55 @@
+{
+ "benchmark": "omniglot_continual_fewshot",
+ "learner": "mlp_sgd-x11",
+ "track": "pretrained",
+ "classes": 20,
+ "shots": 5,
+ "seeds": 1,
+ "hp": {
+  "steps_per_example": 11
+ },
+ "params": 136724,
+ "flops_per_example": 9023784,
+ "encoder_budget": "3000x256 on background",
+ "summary": {
+  "final_acc": [
+   0.05,
+   0.0
+  ],
+  "forgetting": [
+   0.93,
+   0.0
+  ],
+  "acc_new_k1": [
+   0.4666666666666667,
+   0.0
+  ],
+  "acc_new_k3": [
+   0.9433333333333334,
+   0.0
+  ],
+  "acc_new_k5": [
+   0.9800000000000001,
+   0.0
+  ]
+ },
+ "runs": [
+  {
+   "acc_new": {
+    "k1": 0.4666666666666667,
+    "k3": 0.9433333333333334,
+    "k5": 0.9800000000000001
+   },
+   "curve": [
+    [
+     20,
+     0.05
+    ]
+   ],
+   "final_acc": 0.05,
+   "forgetting": 0.93,
+   "wall_s": 2.4186737537384033,
+   "seed": 0
+  }
+ ]
+}

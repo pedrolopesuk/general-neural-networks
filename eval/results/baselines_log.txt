@@ -1,0 +1,565 @@
+﻿===== --learner ncm --track scratch --tune
+  tune ncm {}: final 0.345
+seed 0: final 0.161  forgetting +0.074  new@1/3/5 0.068/0.163/0.235  2s
+seed 1: final 0.162  forgetting +0.077  new@1/3/5 0.073/0.170/0.239  1s
+seed 2: final 0.170  forgetting +0.080  new@1/3/5 0.074/0.173/0.250  1s
+seed 3: final 0.157  forgetting +0.078  new@1/3/5 0.069/0.166/0.235  2s
+seed 4: final 0.162  forgetting +0.071  new@1/3/5 0.075/0.164/0.233  2s
+{"learner": "ncm", "track": "scratch", "final_acc": [0.1623111111111111, 0.004607696191973908], "forgetting": [0.076, 0.0035162760885437015], "acc_new_k1": [0.07193333333333332, 0.0032361766803085433], "acc_new_k3": [0.1670444444444444, 0.004208750437708751], "acc_new_k5": [0.23831111111111108, 0.0067879704779762046]}
+===== --learner ncm --track scratch --protocol anml --tune
+  tune ncm {}: final 0.430
+seed 0: final 0.224  forgetting +0.101  new@1/3/5 0.062/0.134/0.199  3s
+seed 1: final 0.229  forgetting +0.081  new@1/3/5 0.059/0.139/0.193  3s
+seed 2: final 0.225  forgetting +0.095  new@1/3/5 0.063/0.139/0.198  3s
+seed 3: final 0.221  forgetting +0.092  new@1/3/5 0.063/0.146/0.194  3s
+seed 4: final 0.218  forgetting +0.092  new@1/3/5 0.062/0.135/0.195  3s
+{"learner": "ncm", "track": "scratch", "final_acc": [0.22333333333333333, 0.00417665469538055], "forgetting": [0.09213333333333333, 0.0070023805475947516], "acc_new_k1": [0.06173333333333333, 0.0016055459438389732], "acc_new_k3": [0.13866666666666666, 0.004612784167699335], "acc_new_k5": [0.19573333333333334, 0.0023021728866442544]}
+===== --learner slda --track scratch --tune
+  tune slda {'shrinkage': 0.0001}: final 0.099
+  tune slda {'shrinkage': 0.01}: final 0.188
+  tune slda {'shrinkage': 0.1}: final 0.277
+  tune slda {'shrinkage': 0.3}: final 0.313
+  tune slda {'shrinkage': 0.5}: final 0.329
+  tune slda {'shrinkage': 0.7}: final 0.343
+  tune slda {'shrinkage': 0.9}: final 0.353
+  tune slda {'shrinkage': 0.99}: final 0.356
+seed 0: final 0.178  forgetting +0.076  new@1/3/5 0.037/0.158/0.254  5s
+seed 1: final 0.178  forgetting +0.082  new@1/3/5 0.037/0.164/0.260  5s
+seed 2: final 0.183  forgetting +0.085  new@1/3/5 0.040/0.170/0.268  5s
+seed 3: final 0.171  forgetting +0.081  new@1/3/5 0.037/0.161/0.251  5s
+seed 4: final 0.176  forgetting +0.076  new@1/3/5 0.042/0.157/0.251  5s
+{"learner": "slda", "track": "scratch", "final_acc": [0.17695555555555556, 0.0043656911548183635], "forgetting": [0.07991111111111111, 0.003946712962691429], "acc_new_k1": [0.038622222222222224, 0.0019760916657900612], "acc_new_k3": [0.1620888888888889, 0.005399702781029414], "acc_new_k5": [0.25686666666666663, 0.007116057307592317]}
+===== --learner slda --track scratch --protocol anml --tune
+  tune slda {'shrinkage': 0.0001}: final 0.218
+  tune slda {'shrinkage': 0.01}: final 0.336
+  tune slda {'shrinkage': 0.1}: final 0.426
+  tune slda {'shrinkage': 0.3}: final 0.464
+  tune slda {'shrinkage': 0.5}: final 0.470
+  tune slda {'shrinkage': 0.7}: final 0.478
+  tune slda {'shrinkage': 0.9}: final 0.470
+  tune slda {'shrinkage': 0.99}: final 0.462
+seed 0: final 0.256  forgetting +0.104  new@1/3/5 0.029/0.118/0.199  8s
+seed 1: final 0.254  forgetting +0.087  new@1/3/5 0.026/0.122/0.197  8s
+seed 2: final 0.248  forgetting +0.099  new@1/3/5 0.028/0.120/0.196  8s
+seed 3: final 0.241  forgetting +0.102  new@1/3/5 0.029/0.125/0.195  8s
+seed 4: final 0.249  forgetting +0.101  new@1/3/5 0.032/0.118/0.199  8s
+{"learner": "slda", "track": "scratch", "final_acc": [0.24980000000000002, 0.005988878581726869], "forgetting": [0.09860000000000001, 0.006788061415292125], "acc_new_k1": [0.028666666666666667, 0.002273030282830976], "acc_new_k3": [0.12046666666666665, 0.0030422944557612357], "acc_new_k5": [0.19706666666666667, 0.001963556863336427]}
+===== --learner mlp_sgd --track scratch --tune
+  tune mlp_sgd {'lr': 0.0001}: final 0.011
+  tune mlp_sgd {'lr': 0.0003}: final 0.010
+  tune mlp_sgd {'lr': 0.001}: final 0.011
+  tune mlp_sgd {'lr': 0.003}: final 0.012
+  tune mlp_sgd {'lr': 0.01}: final 0.021
+seed 0: final 0.002  forgetting +0.284  new@1/3/5 0.007/0.010/0.286  4s
+seed 1: final 0.002  forgetting +0.275  new@1/3/5 0.006/0.017/0.277  4s
+seed 2: final 0.002  forgetting +0.293  new@1/3/5 0.007/0.011/0.295  3s
+seed 3: final 0.002  forgetting +0.291  new@1/3/5 0.006/0.014/0.293  3s
+seed 4: final 0.002  forgetting +0.295  new@1/3/5 0.004/0.015/0.297  4s
+{"learner": "mlp_sgd", "track": "scratch", "final_acc": [0.0016666666666666666, 2.42434975903054e-19], "forgetting": [0.2876222222222222, 0.008274458693272126], "acc_new_k1": [0.0058, 0.0012156388352540315], "acc_new_k3": [0.013488888888888889, 0.0027594953913378465], "acc_new_k5": [0.2892888888888889, 0.008274458693272126]}
+===== --learner mlp_sgd --track scratch --iid 20
+seed 0: final 0.234  forgetting +0.000  new@1/3/5 nan/nan/nan  53s
+seed 1: final 0.222  forgetting +0.000  new@1/3/5 nan/nan/nan  53s
+seed 2: final 0.233  forgetting +0.000  new@1/3/5 nan/nan/nan  54s
+seed 3: final 0.228  forgetting +0.000  new@1/3/5 nan/nan/nan  57s
+seed 4: final 0.225  forgetting +0.000  new@1/3/5 nan/nan/nan  61s
+{"learner": "mlp_sgd", "track": "scratch", "final_acc": [0.22833333333333333, 0.005148414594756931], "forgetting": [0.0, 0.0], "acc_new_k1": [NaN, NaN], "acc_new_k3": [NaN, NaN], "acc_new_k5": [NaN, NaN]}
+===== --learner mlp_sgd --track scratch --protocol anml --tune
+  tune mlp_sgd {'lr': 0.0001}: final 0.014
+  tune mlp_sgd {'lr': 0.0003}: final 0.014
+  tune mlp_sgd {'lr': 0.001}: final 0.012
+  tune mlp_sgd {'lr': 0.003}: final 0.012
+  tune mlp_sgd {'lr': 0.01}: final 0.010
+seed 0: final 0.001  forgetting +0.009  new@1/3/5 0.009/0.009/0.009  10s
+seed 1: final 0.003  forgetting +0.010  new@1/3/5 0.011/0.011/0.011  10s
+seed 2: final 0.001  forgetting +0.016  new@1/3/5 0.016/0.016/0.016  11s
+seed 3: final 0.002  forgetting +0.015  new@1/3/5 0.016/0.016/0.016  10s
+seed 4: final 0.001  forgetting +0.013  new@1/3/5 0.013/0.013/0.013  10s
+{"learner": "mlp_sgd", "track": "scratch", "final_acc": [0.0018, 0.0007302967433402216], "forgetting": [0.0126, 0.0028905977851571723], "acc_new_k1": [0.012866666666666669, 0.002873248258601326], "acc_new_k3": [0.013066666666666667, 0.0029382534494718686], "acc_new_k5": [0.013066666666666667, 0.0029382534494718686]}
+===== --learner mlp_sgd --hp {"steps_per_example": 11} --variant x11 --track scratch --tune
+powershell : python.exe : Traceback (most recent call last):
+At line:1 char:344
++ ... abrain-agi; powershell -NoProfile -ExecutionPolicy Bypass -File eval\ ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (python.exe : Tr...ent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+At C:\Users\main\Documents\metabrain-agi\eval\run_baselines.ps1:6 char:51
++ ... ($argv) { Write-Output "===== $argv"; & $py $bench @argv 2>&1 | Where ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 228, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 179, in main
+    fixed = json.loads(args.hp)
+  File "C:\Python314\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python314\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\json\decoder.py", line 361, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ~~~~~~~~~~~~~~^^^^^^^^
+json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+===== --learner mlp_sgd --hp {"steps_per_example": 11} --variant x11 --track scratch --iid 20
+python.exe : Traceback (most recent call last):
+At C:\Users\main\Documents\metabrain-agi\eval\run_baselines.ps1:6 char:51
++ ... ($argv) { Write-Output "===== $argv"; & $py $bench @argv 2>&1 | Where ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 228, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 179, in main
+    fixed = json.loads(args.hp)
+  File "C:\Python314\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python314\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\json\decoder.py", line 361, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ~~~~~~~~~~~~~~^^^^^^^^
+json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+===== --learner mlp_sgd --hp {"steps_per_example": 11} --variant x11 --track scratch --protocol anml --tune
+python.exe : Traceback (most recent call last):
+At C:\Users\main\Documents\metabrain-agi\eval\run_baselines.ps1:6 char:51
++ ... ($argv) { Write-Output "===== $argv"; & $py $bench @argv 2>&1 | Where ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 228, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 179, in main
+    fixed = json.loads(args.hp)
+  File "C:\Python314\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python314\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\json\decoder.py", line 361, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ~~~~~~~~~~~~~~^^^^^^^^
+json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+===== --learner mlp_ewc --track scratch --tune
+  tune mlp_ewc {'lr': 0.0001, 'lam': 0.01}: final 0.011
+  tune mlp_ewc {'lr': 0.0001, 'lam': 0.1}: final 0.011
+  tune mlp_ewc {'lr': 0.0001, 'lam': 1.0}: final 0.011
+  tune mlp_ewc {'lr': 0.0001, 'lam': 10.0}: final 0.011
+  tune mlp_ewc {'lr': 0.0001, 'lam': 100.0}: final 0.011
+  tune mlp_ewc {'lr': 0.0001, 'lam': 1000.0}: final 0.011
+  tune mlp_ewc {'lr': 0.0003, 'lam': 0.01}: final 0.010
+  tune mlp_ewc {'lr': 0.0003, 'lam': 0.1}: final 0.010
+  tune mlp_ewc {'lr': 0.0003, 'lam': 1.0}: final 0.010
+  tune mlp_ewc {'lr': 0.0003, 'lam': 10.0}: final 0.010
+  tune mlp_ewc {'lr': 0.0003, 'lam': 100.0}: final 0.010
+  tune mlp_ewc {'lr': 0.0003, 'lam': 1000.0}: final 0.010
+  tune mlp_ewc {'lr': 0.001, 'lam': 0.01}: final 0.011
+  tune mlp_ewc {'lr': 0.001, 'lam': 0.1}: final 0.011
+  tune mlp_ewc {'lr': 0.001, 'lam': 1.0}: final 0.011
+  tune mlp_ewc {'lr': 0.001, 'lam': 10.0}: final 0.011
+  tune mlp_ewc {'lr': 0.001, 'lam': 100.0}: final 0.011
+  tune mlp_ewc {'lr': 0.001, 'lam': 1000.0}: final 0.010
+  tune mlp_ewc {'lr': 0.003, 'lam': 0.01}: final 0.012
+  tune mlp_ewc {'lr': 0.003, 'lam': 0.1}: final 0.012
+  tune mlp_ewc {'lr': 0.003, 'lam': 1.0}: final 0.012
+  tune mlp_ewc {'lr': 0.003, 'lam': 10.0}: final 0.011
+  tune mlp_ewc {'lr': 0.003, 'lam': 100.0}: final 0.010
+  tune mlp_ewc {'lr': 0.003, 'lam': 1000.0}: final 0.011
+seed 0: final 0.002  forgetting +0.024  new@1/3/5 0.009/0.015/0.026  12s
+seed 1: final 0.003  forgetting +0.028  new@1/3/5 0.010/0.016/0.030  11s
+seed 2: final 0.002  forgetting +0.027  new@1/3/5 0.012/0.018/0.028  12s
+seed 3: final 0.002  forgetting +0.029  new@1/3/5 0.012/0.021/0.031  11s
+seed 4: final 0.003  forgetting +0.031  new@1/3/5 0.010/0.019/0.034  11s
+{"learner": "mlp_ewc", "track": "scratch", "final_acc": [0.0021999999999999997, 0.0005235208439728776], "forgetting": [0.027688888888888884, 0.002387467277262665], "acc_new_k1": [0.010644444444444444, 0.0015303513677067677], "acc_new_k3": [0.01773333333333333, 0.002236895997516133], "acc_new_k5": [0.02988888888888889, 0.0027498597046143503]}
+===== --learner mlp_ewc --track scratch --iid 20
+seed 0: final 0.112  forgetting +0.000  new@1/3/5 nan/nan/nan  56s
+seed 1: final 0.128  forgetting +0.000  new@1/3/5 nan/nan/nan  55s
+seed 2: final 0.108  forgetting +0.000  new@1/3/5 nan/nan/nan  56s
+seed 3: final 0.124  forgetting +0.000  new@1/3/5 nan/nan/nan  55s
+seed 4: final 0.115  forgetting +0.000  new@1/3/5 nan/nan/nan  56s
+{"learner": "mlp_ewc", "track": "scratch", "final_acc": [0.11751111111111112, 0.008339849304379133], "forgetting": [0.0, 0.0], "acc_new_k1": [NaN, NaN], "acc_new_k3": [NaN, NaN], "acc_new_k5": [NaN, NaN]}
+===== --learner mlp_ewc --track scratch --protocol anml --tune
+  tune mlp_ewc {'lr': 0.0001, 'lam': 0.01}: final 0.014
+  tune mlp_ewc {'lr': 0.0001, 'lam': 0.1}: final 0.014
+  tune mlp_ewc {'lr': 0.0001, 'lam': 1.0}: final 0.014
+  tune mlp_ewc {'lr': 0.0001, 'lam': 10.0}: final 0.014
+  tune mlp_ewc {'lr': 0.0001, 'lam': 100.0}: final 0.014
+  tune mlp_ewc {'lr': 0.0001, 'lam': 1000.0}: final 0.016
+  tune mlp_ewc {'lr': 0.0003, 'lam': 0.01}: final 0.014
+  tune mlp_ewc {'lr': 0.0003, 'lam': 0.1}: final 0.014
+  tune mlp_ewc {'lr': 0.0003, 'lam': 1.0}: final 0.014
+  tune mlp_ewc {'lr': 0.0003, 'lam': 10.0}: final 0.014
+  tune mlp_ewc {'lr': 0.0003, 'lam': 100.0}: final 0.014
+  tune mlp_ewc {'lr': 0.0003, 'lam': 1000.0}: final 0.014
+  tune mlp_ewc {'lr': 0.001, 'lam': 0.01}: final 0.012
+  tune mlp_ewc {'lr': 0.001, 'lam': 0.1}: final 0.012
+  tune mlp_ewc {'lr': 0.001, 'lam': 1.0}: final 0.012
+  tune mlp_ewc {'lr': 0.001, 'lam': 10.0}: final 0.012
+  tune mlp_ewc {'lr': 0.001, 'lam': 100.0}: final 0.012
+  tune mlp_ewc {'lr': 0.001, 'lam': 1000.0}: final 0.010
+  tune mlp_ewc {'lr': 0.003, 'lam': 0.01}: final 0.012
+  tune mlp_ewc {'lr': 0.003, 'lam': 0.1}: final 0.012
+  tune mlp_ewc {'lr': 0.003, 'lam': 1.0}: final 0.012
+  tune mlp_ewc {'lr': 0.003, 'lam': 10.0}: final 0.010
+  tune mlp_ewc {'lr': 0.003, 'lam': 100.0}: final 0.010
+  tune mlp_ewc {'lr': 0.003, 'lam': 1000.0}: final 0.010
+seed 0: final 0.002  forgetting +0.008  new@1/3/5 0.009/0.009/0.009  32s
+seed 1: final 0.003  forgetting +0.009  new@1/3/5 0.011/0.011/0.011  31s
+seed 2: final 0.001  forgetting +0.016  new@1/3/5 0.016/0.016/0.016  30s
+seed 3: final 0.002  forgetting +0.015  new@1/3/5 0.015/0.015/0.016  30s
+seed 4: final 0.001  forgetting +0.013  new@1/3/5 0.012/0.013/0.013  30s
+{"learner": "mlp_ewc", "track": "scratch", "final_acc": [0.0018666666666666669, 0.0006912147117775908], "forgetting": [0.012199999999999999, 0.0032369395696827223], "acc_new_k1": [0.012733333333333333, 0.002802776401277054], "acc_new_k3": [0.012933333333333333, 0.002975828549422086], "acc_new_k5": [0.013066666666666667, 0.0029382534494718686]}
+===== --learner mlp_replay --track scratch --tune
+  tune mlp_replay {'lr': 0.0001}: final 0.011
+  tune mlp_replay {'lr': 0.0003}: final 0.011
+  tune mlp_replay {'lr': 0.001}: final 0.009
+  tune mlp_replay {'lr': 0.003}: final 0.009
+  tune mlp_replay {'lr': 0.01}: final 0.013
+seed 0: final 0.005  forgetting +0.003  new@1/3/5 0.005/0.007/0.009  5s
+seed 1: final 0.006  forgetting +0.011  new@1/3/5 0.010/0.013/0.017  5s
+seed 2: final 0.007  forgetting +0.015  new@1/3/5 0.014/0.017/0.022  5s
+seed 3: final 0.005  forgetting +0.016  new@1/3/5 0.016/0.018/0.021  5s
+seed 4: final 0.007  forgetting +0.008  new@1/3/5 0.010/0.012/0.014  5s
+{"learner": "mlp_replay", "track": "scratch", "final_acc": [0.0060888888888888885, 0.0008656689413681091], "forgetting": [0.010644444444444446, 0.0052654241384740025], "acc_new_k1": [0.011177777777777778, 0.004200676018493415], "acc_new_k3": [0.013288888888888888, 0.004239438583842539], "acc_new_k5": [0.01673333333333333, 0.005568651231960021]}
+===== --learner mlp_replay --track scratch --iid 20
+seed 0: final 0.207  forgetting +0.000  new@1/3/5 nan/nan/nan  72s
+seed 1: final 0.209  forgetting +0.000  new@1/3/5 nan/nan/nan  71s
+seed 2: final 0.214  forgetting +0.000  new@1/3/5 nan/nan/nan  70s
+seed 3: final 0.204  forgetting +0.000  new@1/3/5 nan/nan/nan  68s
+seed 4: final 0.208  forgetting +0.000  new@1/3/5 nan/nan/nan  70s
+{"learner": "mlp_replay", "track": "scratch", "final_acc": [0.20833333333333331, 0.0034845337290148257], "forgetting": [0.0, 0.0], "acc_new_k1": [NaN, NaN], "acc_new_k3": [NaN, NaN], "acc_new_k5": [NaN, NaN]}
+===== --learner mlp_replay --track scratch --protocol anml --tune
+  tune mlp_replay {'lr': 0.0001}: final 0.018
+  tune mlp_replay {'lr': 0.0003}: final 0.016
+  tune mlp_replay {'lr': 0.001}: final 0.014
+  tune mlp_replay {'lr': 0.003}: final 0.022
+  tune mlp_replay {'lr': 0.01}: final 0.048
+seed 0: final 0.038  forgetting +0.506  new@1/3/5 0.005/0.009/0.127  13s
+seed 1: final 0.040  forgetting +0.527  new@1/3/5 0.006/0.018/0.130  13s
+seed 2: final 0.049  forgetting +0.497  new@1/3/5 0.008/0.015/0.137  13s
+seed 3: final 0.056  forgetting +0.509  new@1/3/5 0.004/0.011/0.130  13s
+seed 4: final 0.048  forgetting +0.519  new@1/3/5 0.003/0.012/0.118  13s
+{"learner": "mlp_replay", "track": "scratch", "final_acc": [0.046, 0.007156970184527964], "forgetting": [0.5114666666666666, 0.011471220026173692], "acc_new_k1": [0.004999999999999999, 0.0020816659994661326], "acc_new_k3": [0.013000000000000001, 0.0036132472314464674], "acc_new_k5": [0.12840000000000001, 0.006759355656339496]}
+===== --learner vit_online --track scratch --tune
+python.exe : C:\Users\main\Documents\metabrain-agi\eval\learners.py:153: UserWarning: enable_nested_tensor is True, 
+but self.use_nested_tensor is False because encoder_layer.norm_first was True
+At C:\Users\main\Documents\metabrain-agi\eval\run_baselines.ps1:6 char:51
++ ... ($argv) { Write-Output "===== $argv"; & $py $bench @argv 2>&1 | Where ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\main\D..._first was True:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  self.body = nn.TransformerEncoder(layer, depth)
+C:\Users\main\Documents\metabrain-agi\eval\learners.py:153: UserWarning: enable_nested_tensor is True, but 
+self.use_nested_tensor is False because encoder_layer.norm_first was True
+  self.body = nn.TransformerEncoder(layer, depth)
+  tune vit_online {'lr': 1e-05}: final 0.009
+  tune vit_online {'lr': 3e-05}: final 0.010
+  tune vit_online {'lr': 0.0001}: final 0.011
+  tune vit_online {'lr': 0.0003}: final 0.010
+  tune vit_online {'lr': 0.001}: final 0.010
+seed 0: final 0.002  forgetting +0.015  new@1/3/5 0.008/0.012/0.017  28s
+seed 1: final 0.002  forgetting +0.018  new@1/3/5 0.005/0.013/0.020  29s
+seed 2: final 0.002  forgetting +0.016  new@1/3/5 0.006/0.007/0.018  29s
+seed 3: final 0.002  forgetting +0.016  new@1/3/5 0.007/0.009/0.018  29s
+seed 4: final 0.002  forgetting +0.012  new@1/3/5 0.007/0.007/0.014  28s
+{"learner": "vit_online", "track": "scratch", "final_acc": [0.0016666666666666666, 2.42434975903054e-19], "forgetting": [0.015466666666666667, 0.002215824122806203], "acc_new_k1": [0.006555555555555556, 0.0011547005383792516], "acc_new_k3": [0.009711111111111111, 0.0027939529057423597], "acc_new_k5": [0.017133333333333334, 0.002215824122806204]}
+===== --learner vit_online --track scratch --iid 20
+python.exe : C:\Users\main\Documents\metabrain-agi\eval\learners.py:153: UserWarning: enable_nested_tensor is True, 
+but self.use_nested_tensor is False because encoder_layer.norm_first was True
+At C:\Users\main\Documents\metabrain-agi\eval\run_baselines.ps1:6 char:51
++ ... ($argv) { Write-Output "===== $argv"; & $py $bench @argv 2>&1 | Where ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\main\D..._first was True:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  self.body = nn.TransformerEncoder(layer, depth)
+C:\Users\main\Documents\metabrain-agi\eval\learners.py:153: UserWarning: enable_nested_tensor is True, but 
+self.use_nested_tensor is False because encoder_layer.norm_first was True
+  self.body = nn.TransformerEncoder(layer, depth)
+seed 0: final 0.064  forgetting +0.000  new@1/3/5 nan/nan/nan  420s
+seed 1: final 0.068  forgetting +0.000  new@1/3/5 nan/nan/nan  427s
+seed 2: final 0.069  forgetting +0.000  new@1/3/5 nan/nan/nan  420s
+seed 3: final 0.061  forgetting +0.000  new@1/3/5 nan/nan/nan  422s
+seed 4: final 0.054  forgetting +0.000  new@1/3/5 nan/nan/nan  420s
+{"learner": "vit_online", "track": "scratch", "final_acc": [0.06331111111111112, 0.006038661449258889], "forgetting": [0.0, 0.0], "acc_new_k1": [NaN, NaN], "acc_new_k3": [NaN, NaN], "acc_new_k5": [NaN, NaN]}
+===== --learner vit_online --track scratch --protocol anml --tune
+python.exe : C:\Users\main\Documents\metabrain-agi\eval\learners.py:153: UserWarning: enable_nested_tensor is True, 
+but self.use_nested_tensor is False because encoder_layer.norm_first was True
+At C:\Users\main\Documents\metabrain-agi\eval\run_baselines.ps1:6 char:51
++ ... ($argv) { Write-Output "===== $argv"; & $py $bench @argv 2>&1 | Where ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\main\D..._first was True:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  self.body = nn.TransformerEncoder(layer, depth)
+C:\Users\main\Documents\metabrain-agi\eval\learners.py:153: UserWarning: enable_nested_tensor is True, but 
+self.use_nested_tensor is False because encoder_layer.norm_first was True
+  self.body = nn.TransformerEncoder(layer, depth)
+  tune vit_online {'lr': 1e-05}: final 0.010
+  tune vit_online {'lr': 3e-05}: final 0.010
+  tune vit_online {'lr': 0.0001}: final 0.010
+  tune vit_online {'lr': 0.0003}: final 0.010
+  tune vit_online {'lr': 0.001}: final 0.010
+seed 0: final 0.002  forgetting +0.029  new@1/3/5 0.011/0.012/0.013  75s
+seed 1: final 0.002  forgetting +0.028  new@1/3/5 0.013/0.014/0.016  73s
+seed 2: final 0.002  forgetting +0.029  new@1/3/5 0.012/0.014/0.014  73s
+seed 3: final 0.002  forgetting +0.032  new@1/3/5 0.010/0.011/0.013  76s
+seed 4: final 0.002  forgetting +0.033  new@1/3/5 0.015/0.016/0.016  72s
+{"learner": "vit_online", "track": "scratch", "final_acc": [0.0018000000000000002, 0.000298142396999972], "forgetting": [0.030266666666666664, 0.0020869967789998055], "acc_new_k1": [0.012333333333333333, 0.0018257418583505537], "acc_new_k3": [0.013266666666666668, 0.001991649232838621], "acc_new_k5": [0.014400000000000001, 0.0015881505666095462]}
+===== --learner ncm --track pretrained --tune
+  tune ncm {}: final 0.948
+seed 0: final 0.738  forgetting +0.086  new@1/3/5 0.492/0.765/0.824  6s
+seed 1: final 0.738  forgetting +0.085  new@1/3/5 0.477/0.763/0.823  5s
+seed 2: final 0.733  forgetting +0.086  new@1/3/5 0.471/0.759/0.820  5s
+seed 3: final 0.739  forgetting +0.075  new@1/3/5 0.475/0.753/0.815  5s
+seed 4: final 0.749  forgetting +0.085  new@1/3/5 0.487/0.767/0.834  5s
+{"learner": "ncm", "track": "pretrained", "final_acc": [0.7394666666666667, 0.005563549803835048], "forgetting": [0.08362222222222224, 0.004644524188576441], "acc_new_k1": [0.4804444444444444, 0.008830013352338122], "acc_new_k3": [0.7613555555555556, 0.0057399402070271366], "acc_new_k5": [0.8231777777777778, 0.0072186315860631595]}
+===== --learner ncm --track pretrained --protocol anml --tune
+  tune ncm {}: final 0.964
+seed 0: final 0.807  forgetting +0.060  new@1/3/5 0.474/0.740/0.800  11s
+seed 1: final 0.813  forgetting +0.067  new@1/3/5 0.436/0.745/0.806  10s
+seed 2: final 0.805  forgetting +0.063  new@1/3/5 0.444/0.741/0.798  10s
+seed 3: final 0.801  forgetting +0.066  new@1/3/5 0.467/0.734/0.799  10s
+seed 4: final 0.800  forgetting +0.078  new@1/3/5 0.463/0.738/0.811  10s
+{"learner": "ncm", "track": "pretrained", "final_acc": [0.8051333333333333, 0.00532081865046262], "forgetting": [0.06673333333333334, 0.0068003267895333135], "acc_new_k1": [0.45666666666666667, 0.01596350003393157], "acc_new_k3": [0.7396666666666667, 0.004116363011742816], "acc_new_k5": [0.8027333333333333, 0.00579463353265566]}
+===== --learner slda --track pretrained --tune
+  tune slda {'shrinkage': 0.0001}: final 0.775
+  tune slda {'shrinkage': 0.01}: final 0.805
+  tune slda {'shrinkage': 0.1}: final 0.876
+  tune slda {'shrinkage': 0.3}: final 0.904
+  tune slda {'shrinkage': 0.5}: final 0.918
+  tune slda {'shrinkage': 0.7}: final 0.926
+  tune slda {'shrinkage': 0.9}: final 0.939
+  tune slda {'shrinkage': 0.99}: final 0.943
+seed 0: final 0.746  forgetting +0.084  new@1/3/5 0.423/0.758/0.831  7s
+seed 1: final 0.741  forgetting +0.083  new@1/3/5 0.398/0.752/0.823  7s
+seed 2: final 0.742  forgetting +0.083  new@1/3/5 0.395/0.750/0.825  7s
+seed 3: final 0.743  forgetting +0.079  new@1/3/5 0.413/0.744/0.821  7s
+seed 4: final 0.748  forgetting +0.089  new@1/3/5 0.410/0.755/0.837  7s
+{"learner": "slda", "track": "pretrained", "final_acc": [0.7440444444444445, 0.0031929706745278774], "forgetting": [0.0834888888888889, 0.0036730584020256665], "acc_new_k1": [0.4078666666666667, 0.011325541984142231], "acc_new_k3": [0.7517777777777778, 0.005226357700618529], "acc_new_k5": [0.8275333333333335, 0.006387874315576728]}
+===== --learner slda --track pretrained --protocol anml --tune
+  tune slda {'shrinkage': 0.0001}: final 0.948
+  tune slda {'shrinkage': 0.01}: final 0.948
+  tune slda {'shrinkage': 0.1}: final 0.956
+  tune slda {'shrinkage': 0.3}: final 0.970
+  tune slda {'shrinkage': 0.5}: final 0.972
+  tune slda {'shrinkage': 0.7}: final 0.978
+  tune slda {'shrinkage': 0.9}: final 0.972
+  tune slda {'shrinkage': 0.99}: final 0.972
+seed 0: final 0.821  forgetting +0.065  new@1/3/5 0.233/0.647/0.764  13s
+seed 1: final 0.826  forgetting +0.062  new@1/3/5 0.199/0.636/0.769  13s
+seed 2: final 0.835  forgetting +0.057  new@1/3/5 0.205/0.634/0.765  13s
+seed 3: final 0.816  forgetting +0.061  new@1/3/5 0.212/0.628/0.764  13s
+seed 4: final 0.822  forgetting +0.067  new@1/3/5 0.202/0.614/0.758  13s
+{"learner": "slda", "track": "pretrained", "final_acc": [0.8239999999999998, 0.007214953607304492], "forgetting": [0.06253333333333333, 0.00377565299723843], "acc_new_k1": [0.21013333333333334, 0.01355154767709006], "acc_new_k3": [0.6319333333333332, 0.012212015940594468], "acc_new_k5": [0.7641333333333333, 0.0038122609214655645]}
+===== --learner mlp_sgd --track pretrained --tune
+  tune mlp_sgd {'lr': 0.0001}: final 0.034
+  tune mlp_sgd {'lr': 0.0003}: final 0.047
+  tune mlp_sgd {'lr': 0.001}: final 0.052
+  tune mlp_sgd {'lr': 0.003}: final 0.043
+  tune mlp_sgd {'lr': 0.01}: final 0.021
+seed 0: final 0.012  forgetting +0.921  new@1/3/5 0.017/0.427/0.933  8s
+seed 1: final 0.006  forgetting +0.960  new@1/3/5 0.023/0.536/0.966  7s
+seed 2: final 0.010  forgetting +0.955  new@1/3/5 0.022/0.525/0.965  8s
+seed 3: final 0.006  forgetting +0.966  new@1/3/5 0.028/0.584/0.972  7s
+seed 4: final 0.005  forgetting +0.953  new@1/3/5 0.024/0.492/0.957  8s
+{"learner": "mlp_sgd", "track": "pretrained", "final_acc": [0.007666666666666666, 0.0030892086165461873], "forgetting": [0.9512, 0.01740944826491889], "acc_new_k1": [0.022733333333333335, 0.003913099242162451], "acc_new_k3": [0.5129555555555556, 0.058165876042594475], "acc_new_k5": [0.9588666666666666, 0.015160540073118936]}
+===== --learner mlp_sgd --track pretrained --iid 20
+seed 0: final 0.690  forgetting +0.000  new@1/3/5 nan/nan/nan  88s
+seed 1: final 0.678  forgetting +0.000  new@1/3/5 nan/nan/nan  85s
+seed 2: final 0.684  forgetting +0.000  new@1/3/5 nan/nan/nan  86s
+seed 3: final 0.671  forgetting +0.000  new@1/3/5 nan/nan/nan  88s
+seed 4: final 0.680  forgetting +0.000  new@1/3/5 nan/nan/nan  88s
+{"learner": "mlp_sgd", "track": "pretrained", "final_acc": [0.6807333333333334, 0.006998941718944754], "forgetting": [0.0, 0.0], "acc_new_k1": [NaN, NaN], "acc_new_k3": [NaN, NaN], "acc_new_k5": [NaN, NaN]}
+===== --learner mlp_sgd --track pretrained --protocol anml --tune
+  tune mlp_sgd {'lr': 0.0001}: final 0.044
+  tune mlp_sgd {'lr': 0.0003}: final 0.050
+  tune mlp_sgd {'lr': 0.001}: final 0.056
+  tune mlp_sgd {'lr': 0.003}: final 0.032
+  tune mlp_sgd {'lr': 0.01}: final 0.030
+seed 0: final 0.005  forgetting +0.995  new@1/3/5 0.011/0.544/0.979  18s
+seed 1: final 0.004  forgetting +0.996  new@1/3/5 0.019/0.587/0.979  18s
+seed 2: final 0.004  forgetting +0.996  new@1/3/5 0.016/0.613/0.974  17s
+seed 3: final 0.003  forgetting +0.997  new@1/3/5 0.022/0.666/0.990  18s
+seed 4: final 0.003  forgetting +0.996  new@1/3/5 0.017/0.598/0.976  15s
+{"learner": "mlp_sgd", "track": "pretrained", "final_acc": [0.0036, 0.0007226494462892935], "forgetting": [0.9963333333333333, 0.0007071067811865089], "acc_new_k1": [0.017, 0.0039086797998528575], "acc_new_k3": [0.6014666666666666, 0.04438380585553944], "acc_new_k5": [0.9796666666666667, 0.006159906204192092]}
+===== --learner mlp_sgd --hp {"steps_per_example": 11} --variant x11 --track pretrained --tune
+python.exe : Traceback (most recent call last):
+At C:\Users\main\Documents\metabrain-agi\eval\run_baselines.ps1:6 char:51
++ ... ($argv) { Write-Output "===== $argv"; & $py $bench @argv 2>&1 | Where ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 228, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 179, in main
+    fixed = json.loads(args.hp)
+  File "C:\Python314\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python314\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\json\decoder.py", line 361, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ~~~~~~~~~~~~~~^^^^^^^^
+json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+===== --learner mlp_sgd --hp {"steps_per_example": 11} --variant x11 --track pretrained --iid 20
+python.exe : Traceback (most recent call last):
+At C:\Users\main\Documents\metabrain-agi\eval\run_baselines.ps1:6 char:51
++ ... ($argv) { Write-Output "===== $argv"; & $py $bench @argv 2>&1 | Where ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 228, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 179, in main
+    fixed = json.loads(args.hp)
+  File "C:\Python314\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python314\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\json\decoder.py", line 361, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ~~~~~~~~~~~~~~^^^^^^^^
+json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+===== --learner mlp_sgd --hp {"steps_per_example": 11} --variant x11 --track pretrained --protocol anml --tune
+python.exe : Traceback (most recent call last):
+At C:\Users\main\Documents\metabrain-agi\eval\run_baselines.ps1:6 char:51
++ ... ($argv) { Write-Output "===== $argv"; & $py $bench @argv 2>&1 | Where ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 228, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\main\Documents\metabrain-agi\eval\run_bench.py", line 179, in main
+    fixed = json.loads(args.hp)
+  File "C:\Python314\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python314\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\json\decoder.py", line 361, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ~~~~~~~~~~~~~~^^^^^^^^
+json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+===== --learner mlp_ewc --track pretrained --tune
+  tune mlp_ewc {'lr': 0.0001, 'lam': 0.01}: final 0.034
+  tune mlp_ewc {'lr': 0.0001, 'lam': 0.1}: final 0.033
+  tune mlp_ewc {'lr': 0.0001, 'lam': 1.0}: final 0.033
+  tune mlp_ewc {'lr': 0.0001, 'lam': 10.0}: final 0.034
+  tune mlp_ewc {'lr': 0.0001, 'lam': 100.0}: final 0.034
+  tune mlp_ewc {'lr': 0.0001, 'lam': 1000.0}: final 0.028
+  tune mlp_ewc {'lr': 0.0003, 'lam': 0.01}: final 0.047
+  tune mlp_ewc {'lr': 0.0003, 'lam': 0.1}: final 0.048
+  tune mlp_ewc {'lr': 0.0003, 'lam': 1.0}: final 0.048
+  tune mlp_ewc {'lr': 0.0003, 'lam': 10.0}: final 0.051
+  tune mlp_ewc {'lr': 0.0003, 'lam': 100.0}: final 0.051
+  tune mlp_ewc {'lr': 0.0003, 'lam': 1000.0}: final 0.047
+  tune mlp_ewc {'lr': 0.001, 'lam': 0.01}: final 0.052
+  tune mlp_ewc {'lr': 0.001, 'lam': 0.1}: final 0.050
+  tune mlp_ewc {'lr': 0.001, 'lam': 1.0}: final 0.051
+  tune mlp_ewc {'lr': 0.001, 'lam': 10.0}: final 0.054
+  tune mlp_ewc {'lr': 0.001, 'lam': 100.0}: final 0.061
+  tune mlp_ewc {'lr': 0.001, 'lam': 1000.0}: final 0.010
+  tune mlp_ewc {'lr': 0.003, 'lam': 0.01}: final 0.031
+  tune mlp_ewc {'lr': 0.003, 'lam': 0.1}: final 0.045
+  tune mlp_ewc {'lr': 0.003, 'lam': 1.0}: final 0.043
+  tune mlp_ewc {'lr': 0.003, 'lam': 10.0}: final 0.039
+  tune mlp_ewc {'lr': 0.003, 'lam': 100.0}: final 0.010
+  tune mlp_ewc {'lr': 0.003, 'lam': 1000.0}: final 0.010
+seed 0: final 0.003  forgetting +0.986  new@1/3/5 0.029/0.762/0.988  12s
+seed 1: final 0.002  forgetting +0.662  new@1/3/5 0.040/0.531/0.664  15s
+seed 2: final 0.002  forgetting +0.751  new@1/3/5 0.022/0.557/0.753  17s
+seed 3: final 0.002  forgetting +0.622  new@1/3/5 0.031/0.529/0.624  17s
+seed 4: final 0.002  forgetting +0.047  new@1/3/5 0.020/0.041/0.048  17s
+{"learner": "mlp_ewc", "track": "pretrained", "final_acc": [0.0018666666666666669, 0.00044721359549995785], "forgetting": [0.6136222222222222, 0.3469155854913269], "acc_new_k1": [0.028355555555555557, 0.00773615848778631], "acc_new_k3": [0.48391111111111107, 0.2660088576451525], "acc_new_k5": [0.615488888888889, 0.3471838787717718]}
+===== --learner mlp_ewc --track pretrained --iid 20
+seed 0: final 0.690  forgetting +0.000  new@1/3/5 nan/nan/nan  90s
+seed 1: final 0.678  forgetting +0.000  new@1/3/5 nan/nan/nan  90s
+seed 2: final 0.684  forgetting +0.000  new@1/3/5 nan/nan/nan  90s
+seed 3: final 0.671  forgetting +0.000  new@1/3/5 nan/nan/nan  90s
+seed 4: final 0.680  forgetting +0.000  new@1/3/5 nan/nan/nan  93s
+{"learner": "mlp_ewc", "track": "pretrained", "final_acc": [0.6807333333333334, 0.006998941718944754], "forgetting": [0.0, 0.0], "acc_new_k1": [NaN, NaN], "acc_new_k3": [NaN, NaN], "acc_new_k5": [NaN, NaN]}
+===== --learner mlp_ewc --track pretrained --protocol anml --tune
+  tune mlp_ewc {'lr': 0.0001, 'lam': 0.01}: final 0.044
+  tune mlp_ewc {'lr': 0.0001, 'lam': 0.1}: final 0.044
+  tune mlp_ewc {'lr': 0.0001, 'lam': 1.0}: final 0.044
+  tune mlp_ewc {'lr': 0.0001, 'lam': 10.0}: final 0.044
+  tune mlp_ewc {'lr': 0.0001, 'lam': 100.0}: final 0.040
+  tune mlp_ewc {'lr': 0.0001, 'lam': 1000.0}: final 0.046
+  tune mlp_ewc {'lr': 0.0003, 'lam': 0.01}: final 0.048
+  tune mlp_ewc {'lr': 0.0003, 'lam': 0.1}: final 0.048
+  tune mlp_ewc {'lr': 0.0003, 'lam': 1.0}: final 0.050
+  tune mlp_ewc {'lr': 0.0003, 'lam': 10.0}: final 0.044
+  tune mlp_ewc {'lr': 0.0003, 'lam': 100.0}: final 0.048
+  tune mlp_ewc {'lr': 0.0003, 'lam': 1000.0}: final 0.010
+  tune mlp_ewc {'lr': 0.001, 'lam': 0.01}: final 0.056
+  tune mlp_ewc {'lr': 0.001, 'lam': 0.1}: final 0.052
+  tune mlp_ewc {'lr': 0.001, 'lam': 1.0}: final 0.058
+  tune mlp_ewc {'lr': 0.001, 'lam': 10.0}: final 0.042
+  tune mlp_ewc {'lr': 0.001, 'lam': 100.0}: final 0.066
+  tune mlp_ewc {'lr': 0.001, 'lam': 1000.0}: final 0.010
+  tune mlp_ewc {'lr': 0.003, 'lam': 0.01}: final 0.038
+  tune mlp_ewc {'lr': 0.003, 'lam': 0.1}: final 0.048
+  tune mlp_ewc {'lr': 0.003, 'lam': 1.0}: final 0.048
+  tune mlp_ewc {'lr': 0.003, 'lam': 10.0}: final 0.038
+  tune mlp_ewc {'lr': 0.003, 'lam': 100.0}: final 0.010
+  tune mlp_ewc {'lr': 0.003, 'lam': 1000.0}: final 0.010
+seed 0: final 0.002  forgetting +0.060  new@1/3/5 0.010/0.057/0.062  46s
+seed 1: final 0.002  forgetting +0.030  new@1/3/5 0.019/0.030/0.030  41s
+seed 2: final 0.002  forgetting +0.210  new@1/3/5 0.015/0.171/0.210  40s
+seed 3: final 0.002  forgetting +0.023  new@1/3/5 0.016/0.024/0.025  38s
+seed 4: final 0.002  forgetting +0.023  new@1/3/5 0.012/0.025/0.025  39s
+{"learner": "mlp_ewc", "track": "pretrained", "final_acc": [0.0016666666666666666, 2.42434975903054e-19], "forgetting": [0.06933333333333333, 0.08008328997570799], "acc_new_k1": [0.014266666666666667, 0.0033449796544805597], "acc_new_k3": [0.06126666666666667, 0.06259144421475582], "acc_new_k5": [0.07026666666666667, 0.0794132650548173]}
+===== --learner mlp_replay --track pretrained --tune
+  tune mlp_replay {'lr': 0.0001}: final 0.018
+  tune mlp_replay {'lr': 0.0003}: final 0.078
+  tune mlp_replay {'lr': 0.001}: final 0.365
+  tune mlp_replay {'lr': 0.003}: final 0.607
+  tune mlp_replay {'lr': 0.01}: final 0.635
+seed 0: final 0.333  forgetting +0.557  new@1/3/5 0.128/0.887/0.890  9s
+seed 1: final 0.280  forgetting +0.625  new@1/3/5 0.152/0.878/0.904  9s
+seed 2: final 0.253  forgetting +0.620  new@1/3/5 0.142/0.889/0.872  8s
+seed 3: final 0.349  forgetting +0.526  new@1/3/5 0.113/0.874/0.875  8s
+seed 4: final 0.354  forgetting +0.550  new@1/3/5 0.146/0.866/0.904  8s
+{"learner": "mlp_replay", "track": "pretrained", "final_acc": [0.3136444444444445, 0.0450714384938093], "forgetting": [0.5753999999999999, 0.04408455679881731], "acc_new_k1": [0.13620000000000002, 0.01569705484682389], "acc_new_k3": [0.8788888888888889, 0.009466966609750146], "acc_new_k5": [0.8890888888888888, 0.015311054668497888]}
+===== --learner mlp_replay --track pretrained --iid 20
+seed 0: final 0.689  forgetting +0.000  new@1/3/5 nan/nan/nan  97s
+seed 1: final 0.678  forgetting +0.000  new@1/3/5 nan/nan/nan  108s
+seed 2: final 0.682  forgetting +0.000  new@1/3/5 nan/nan/nan  106s
+seed 3: final 0.680  forgetting +0.000  new@1/3/5 nan/nan/nan  103s
+seed 4: final 0.683  forgetting +0.000  new@1/3/5 nan/nan/nan  98s
+{"learner": "mlp_replay", "track": "pretrained", "final_acc": [0.6825333333333333, 0.004017246769236164], "forgetting": [0.0, 0.0], "acc_new_k1": [NaN, NaN], "acc_new_k3": [NaN, NaN], "acc_new_k5": [NaN, NaN]}
+===== --learner mlp_replay --track pretrained --protocol anml --tune
+  tune mlp_replay {'lr': 0.0001}: final 0.078
+  tune mlp_replay {'lr': 0.0003}: final 0.306
+  tune mlp_replay {'lr': 0.001}: final 0.594
+  tune mlp_replay {'lr': 0.003}: final 0.692
+  tune mlp_replay {'lr': 0.01}: final 0.772
+seed 0: final 0.437  forgetting +0.501  new@1/3/5 0.113/0.907/0.927  15s
+seed 1: final 0.358  forgetting +0.600  new@1/3/5 0.116/0.890/0.906  16s
+seed 2: final 0.370  forgetting +0.580  new@1/3/5 0.123/0.889/0.907  15s
+seed 3: final 0.388  forgetting +0.562  new@1/3/5 0.101/0.892/0.907  15s
+seed 4: final 0.411  forgetting +0.541  new@1/3/5 0.129/0.897/0.907  15s
+{"learner": "mlp_replay", "track": "pretrained", "final_acc": [0.39266666666666666, 0.031660525720349136], "forgetting": [0.5569999999999999, 0.03808543028508409], "acc_new_k1": [0.11646666666666668, 0.010529324131522718], "acc_new_k3": [0.8950000000000001, 0.007137537701787893], "acc_new_k5": [0.9108666666666666, 0.009026504183668132]}

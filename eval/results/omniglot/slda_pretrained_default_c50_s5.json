@@ -1,0 +1,56 @@
+{
+ "benchmark": "omniglot_continual_fewshot",
+ "learner": "slda",
+ "track": "pretrained",
+ "classes": 50,
+ "shots": 5,
+ "seeds": 1,
+ "hp": {
+  "shrinkage": 0.5
+ },
+ "params": 78336,
+ "flops_per_example": 156672,
+ "encoder_budget": "3000x256 on background minus 100 tuning classes (v1)",
+ "tuning": "100 held-out background classes, seed 0",
+ "summary": {
+  "final_acc": [
+   0.9,
+   0.0
+  ],
+  "forgetting": [
+   0.034666666666666665,
+   0.0
+  ],
+  "acc_new_k1": [
+   0.5266666666666667,
+   0.0
+  ],
+  "acc_new_k3": [
+   0.8626666666666665,
+   0.0
+  ],
+  "acc_new_k5": [
+   0.9346666666666666,
+   0.0
+  ]
+ },
+ "runs": [
+  {
+   "acc_new": {
+    "k1": 0.5266666666666667,
+    "k3": 0.8626666666666665,
+    "k5": 0.9346666666666666
+   },
+   "curve": [
+    [
+     50,
+     0.9
+    ]
+   ],
+   "final_acc": 0.9,
+   "forgetting": 0.034666666666666665,
+   "wall_s": 0.3945128917694092,
+   "seed": 0
+  }
+ ]
+}

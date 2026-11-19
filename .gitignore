@@ -17,3 +17,8 @@ build2/
 output/brain_snapshot.json
 output/brain_graph.graphml
 visualizer/brain_preload.js
+
+# AGI eval
+.venv/
+eval/data/
+__pycache__/

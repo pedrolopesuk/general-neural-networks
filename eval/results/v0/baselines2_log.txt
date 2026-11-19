@@ -1,0 +1,37 @@
+﻿===== --learner slda --track scratch --tune
+  tune slda {'shrinkage': 0.0001}: final 0.100
+  tune slda {'shrinkage': 0.01}: final 0.197
+  tune slda {'shrinkage': 0.1}: final 0.290
+  tune slda {'shrinkage': 0.3}: final 0.342
+  tune slda {'shrinkage': 0.5}: final 0.361
+seed 0: final 0.162  forgetting +0.075  new@1/3/5 0.030/0.141/0.238  6s
+seed 1: final 0.160  forgetting +0.081  new@1/3/5 0.030/0.144/0.241  6s
+seed 2: final 0.166  forgetting +0.079  new@1/3/5 0.033/0.148/0.245  6s
+seed 3: final 0.152  forgetting +0.080  new@1/3/5 0.030/0.140/0.233  6s
+seed 4: final 0.161  forgetting +0.070  new@1/3/5 0.032/0.134/0.231  6s
+{"learner": "slda", "track": "scratch", "final_acc": [0.1604888888888889, 0.004980579568635182], "forgetting": [0.07711111111111112, 0.0045017143510850885], "acc_new_k1": [0.03104444444444444, 0.001357648657253862], "acc_new_k3": [0.14124444444444445, 0.005102891942108846], "acc_new_k5": [0.23760000000000003, 0.005633673011893591]}
+===== --learner slda --track scratch --protocol anml --tune
+  tune slda {'shrinkage': 0.0001}: final 0.256
+  tune slda {'shrinkage': 0.01}: final 0.390
+  tune slda {'shrinkage': 0.1}: final 0.450
+  tune slda {'shrinkage': 0.3}: final 0.490
+  tune slda {'shrinkage': 0.5}: final 0.484
+seed 0: final 0.244  forgetting +0.102  new@1/3/5 0.021/0.101/0.170  10s
+seed 1: final 0.247  forgetting +0.093  new@1/3/5 0.018/0.094/0.169  10s
+seed 2: final 0.241  forgetting +0.096  new@1/3/5 0.021/0.098/0.169  10s
+seed 3: final 0.240  forgetting +0.096  new@1/3/5 0.022/0.102/0.169  11s
+seed 4: final 0.240  forgetting +0.100  new@1/3/5 0.024/0.093/0.172  10s
+{"learner": "slda", "track": "scratch", "final_acc": [0.24220000000000003, 0.0029306806187111034], "forgetting": [0.0976, 0.003714835124201341], "acc_new_k1": [0.021333333333333336, 0.0023094010767585015], "acc_new_k3": [0.09773333333333331, 0.0040373258476372725], "acc_new_k5": [0.17, 0.0012247448713915807]}
+===== --learner mlp_replay --track scratch --tune
+  tune mlp_replay {'lr': 0.0001}: final 0.006
+  tune mlp_replay {'lr': 0.0003}: final 0.006
+  tune mlp_replay {'lr': 0.001}: final 0.005
+  tune mlp_replay {'lr': 0.003}: final 0.006
+  tune mlp_replay {'lr': 0.01}: final 0.010
+seed 0: final 0.005  forgetting +0.003  new@1/3/5 0.005/0.007/0.009  5s
+seed 1: final 0.006  forgetting +0.011  new@1/3/5 0.010/0.013/0.017  6s
+seed 2: final 0.007  forgetting +0.015  new@1/3/5 0.014/0.017/0.022  6s
+seed 3: final 0.005  forgetting +0.016  new@1/3/5 0.016/0.018/0.021  6s
+seed 4: final 0.007  forgetting +0.008  new@1/3/5 0.010/0.012/0.014  6s
+{"learner": "mlp_replay", "track": "scratch", "final_acc": [0.0060888888888888885, 0.0008656689413681091], "forgetting": [0.010644444444444446, 0.0052654241384740025], "acc_new_k1": [0.011177777777777778, 0.004200676018493415], "acc_new_k3": [0.013288888888888888, 0.004239438583842539], "acc_new_k5": [0.01673333333333333, 0.005568651231960021]}
+===== --learner mlp_replay --track scratch --iid 20
