@@ -60,6 +60,14 @@ Sustained thalamic median / max in Hz, 5 seeds each (42, 7, 1234, 99, 2026). Pas
 
 **Consequence:** short-term synaptic depression at the sensory driver input becomes a **Phase 2 requirement**, not a refinement. This matches thalamic biology, where retinogeniculate depression limits relay rates. Feedforward inhibition and synaptic scaling (slow, long-term only) stay as refinements.
 
+## Phase 2 acceptance for short-term depression: the input-output curve
+Once short-term depression lands, test the shape of the curve, not one number. Measure the sustained thalamic rate at 0.5×, 1×, 1.5×, 2× and 3× input:
+- The rate must rise monotonically with input.
+- It must be sublinear: 3× input gives less than 3× the rate.
+- It must saturate at roughly 150–200 Hz.
+
+When this passes, replace the fixed 100 Hz ceiling and remove `max_sensory_input`, the interim 0.9 input clamp in `SpikingConfig`.
+
 ## Known limits
 - 0.03 was tuned against the band; the sweep above shows how much room it has.
 - The spike stream is not yet sent to UE (Phase 1, step 3).

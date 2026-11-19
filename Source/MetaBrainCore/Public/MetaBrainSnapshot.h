@@ -22,6 +22,7 @@ struct METABRAINCORE_API FMetaBrainNeuronSnap
 	int32 OutgoingCount = 0;
 
 	bool bFiredThisTick = false;
+	int32 SpikesThisTick = 0; // real action potentials since the previous snapshot (spiking engine)
 	double LastFireWallSec = -100.0;
 
 	FString Label;

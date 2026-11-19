@@ -239,6 +239,8 @@ public:
     [[nodiscard]] bool IsSpikingMode() const noexcept { return spiking_mode_; }
     /// Neuron ids (graph ids) that emitted at least one spike during the last StepSpiking.
     [[nodiscard]] const std::vector<uint64_t>& GetLastSpikes() const noexcept { return last_spike_ids_; }
+    /// Spike count per id in GetLastSpikes() (same order).
+    [[nodiscard]] const std::vector<uint16_t>& GetLastSpikeCounts() const noexcept { return last_spike_counts_; }
     [[nodiscard]] const spiking::SpikingNetwork* GetSpikingNetwork() const noexcept { return snn_.get(); }
 
     /**
@@ -354,6 +356,7 @@ private:
     std::vector<float> snn_rate_hz_;
     std::vector<float> snn_excitability_;          // per-cell intrinsic offset -> lognormal-like rate spread              // exponential firing-rate estimate
     std::vector<uint64_t> last_spike_ids_;
+    std::vector<uint16_t> last_spike_counts_;
     size_t snn_sig_neurons_ = 0, snn_sig_synapses_ = 0;
     void RebuildSpikingNetwork();
     ParallelPool pool_;

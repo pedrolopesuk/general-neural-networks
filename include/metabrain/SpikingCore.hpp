@@ -68,6 +68,9 @@ struct SpikingConfig {
     float tc_ahp_increment = 0.03f;
     // Sensory current per unit of [0..1] input on thalamic relay cells (engine bridge)
     float sensory_gain = 12.0f;
+    // Sensory input is clamped to the validated range until short-term depression
+    // (Phase 2) gives the relay a saturating response. See docs/PHASE1_NOTES.md.
+    float max_sensory_input = 0.9f;
 };
 
 // Slow afterhyperpolarisation (Ca2+-activated K+, sAHP): conductance added per spike.

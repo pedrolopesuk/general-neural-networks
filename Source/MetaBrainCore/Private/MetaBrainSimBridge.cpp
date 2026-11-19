@@ -83,6 +83,8 @@ void FMetaBrainSimBridge::InitializeDefaultBrain()
 	{
 		Engine->StepNeurogenesis(true);
 	}
+	// Pretraining above used the rate engine; live dynamics run on the spiking substrate
+	Engine->SetSpikingMode(true);
 	Engine->SetSustainedSensoryPulses(PulseAlpha, 8);
 	FiringTrackers.Reset();
 	++TopologyRevision;
@@ -302,7 +304,9 @@ uint32 FMetaBrainSimBridge::Run()
 			{
 				if (R->GetExternalInput() > 0.001f) { bHasExt = true; break; }
 			}
-			if (!bHasExt && !Engine->GetRootNeurons().empty())
+			// Spiking engine has a real resting state (~1 Hz cortex); the scripted ambient
+			// rhythm is only for the legacy rate engine.
+			if (!bHasExt && !Engine->IsSpikingMode() && !Engine->GetRootNeurons().empty())
 			{
 				const size_t NumR = Engine->GetRootNeurons().size();
 				std::vector<float> Thalamic(NumR, 0.0f);
@@ -316,7 +320,18 @@ uint32 FMetaBrainSimBridge::Run()
 				Engine->InjectSensoryPulses(Thalamic);
 			}
 
-			if (PreCount >= 500)
+			if (Engine->IsSpikingMode())
+			{
+				// Real time: each tick advances exactly one wall-clock period of biology
+				Engine->StepSpiking(1000.0f / static_cast<float>(FMath::Clamp(TargetHz.Load(), 1, 240)));
+				if (bAutoGrow.Load() && Engine->GetTick() % 10 == 9) Engine->StepNeurogenesis(false);
+				if (Engine->ComputeMetrics().total_neurons != PreCount)
+				{
+					++TopologyRevision;
+					bTopoChanged = true;
+				}
+			}
+			else if (PreCount >= 500)
 			{
 				Engine->StepFastParallel(true);
 				// Sync activations cleanly every tick for snapshot publishing
@@ -416,6 +431,14 @@ void FMetaBrainSimBridge::PublishSnapshot(double WallSec)
 		}
 	}
 
+	TMap<uint64, int32> SpikeCountById;
+	{
+		const auto& Ids = Engine->GetLastSpikes();
+		const auto& Cnts = Engine->GetLastSpikeCounts();
+		SpikeCountById.Reserve(static_cast<int32>(Ids.size()));
+		for (size_t k = 0; k < Ids.size(); ++k) SpikeCountById.Add(Ids[k], static_cast<int32>(Cnts[k]));
+	}
+
 	TSharedRef<FMetaBrainSnapshot, ESPMode::ThreadSafe> Snap = MakeShared<FMetaBrainSnapshot, ESPMode::ThreadSafe>();
 	Snap->Tick = Metrics.tick;
 	Snap->TopologyRevision = TopologyRevision;
@@ -475,7 +498,17 @@ void FMetaBrainSimBridge::PublishSnapshot(double WallSec)
 		FFiringTracker& FT = FiringTrackers.FindOrAdd(NId);
 		const float Delta = NS.Activation - FT.PrevAct;
 		const double SinceFire = WallSec - FT.LastFireSec;
-		if ((Delta > 0.048f && NS.Activation > 0.30f) ||
+		if (Engine->IsSpikingMode())
+		{
+			// Real action potentials from the spiking substrate
+			if (const int32* Cnt = SpikeCountById.Find(NId))
+			{
+				NS.SpikesThisTick = *Cnt;
+				FT.LastFireSec = WallSec;
+				NS.bFiredThisTick = true;
+			}
+		}
+		else if ((Delta > 0.048f && NS.Activation > 0.30f) ||
 			(NS.Activation > FT.EmaAct + 0.075f && SinceFire > 0.38))
 		{
 			FT.LastFireSec = WallSec;

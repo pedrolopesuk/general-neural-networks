@@ -1165,7 +1165,7 @@ void BrainEngine::StepSpiking(float bio_ms) {
     const float mod_bias = 1.5f * endocrine_.fear - 2.0f * endocrine_.fatigue;
     const float noise_sd = 2.0f + 2.0f * endocrine_.curiosity;  // synaptic bombardment
     std::normal_distribution<float> noise(0.0f, 1.0f);
-    std::vector<uint8_t> spiked(N, 0);
+    std::vector<uint16_t> spiked(N, 0);
 
     const int total_ms = std::max(1, static_cast<int>(bio_ms));
     for (int ms = 0; ms < total_ms; ++ms) {
@@ -1174,7 +1174,7 @@ void BrainEngine::StepSpiking(float bio_ms) {
             float I = snn_excitability_[i] + mod_bias + noise_sd * noise(rng_);
             // Thalamic relay cells are quiet at rest and driven by their sensory input;
             // cortical cells carry their learned bias as tonic depolarisation.
-            if (n->GetRole() == NeuronRole::RootSensory) I += snn_->Config().sensory_gain * n->GetExternalInput() - 1.0f;
+            if (n->GetRole() == NeuronRole::RootSensory) I += snn_->Config().sensory_gain * std::min(n->GetExternalInput(), snn_->Config().max_sensory_input) - 1.0f;
             else I += 2.0f * n->GetBias();
             snn_->SetInputCurrent(static_cast<uint32_t>(i), I);
         }
@@ -1182,7 +1182,7 @@ void BrainEngine::StepSpiking(float bio_ms) {
             for (size_t i = 0; i < N; ++i) snn_rate_hz_[i] *= rate_decay;
             for (uint32_t f : snn_->Step()) {
                 snn_rate_hz_[f] += rate_kick;
-                spiked[f] = 1;
+                if (spiked[f] < 65535) ++spiked[f];
             }
         }
     }
@@ -1190,6 +1190,7 @@ void BrainEngine::StepSpiking(float bio_ms) {
     // Write back: firing rate -> activation, learned conductance -> graph weight
     float total_act = 0.0f, max_act = 0.0f;
     last_spike_ids_.clear();
+    last_spike_counts_.clear();
     for (size_t i = 0; i < N; ++i) {
         const float a = 1.0f - std::exp(-snn_rate_hz_[i] / 25.0f);
         Neuron* n = snn_neurons_[i];
@@ -1199,7 +1200,7 @@ void BrainEngine::StepSpiking(float bio_ms) {
         n->SetAgeTicks(n->GetAgeTicks() + 1);
         total_act += a;
         max_act = std::max(max_act, a);
-        if (spiked[i]) last_spike_ids_.push_back(n->GetId());
+        if (spiked[i]) { last_spike_ids_.push_back(n->GetId()); last_spike_counts_.push_back(spiked[i]); }
     }
     for (auto& L : snn_links_) {
         const auto& s = snn_->GetSynapse(L.pre, L.k);

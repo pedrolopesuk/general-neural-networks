@@ -1851,7 +1851,9 @@ void AMetaBrainSceneController::SyncEdgesAndPulses(float DeltaSeconds, double No
 				P.ActiveEdgeInstIdx = InstIdx;
 				P.LengthCm = Len * 1.12f;
 				P.SpeedCmPerSec = 220.0f + 210.0f * E.AbsWeight;
-				P.Amp = FMath::Clamp((0.35f + 0.65f * Neurons[E.SourceIndex].Activation) * (0.3f + 0.7f * FMath::Clamp(E.AbsWeight / 1.4f, 0.0f, 1.0f)), 0.15f, 1.0f);
+				// Real spikes: a burst (several APs this tick) reads brighter than a single spike
+				const float Drive = Src.SpikesThisTick > 0 ? FMath::Clamp(0.25f * static_cast<float>(Src.SpikesThisTick), 0.25f, 1.0f) : Neurons[E.SourceIndex].Activation;
+				P.Amp = FMath::Clamp((0.35f + 0.65f * Drive) * (0.3f + 0.7f * FMath::Clamp(E.AbsWeight / 1.4f, 0.0f, 1.0f)), 0.15f, 1.0f);
 				P.Progress = 0.0f;
 				P.bTriggeredBouton = false;
 				TravelingPulses.Add(P);

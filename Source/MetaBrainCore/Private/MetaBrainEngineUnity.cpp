@@ -10,6 +10,7 @@
 
 #include "../../../src/Neuron.cpp"
 #include "../../../src/SensoryPipeline.cpp"
+#include "../../../src/SpikingCore.cpp"
 #include "../../../src/BrainEngine.cpp"
 #include "../../../src/Layout3D.cpp"
 #include "../../../src/Serializer.cpp"

@@ -14,3 +14,6 @@ Content/**/*.uasset
 Content/**/*.umap
 Scripts/build_assets/fonts/*.ttf
 build2/
+output/brain_snapshot.json
+output/brain_graph.graphml
+visualizer/brain_preload.js
