@@ -252,6 +252,14 @@ public:
     /// Spike count per id in GetLastSpikes() (same order).
     [[nodiscard]] const std::vector<uint16_t>& GetLastSpikeCounts() const noexcept { return last_spike_counts_; }
     [[nodiscard]] const spiking::SpikingNetwork* GetSpikingNetwork() const noexcept { return snn_.get(); }
+    /// Spike counts for every substrate cell (graph cells first, then hidden interneurons).
+    [[nodiscard]] const std::vector<uint16_t>& GetLastSpikeCountsAll() const noexcept { return last_spike_counts_all_; }
+    [[nodiscard]] bool IsSubstrateInhibitory(size_t snn_index) const { return snn_inhib_[snn_index] != 0; }
+    struct SpikingAudit {
+        size_t cells = 0, inhibitory = 0, negative_routed = 0, sign_violations = 0;
+        std::vector<std::pair<size_t, size_t>> columns;  // (excitatory, inhibitory) per column
+    };
+    [[nodiscard]] const SpikingAudit& GetSpikingAudit() const noexcept { return snn_audit_; }
 
     /**
      * Clears short-term membrane potentials, activations, and eligibility traces
@@ -369,6 +377,8 @@ private:
     std::vector<float> snn_excitability_;          // per-cell intrinsic offset -> lognormal-like rate spread              // exponential firing-rate estimate
     std::vector<uint64_t> last_spike_ids_;
     std::vector<uint16_t> last_spike_counts_;
+    std::vector<uint16_t> last_spike_counts_all_;
+    SpikingAudit snn_audit_;
     size_t snn_sig_neurons_ = 0, snn_sig_synapses_ = 0;
     void RebuildSpikingNetwork();
     ParallelPool pool_;

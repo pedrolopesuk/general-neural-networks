@@ -1057,6 +1057,16 @@ constexpr float kSnnConductanceScale = 0.03f;  // graph weight -> conductance: |
 void BrainEngine::RebuildSpikingNetwork() {
     // Learned weights live in the graph (written back every tick), so a rebuild only
     // loses transient membrane state, never memory.
+    //
+    // E/I architecture (cortex-faithful):
+    //  * Every graph neuron is EXCITATORY. Long-range projections in cortex are glutamatergic.
+    //  * Inhibition is LOCAL: each column (top-level holon + descendants), the thalamus
+    //    (reticular nucleus, TRN) and the readout layer get a hidden fast-spiking
+    //    interneuron pool sized so ~20% of the column's cells are inhibitory.
+    //  * Local loop (non-plastic): E -> I (feedback), I -> E broadly (I/E strength ratio
+    //    per Brunel 2000), sensory -> column interneurons (feedforward inhibition).
+    //  * A negative graph weight pre->post becomes disynaptic inhibition:
+    //    pre excites an interneuron of post's column (plastic, linked to the graph synapse).
     auto all = FlattenAllNeurons();
     spiking::SpikingConfig cfg = snn_base_cfg_;
     // Conductance ceiling: legacy = clip in global units; normalised = ~5 mV unitary EPSP
@@ -1066,40 +1076,56 @@ void BrainEngine::RebuildSpikingNetwork() {
     snn_inhib_.clear();
     snn_links_.clear();
     last_spike_ids_.clear();
+    snn_audit_ = {};
 
     std::unordered_map<const Neuron*, uint32_t> index;
     index.reserve(all.size());
     for (const auto& n : all) index[n.get()] = static_cast<uint32_t>(index.size());
 
-    // Dale's law: each cell is excitatory OR inhibitory, decided by the net sign of
-    // its outgoing weights (graph synapses are stored on the postsynaptic side).
-    std::vector<float> out_sum(all.size(), 0.0f);
-    size_t syn_total = 0;
-    for (const auto& post : all) {
-        for (const auto& s : post->GetSynapses()) {
-            if (auto pre = s.source.lock()) {
-                auto it = index.find(pre.get());
-                if (it != index.end()) out_sum[it->second] += s.weight;
-            }
-            ++syn_total;
-        }
-    }
-
-    for (size_t i = 0; i < all.size(); ++i) {
-        Neuron* n = all[i].get();
-        const bool inhib = out_sum[i] < 0.0f && n->GetRole() != NeuronRole::RootSensory;
+    // 1. Graph cells: all excitatory, type by role
+    for (const auto& sp : all) {
+        Neuron* n = sp.get();
         spiking::CellType type = spiking::CellType::RegularSpiking;
         switch (n->GetRole()) {
             case NeuronRole::RootSensory:       type = spiking::CellType::ThalamoCortical; break;
             case NeuronRole::CorticalComposite: type = spiking::CellType::IntrinsicBursting; break;  // L5 pyramidal
-            case NeuronRole::MicroInterneuron:  type = spiking::CellType::Chattering; break;        // L2/3
+            case NeuronRole::MicroInterneuron:  type = spiking::CellType::Chattering; break;        // L2/3 pyramidal
             case NeuronRole::TerminalReadout:   type = spiking::CellType::RegularSpiking; break;
         }
-        if (inhib) type = spiking::CellType::FastSpiking;
         snn_->AddNeuron(type);
         snn_neurons_.push_back(n);
-        snn_inhib_.push_back(inhib ? 1 : 0);
+        snn_inhib_.push_back(0);
     }
+
+    // 2. Columns: thalamus (all roots), readout (all terminals), one per top-level cortical holon
+    auto column_of = [&](const Neuron* n) -> const Neuron* {
+        if (n->GetRole() == NeuronRole::RootSensory) return nullptr;                       // key: thalamus
+        if (n->GetRole() == NeuronRole::TerminalReadout) return reinterpret_cast<const Neuron*>(1);  // key: readout
+        const Neuron* top = n;
+        for (auto p = n->GetParent(); p; p = p->GetParent()) top = p.get();
+        return top;
+    };
+    std::unordered_map<const Neuron*, std::vector<uint32_t>> col_exc, col_inh;
+    std::vector<const Neuron*> col_order;
+    for (size_t i = 0; i < all.size(); ++i) {
+        const Neuron* key = column_of(all[i].get());
+        if (!col_exc.count(key)) col_order.push_back(key);
+        col_exc[key].push_back(static_cast<uint32_t>(i));
+    }
+    const float f = std::clamp(cfg.inhibitory_fraction, 0.0f, 0.9f);
+    for (const Neuron* key : col_order) {
+        const size_t ne = col_exc[key].size();
+        const size_t ni = std::max<size_t>(1, static_cast<size_t>(std::lround(ne * f / (1.0f - f))));
+        for (size_t k = 0; k < ni; ++k) {
+            // TRN cells are low-threshold bursters; cortical/readout pools are PV basket cells
+            const auto t = key == nullptr ? spiking::CellType::LowThresholdSpiking : spiking::CellType::FastSpiking;
+            col_inh[key].push_back(snn_->AddNeuron(t));
+            snn_inhib_.push_back(1);
+        }
+        snn_audit_.columns.push_back({ne, ni});
+    }
+    std::vector<const Neuron*> col_key_of(all.size());
+    for (size_t i = 0; i < all.size(); ++i) col_key_of[i] = column_of(all[i].get());
 
     auto delay_ms = [](const Neuron* a, const Neuron* b) {
         // Myelinated conduction: delay grows with physical distance (1..20 ms)
@@ -1107,6 +1133,19 @@ void BrainEngine::RebuildSpikingNetwork() {
         return std::clamp(1.0f + d * 0.02f, 1.0f, 20.0f);
     };
 
+    // 3. Local E/I loop per column (non-plastic)
+    const float gE = cfg.local_exc_conductance;
+    const float gI = gE * cfg.inh_exc_ratio;
+    for (const Neuron* key : col_order) {
+        const auto& E = col_exc[key];
+        const auto& I = col_inh[key];
+        for (uint32_t e : E) for (uint32_t i : I) snn_->Connect(e, i, gE * cfg.exc_to_inh_gain, 1.0f, false);  // feedback
+        for (uint32_t i : I) for (uint32_t e : E) snn_->Connect(i, e, gI, 1.0f, false);                        // broad inhibition
+    }
+
+    // 4. Graph synapses
+    size_t syn_total = 0;
+    std::unordered_map<const Neuron*, std::vector<uint8_t>> ff_done;  // feedforward root->column pool, once per pair
     for (size_t post = 0; post < all.size(); ++post) {
         float scale = kSnnConductanceScale;
         if (cfg.input_conductance_target > 0.0f) {
@@ -1114,15 +1153,34 @@ void BrainEngine::RebuildSpikingNetwork() {
             for (const auto& s : all[post]->GetSynapses()) sum_abs += std::fabs(s.weight);
             scale = cfg.input_conductance_target / std::max(sum_abs, 1.0f);
         }
+        const auto& pool = col_inh[col_key_of[post]];
         for (auto& s : all[post]->GetSynapsesMutable()) {
+            ++syn_total;
             auto pre = s.source.lock();
             if (!pre) continue;
             auto it = index.find(pre.get());
             if (it == index.end()) continue;
             const uint32_t p = it->second;
-            snn_->Connect(p, static_cast<uint32_t>(post), std::fabs(s.weight) * scale,
-                          delay_ms(pre.get(), all[post].get()), true);
+            const float g = std::fabs(s.weight) * scale;
+            const float d = delay_ms(pre.get(), all[post].get());
+            uint32_t target = static_cast<uint32_t>(post);
+            if (s.weight < 0.0f) {
+                // Disynaptic inhibition via an interneuron of the target's column
+                target = pool[post % pool.size()];
+                ++snn_audit_.negative_routed;
+            }
+            snn_->Connect(p, target, g, d, true);
             snn_links_.push_back({&s, p, static_cast<uint32_t>(snn_->OutDegree(p) - 1), s.weight, scale});
+
+            // Feedforward inhibition: sensory input also recruits the column's interneurons
+            if (pre->GetRole() == NeuronRole::RootSensory && all[post]->GetRole() != NeuronRole::RootSensory) {
+                auto& done = ff_done[col_key_of[post]];
+                done.resize(all.size(), 0);
+                if (!done[p]) {
+                    done[p] = 1;
+                    for (uint32_t i : pool) snn_->Connect(p, i, gE * cfg.feedforward_inh_gain, d, false);
+                }
+            }
         }
         // Composite holon wiring: parent drives its micro-circuit, children pool back
         for (const auto& ch : all[post]->GetChildren()) {
@@ -1130,17 +1188,28 @@ void BrainEngine::RebuildSpikingNetwork() {
             if (it == index.end()) continue;
             const uint32_t c = it->second, par = static_cast<uint32_t>(post);
             const float g = config_.composite_child_mix * kSnnConductanceScale * 2.0f;
-            if (!snn_inhib_[par]) snn_->Connect(par, c, g, 1.0f, false);
-            if (!snn_inhib_[c]) snn_->Connect(c, par, g, 1.0f, false);
+            snn_->Connect(par, c, g, 1.0f, false);
+            snn_->Connect(c, par, g, 1.0f, false);
         }
     }
 
-    snn_rate_hz_.assign(all.size(), 0.0f);
-    // Cell-to-cell heterogeneity (stable per neuron id): real neurons differ in
-    // input resistance/rheobase, which turns uniform drive into a skewed rate distribution.
-    snn_excitability_.resize(all.size());
-    for (size_t i = 0; i < all.size(); ++i) {
-        std::mt19937 g(static_cast<uint32_t>(all[i]->GetId() * 2654435761u + 17u));
+    // 5. Audit: every graph-negative synapse must be delivered through an inhibitory cell
+    for (const auto& L : snn_links_) {
+        const auto& syn = snn_->GetSynapse(L.pre, L.k);
+        const bool effective_inhibitory = snn_inhib_[syn.post] != 0;  // excites an interneuron
+        if ((L.graph->weight < 0.0f) != effective_inhibitory) ++snn_audit_.sign_violations;
+    }
+    snn_audit_.cells = snn_->Size();
+    for (uint8_t b : snn_inhib_) snn_audit_.inhibitory += b;
+
+    const size_t NT = snn_->Size();
+    snn_rate_hz_.assign(NT, 0.0f);
+    // Cell-to-cell heterogeneity (stable per cell): real neurons differ in input
+    // resistance/rheobase, which turns uniform drive into a skewed rate distribution.
+    snn_excitability_.resize(NT);
+    for (size_t i = 0; i < NT; ++i) {
+        const uint32_t key = i < all.size() ? static_cast<uint32_t>(all[i]->GetId()) : static_cast<uint32_t>(0x9E3779B9u + i);
+        std::mt19937 g(key * 2654435761u + 17u);
         snn_excitability_[i] = std::normal_distribution<float>(0.0f, 1.2f)(g);
     }
     snn_sig_neurons_ = all.size();
@@ -1172,7 +1241,8 @@ void BrainEngine::StepSpiking(float bio_ms) {
     // Phasic dopamine (above tonic baseline) gates the three-factor rule
     snn_->SetDopamine(2.0f * (endocrine_.dopamine - endocrine_.tonic_dopamine));
 
-    const size_t N = snn_neurons_.size();
+    const size_t N = snn_neurons_.size();   // graph cells
+    const size_t NT = snn_->Size();          // + hidden interneurons
     const float dt = snn_->Config().dt_ms;
     const int sub = static_cast<int>(std::round(1.0f / dt));
     const float rate_decay = std::exp(-dt / 100.0f);  // 100 ms rate window
@@ -1181,10 +1251,12 @@ void BrainEngine::StepSpiking(float bio_ms) {
     const float mod_bias = 1.5f * endocrine_.fear - 2.0f * endocrine_.fatigue;
     const float noise_sd = 2.0f + 2.0f * endocrine_.curiosity;  // synaptic bombardment
     std::normal_distribution<float> noise(0.0f, 1.0f);
-    std::vector<uint16_t> spiked(N, 0);
+    std::vector<uint16_t> spiked(NT, 0);
 
     const int total_ms = std::max(1, static_cast<int>(bio_ms));
     for (int ms = 0; ms < total_ms; ++ms) {
+        for (size_t i = N; i < NT; ++i)
+            snn_->SetInputCurrent(static_cast<uint32_t>(i), snn_excitability_[i] + mod_bias + noise_sd * noise(rng_));
         for (size_t i = 0; i < N; ++i) {
             const Neuron* n = snn_neurons_[i];
             float I = snn_excitability_[i] + mod_bias + noise_sd * noise(rng_);
@@ -1195,7 +1267,7 @@ void BrainEngine::StepSpiking(float bio_ms) {
             snn_->SetInputCurrent(static_cast<uint32_t>(i), I);
         }
         for (int s = 0; s < sub; ++s) {
-            for (size_t i = 0; i < N; ++i) snn_rate_hz_[i] *= rate_decay;
+            for (size_t i = 0; i < NT; ++i) snn_rate_hz_[i] *= rate_decay;
             for (uint32_t f : snn_->Step()) {
                 snn_rate_hz_[f] += rate_kick;
                 if (spiked[f] < 65535) ++spiked[f];
@@ -1207,6 +1279,7 @@ void BrainEngine::StepSpiking(float bio_ms) {
     float total_act = 0.0f, max_act = 0.0f;
     last_spike_ids_.clear();
     last_spike_counts_.clear();
+    last_spike_counts_all_ = spiked;
     for (size_t i = 0; i < N; ++i) {
         const float a = 1.0f - std::exp(-snn_rate_hz_[i] / 25.0f);
         Neuron* n = snn_neurons_[i];

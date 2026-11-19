@@ -224,7 +224,7 @@ bool TestEngineSpikingIntegration() {
     brain.StepNeurogenesis(true);
     brain.StepSpiking(10.0f);
     REQUIRE(brain.FlattenAllNeurons().size() > before, "neurogenesis must add a neuron");
-    REQUIRE(brain.GetSpikingNetwork()->Size() == brain.FlattenAllNeurons().size(), "substrate must recompile after growth");
+    REQUIRE(brain.GetSpikingNetwork()->Size() - brain.GetSpikingAudit().inhibitory == brain.FlattenAllNeurons().size(), "substrate must recompile after growth");
     return true;
 }
 
@@ -377,6 +377,142 @@ bool TestDopamineDecayTickInvariant() {
     return true;
 }
 
+
+// ---- E/I balance ----
+// Mirrors FMetaBrainSimBridge::InitializeDefaultBrain (the brain UE actually loads)
+void BuildUeBrain(metabrain::BrainEngine& e) {
+    using metabrain::BrainEngine;
+    e.BuildCorticalArchitecture(8, 20, 4, 3, 777);
+    e.GetConfig().learning_rate = 0.0018f;
+    e.GetConfig().backprop_learning_rate = 0.11f;
+    const auto A = BrainEngine::EncodeTextToPulses("HARMONY_REWARD_EXPLORE_SIGNAL", 8);
+    const auto B = BrainEngine::EncodeTextToPulses("HAZARD_PREDATOR_FREEZE_ALARM", 8);
+    const std::vector<float> TA = {0.20f, 0.02f, 0.98f, 0.02f}, TB = {0.02f, 0.98f, 0.02f, 0.20f};
+    for (int ep = 0; ep < 65; ++ep) {
+        e.ResetTransientActivity();
+        for (int s = 0; s < 3; ++s) { e.InjectSensoryPulses(A); e.StepRecursiveOOP(true, false); }
+        e.ApplyRewardPunish(1.2f, TA);
+        e.ResetTransientActivity();
+        for (int s = 0; s < 3; ++s) { e.InjectSensoryPulses(B); e.StepRecursiveOOP(true, false); }
+        e.ApplyRewardPunish(1.2f, TB);
+    }
+    for (int k = 0; k < 4; ++k) e.StepNeurogenesis(true);
+}
+
+bool CheckDale(metabrain::BrainEngine& brain, const char* name) {
+    brain.SetSpikingMode(true);
+    brain.StepSpiking(1.0f);
+    const auto& a = brain.GetSpikingAudit();
+    std::printf("    %s: %zu cells, %zu inhibitory (%.0f%%), %zu negative synapses routed via interneurons, %zu sign violations\n",
+                name, a.cells, a.inhibitory, 100.0 * a.inhibitory / a.cells, a.negative_routed, a.sign_violations);
+    REQUIRE(a.sign_violations == 0, name << ": graph-negative synapse delivered as excitation");
+    size_t c = 0;
+    for (const auto& [ne, ni] : a.columns) {
+        const double frac = static_cast<double>(ni) / (ne + ni);
+        // Tiny columns can't hit 20% exactly with whole cells: allow 1 cell of slack
+        const double lo = std::min(0.15, 1.0 / (ne + ni)), hi = std::max(0.25, 1.0 / (ne + 1));
+        REQUIRE(frac >= lo - 1e-9 && frac <= hi + 1e-9, name << ": column " << c << " inhibitory share " << frac << " (" << ni << "/" << ne + ni << ")");
+        ++c;
+    }
+    return true;
+}
+
+bool TestDaleAndEIFraction() {
+    metabrain::BrainEngine t;
+    t.BuildCorticalArchitecture(8, 18, 4, 3, 42);
+    metabrain::BrainEngine ue;
+    BuildUeBrain(ue);
+    return CheckDale(t, "test network") && CheckDale(ue, "UE brain");
+}
+
+// Records per-cell spike times (all substrate cells) over `ms` at a given sensory drive
+std::vector<std::vector<int>> RecordSpikes(metabrain::BrainEngine& brain, int ms, float drive) {
+    std::vector<std::vector<int>> st;
+    for (int t = 0; t < ms; ++t) {
+        if (drive > 0) brain.InjectSensoryPulses(std::vector<float>(8, drive));
+        brain.StepSpiking(1.0f);
+        const auto& c = brain.GetLastSpikeCountsAll();
+        if (st.size() < c.size()) st.resize(c.size());
+        for (size_t i = 0; i < c.size(); ++i) if (c[i]) st[i].push_back(t);
+    }
+    return st;
+}
+
+bool TestAsynchronousIrregular() {
+    metabrain::BrainEngine brain;
+    brain.BuildCorticalArchitecture(8, 18, 4, 3, 42);
+    brain.SetSpikingMode(true);
+    for (int i = 0; i < 500; ++i) brain.StepSpiking(1.0f);
+    const int ms = 20000;
+    const auto st = RecordSpikes(brain, ms, 0.0f);
+
+    // Irregularity: CV of inter-spike intervals for cells with >= 10 spikes
+    std::vector<double> cvs;
+    for (const auto& s : st) {
+        if (s.size() < 10) continue;
+        double m = 0, v = 0;
+        for (size_t k = 1; k < s.size(); ++k) m += s[k] - s[k - 1];
+        m /= (s.size() - 1);
+        for (size_t k = 1; k < s.size(); ++k) v += (s[k] - s[k - 1] - m) * (s[k] - s[k - 1] - m);
+        v /= (s.size() - 1);
+        cvs.push_back(std::sqrt(v) / m);
+    }
+    std::sort(cvs.begin(), cvs.end());
+    const double cv_med = cvs.empty() ? 0 : cvs[cvs.size() / 2];
+
+    // Synchrony: chi = sqrt(Var(population mean) / mean(Var single cell)), 10 ms bins
+    const int bins = ms / 10;
+    std::vector<double> pop(bins, 0.0);
+    double mean_var = 0;
+    int ncell = 0;
+    for (const auto& s : st) {
+        if (s.empty()) continue;
+        std::vector<double> x(bins, 0.0);
+        for (int t : s) x[t / 10] += 1.0;
+        double m = 0, v = 0;
+        for (double b : x) m += b;
+        m /= bins;
+        for (int b = 0; b < bins; ++b) { v += (x[b] - m) * (x[b] - m); pop[b] += x[b]; }
+        mean_var += v / bins;
+        ++ncell;
+    }
+    double pm = 0, pv = 0;
+    for (double& b : pop) { b /= ncell; pm += b; }
+    pm /= bins;
+    for (double b : pop) pv += (b - pm) * (b - pm);
+    pv /= bins;
+    const double chi = std::sqrt(pv / (mean_var / ncell));
+    std::printf("    rest: ISI CV median %.2f (%zu cells), synchrony chi %.3f (independent ~ %.3f)\n",
+                cv_med, cvs.size(), chi, 1.0 / std::sqrt(static_cast<double>(ncell)));
+    REQUIRE(cv_med >= 0.8 && cv_med <= 1.2, "firing must be irregular (CV ~1), median CV " << cv_med);
+    REQUIRE(chi < 0.35, "population must be asynchronous, chi " << chi);
+    return true;
+}
+
+bool TestDriveIsSmooth() {
+    double prev = -1;
+    for (float drive : {0.3f, 0.6f, 0.9f}) {
+        metabrain::BrainEngine brain;
+        brain.BuildCorticalArchitecture(8, 18, 4, 3, 42);
+        brain.SetSpikingMode(true);
+        for (int i = 0; i < 500; ++i) brain.StepSpiking(1.0f);
+        const auto st = RecordSpikes(brain, 2000, drive);
+        double ctx = 0, mx = 0;
+        int n = 0;
+        for (size_t i = 0; i < brain.FlattenAllNeurons().size(); ++i) {
+            const double hz = st.size() > i ? st[i].size() / 2.0 : 0.0;
+            mx = std::max(mx, hz);
+            if (brain.FlattenAllNeurons()[i]->GetRole() != metabrain::NeuronRole::RootSensory) { ctx += hz; ++n; }
+        }
+        ctx /= n;
+        std::printf("    drive %.1f: cortex mean %.2f Hz, fastest cell %.0f Hz\n", drive, ctx, mx);
+        REQUIRE(ctx > prev, "cortical response must rise with drive");
+        REQUIRE(mx < 150.0, "runaway at drive " << drive << ": " << mx << " Hz");
+        prev = ctx;
+    }
+    return true;
+}
+
 }  // namespace
 
 int main() {
@@ -396,6 +532,9 @@ int main() {
         {"fear/fatigue shift excitability", TestFearAndFatigueShiftExcitability},
         {"curiosity raises fluctuations", TestCuriosityRaisesFluctuations},
         {"dopamine decay tick-invariant", TestDopamineDecayTickInvariant},
+        {"Dale + 20% E/I per column", TestDaleAndEIFraction},
+        {"asynchronous irregular rest", TestAsynchronousIrregular},
+        {"smooth drive response", TestDriveIsSmooth},
     };
     // Known failures: reported, not counted. Each carries its reason.
     const struct { const char* name; bool (*fn)(); const char* why; } xfail[] = {

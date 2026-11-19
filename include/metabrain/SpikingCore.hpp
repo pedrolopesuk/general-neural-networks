@@ -75,6 +75,14 @@ struct SpikingConfig {
     // weight maps to this total conductance, relative weights preserved (homeostatic
     // set point). 0 = legacy single global graph->conductance scale.
     float input_conductance_target = 0.0f;
+
+    // E/I columns (engine bridge). Inhibitory share per column, local E->I conductance,
+    // I/E strength ratio (Brunel 2000 stable regime g ~ 4-6), feedforward inhibition gain.
+    float inhibitory_fraction = 0.20f;
+    float local_exc_conductance = 0.03f;
+    float exc_to_inh_gain = 2.0f;
+    float inh_exc_ratio = 5.0f;
+    float feedforward_inh_gain = 2.0f;
 };
 
 // Slow afterhyperpolarisation (Ca2+-activated K+, sAHP): conductance added per spike.

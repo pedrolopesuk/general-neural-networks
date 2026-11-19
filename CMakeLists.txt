@@ -62,3 +62,6 @@ target_link_libraries(sweep_ahp PRIVATE metabrain_core)
 
 add_executable(learn_discrim tests/learn_discrim.cpp)
 target_link_libraries(learn_discrim PRIVATE metabrain_core)
+
+add_executable(sweep_ei tests/sweep_ei.cpp)
+target_link_libraries(sweep_ei PRIVATE metabrain_core)
