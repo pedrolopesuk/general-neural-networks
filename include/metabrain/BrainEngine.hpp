@@ -2,6 +2,7 @@
 
 #include "metabrain/Config.hpp"
 #include "metabrain/Neuron.hpp"
+#include "metabrain/SpikingCore.hpp"
 
 #include <atomic>
 #include <condition_variable>
@@ -224,6 +225,23 @@ public:
     void SyncArenaToGraph();
 
     /**
+     * Biophysical spiking tick (Phase 1): advances `bio_ms` of biological time on the
+     * Izhikevich / conductance / STDP+dopamine substrate compiled from the graph.
+     * Writes firing-rate activations and learned weights back into the graph, so
+     * every existing consumer (REST, UE, serializer) keeps working unchanged.
+     */
+    void StepSpiking(float bio_ms = 10.0f);
+    void SetSpikingMode(bool on) noexcept { spiking_mode_ = on; }
+    /// Substrate parameters used at the next (re)compile. Call before stepping.
+    void SetSpikingConfig(const spiking::SpikingConfig& c) { snn_base_cfg_ = c; snn_.reset(); }
+    [[nodiscard]] const spiking::SpikingConfig& GetSpikingConfig() const noexcept { return snn_base_cfg_; }
+    void SeedRng(uint32_t seed) { rng_.seed(seed); }
+    [[nodiscard]] bool IsSpikingMode() const noexcept { return spiking_mode_; }
+    /// Neuron ids (graph ids) that emitted at least one spike during the last StepSpiking.
+    [[nodiscard]] const std::vector<uint64_t>& GetLastSpikes() const noexcept { return last_spike_ids_; }
+    [[nodiscard]] const spiking::SpikingNetwork* GetSpikingNetwork() const noexcept { return snn_.get(); }
+
+    /**
      * Clears short-term membrane potentials, activations, and eligibility traces
      * between independent stimulus episodes while preserving all learned weights & ages.
      */
@@ -324,6 +342,20 @@ private:
     std::unordered_map<uint64_t, std::weak_ptr<Neuron>> id_lookup_;
 
     FlatCSRArena arena_;
+
+    // ---- Spiking substrate state ----
+    bool spiking_mode_ = false;
+    spiking::SpikingConfig snn_base_cfg_;
+    std::unique_ptr<spiking::SpikingNetwork> snn_;
+    std::vector<Neuron*> snn_neurons_;            // snn index -> graph neuron
+    std::vector<uint8_t> snn_inhib_;              // Dale's law sign per neuron
+    struct SnnSynLink { Synapse* graph; uint32_t pre; uint32_t k; float written; };
+    std::vector<SnnSynLink> snn_links_;
+    std::vector<float> snn_rate_hz_;
+    std::vector<float> snn_excitability_;          // per-cell intrinsic offset -> lognormal-like rate spread              // exponential firing-rate estimate
+    std::vector<uint64_t> last_spike_ids_;
+    size_t snn_sig_neurons_ = 0, snn_sig_synapses_ = 0;
+    void RebuildSpikingNetwork();
     ParallelPool pool_;
     std::mt19937 rng_{133742};
 

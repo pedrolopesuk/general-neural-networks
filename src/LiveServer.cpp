@@ -202,6 +202,7 @@ bool LiveServer::RunBlocking(BrainEngine& engine,
     std::atomic<int> tick_hz{18};
     std::atomic<bool> dynamic_layout{true};
     std::atomic<bool> auto_neurogenesis{false};
+    engine.SetSpikingMode(true);  // Phase 1: biophysical spiking substrate is the default engine
 
     // Background Autonomous Brain Simulation & 3D Force-Directed Physics Loop
     std::thread sim_worker([&]() {
@@ -234,7 +235,12 @@ bool LiveServer::RunBlocking(BrainEngine& engine,
                     engine.InjectSensoryPulses(thalamic);
                 }
 
-                engine.StepRecursiveOOP(true, auto_neurogenesis.load());
+                if (engine.IsSpikingMode()) {
+                    engine.StepSpiking(1000.0f / static_cast<float>(hz));  // real time: 1 s wall = 1 s biology
+                    if (auto_neurogenesis.load() && engine.GetTick() % 10 == 9) engine.StepNeurogenesis(false);
+                } else {
+                    engine.StepRecursiveOOP(true, auto_neurogenesis.load());
+                }
                 if (dynamic_layout.load()) {
                     Layout3D::StepDynamicForces(engine, 0.042f);
                 }
@@ -313,18 +319,25 @@ bool LiveServer::RunBlocking(BrainEngine& engine,
             if (HasJsonKey(body, "tick_hz")) tick_hz.store(std::clamp(static_cast<int>(ExtractJsonFloat(body, "tick_hz", 18.0f)), 1, 120));
             if (HasJsonKey(body, "dynamic_layout")) dynamic_layout.store(ExtractJsonBool(body, "dynamic_layout", dynamic_layout.load()));
             if (HasJsonKey(body, "auto_neurogenesis")) auto_neurogenesis.store(ExtractJsonBool(body, "auto_neurogenesis", auto_neurogenesis.load()));
+            if (HasJsonKey(body, "engine")) {
+                std::lock_guard<std::mutex> lock(engine_mtx);
+                engine.SetSpikingMode(ExtractJsonString(body, "engine") != "rate");
+            }
             std::ostringstream js;
             js << "{\"ok\":true,\"running\":" << (sim_running.load() ? "true" : "false")
                << ",\"tick_hz\":" << tick_hz.load()
                << ",\"dynamic_layout\":" << (dynamic_layout.load() ? "true" : "false")
-               << ",\"auto_neurogenesis\":" << (auto_neurogenesis.load() ? "true" : "false") << "}";
+               << ",\"auto_neurogenesis\":" << (auto_neurogenesis.load() ? "true" : "false")
+               << ",\"engine\":\"" << (engine.IsSpikingMode() ? "spiking" : "rate") << "\"}";
             resp_body = js.str();
         } else if (method == "POST" && path == "/api/step") {
             const int ticks = std::clamp(static_cast<int>(ExtractJsonFloat(body, "ticks", 1.0f)), 1, 100);
             const std::string mode = ExtractJsonString(body, "mode");
             std::lock_guard<std::mutex> lock(engine_mtx);
             for (int i = 0; i < ticks; ++i) {
-                if (mode == "csr") {
+                if (mode == "spiking" || (mode.empty() && engine.IsSpikingMode())) {
+                    engine.StepSpiking(10.0f);
+                } else if (mode == "csr") {
                     engine.StepFastParallel(true);
                 } else {
                     engine.StepRecursiveOOP(true, auto_neurogenesis.load());
@@ -370,7 +383,7 @@ bool LiveServer::RunBlocking(BrainEngine& engine,
             }
 
             engine.SetSustainedSensoryPulses(std::move(encoded), hold);
-            engine.StepRecursiveOOP(true, false);
+            if (engine.IsSpikingMode()) engine.StepSpiking(10.0f); else engine.StepRecursiveOOP(true, false);
             resp_body = GraphSerializer::ToJson(engine, false, false);
         } else if (method == "POST" && path == "/api/feedback") {
             const float valence = ExtractJsonFloat(body, "valence", 1.0f);

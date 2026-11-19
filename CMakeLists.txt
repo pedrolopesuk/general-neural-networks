@@ -30,6 +30,7 @@ add_library(metabrain_core STATIC
     src/Layout3D.cpp
     src/Serializer.cpp
     src/LiveServer.cpp
+    src/SpikingCore.cpp
 )
 
 target_include_directories(metabrain_core PUBLIC
@@ -48,3 +49,13 @@ target_link_libraries(metabrain_tests PRIVATE metabrain_core)
 
 enable_testing()
 add_test(NAME MetaBrainUnitSuite COMMAND metabrain_tests)
+
+add_executable(spiking_tests tests/test_spiking.cpp)
+target_link_libraries(spiking_tests PRIVATE metabrain_core)
+add_test(NAME SpikingBiologyValidation COMMAND spiking_tests)
+
+add_executable(measure_rest tests/measure_rest.cpp)
+target_link_libraries(measure_rest PRIVATE metabrain_core)
+
+add_executable(sweep_ahp tests/sweep_ahp.cpp)
+target_link_libraries(sweep_ahp PRIVATE metabrain_core)

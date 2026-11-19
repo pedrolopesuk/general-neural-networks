@@ -13,3 +13,4 @@ Saved/
 Content/**/*.uasset
 Content/**/*.umap
 Scripts/build_assets/fonts/*.ttf
+build2/

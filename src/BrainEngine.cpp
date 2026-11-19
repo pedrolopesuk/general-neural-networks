@@ -1037,4 +1037,190 @@ void BrainEngine::RebuildIndicesFromTopLevel(std::vector<std::shared_ptr<Neuron>
     arena_.compiled = false;
 }
 
+
+// ============================================================================
+// Phase 1 - biophysical spiking substrate bridge
+// ============================================================================
+namespace {
+constexpr float kSnnConductanceScale = 0.03f;  // graph weight -> conductance: |w|=1 gives a ~1 mV unitary EPSP, as in cortex
+}
+
+void BrainEngine::RebuildSpikingNetwork() {
+    // Learned weights live in the graph (written back every tick), so a rebuild only
+    // loses transient membrane state, never memory.
+    auto all = FlattenAllNeurons();
+    spiking::SpikingConfig cfg = snn_base_cfg_;
+    cfg.w_max = config_.weight_clip * kSnnConductanceScale;
+    snn_ = std::make_unique<spiking::SpikingNetwork>(cfg);
+    snn_neurons_.clear();
+    snn_inhib_.clear();
+    snn_links_.clear();
+    last_spike_ids_.clear();
+
+    std::unordered_map<const Neuron*, uint32_t> index;
+    index.reserve(all.size());
+    for (const auto& n : all) index[n.get()] = static_cast<uint32_t>(index.size());
+
+    // Dale's law: each cell is excitatory OR inhibitory, decided by the net sign of
+    // its outgoing weights (graph synapses are stored on the postsynaptic side).
+    std::vector<float> out_sum(all.size(), 0.0f);
+    size_t syn_total = 0;
+    for (const auto& post : all) {
+        for (const auto& s : post->GetSynapses()) {
+            if (auto pre = s.source.lock()) {
+                auto it = index.find(pre.get());
+                if (it != index.end()) out_sum[it->second] += s.weight;
+            }
+            ++syn_total;
+        }
+    }
+
+    for (size_t i = 0; i < all.size(); ++i) {
+        Neuron* n = all[i].get();
+        const bool inhib = out_sum[i] < 0.0f && n->GetRole() != NeuronRole::RootSensory;
+        spiking::CellType type = spiking::CellType::RegularSpiking;
+        switch (n->GetRole()) {
+            case NeuronRole::RootSensory:       type = spiking::CellType::ThalamoCortical; break;
+            case NeuronRole::CorticalComposite: type = spiking::CellType::IntrinsicBursting; break;  // L5 pyramidal
+            case NeuronRole::MicroInterneuron:  type = spiking::CellType::Chattering; break;        // L2/3
+            case NeuronRole::TerminalReadout:   type = spiking::CellType::RegularSpiking; break;
+        }
+        if (inhib) type = spiking::CellType::FastSpiking;
+        snn_->AddNeuron(type);
+        snn_neurons_.push_back(n);
+        snn_inhib_.push_back(inhib ? 1 : 0);
+    }
+
+    auto delay_ms = [](const Neuron* a, const Neuron* b) {
+        // Myelinated conduction: delay grows with physical distance (1..20 ms)
+        const float d = (a->GetPosition() - b->GetPosition()).Length();
+        return std::clamp(1.0f + d * 0.02f, 1.0f, 20.0f);
+    };
+
+    for (size_t post = 0; post < all.size(); ++post) {
+        for (auto& s : all[post]->GetSynapsesMutable()) {
+            auto pre = s.source.lock();
+            if (!pre) continue;
+            auto it = index.find(pre.get());
+            if (it == index.end()) continue;
+            const uint32_t p = it->second;
+            snn_->Connect(p, static_cast<uint32_t>(post), std::fabs(s.weight) * kSnnConductanceScale,
+                          delay_ms(pre.get(), all[post].get()), true);
+            snn_links_.push_back({&s, p, static_cast<uint32_t>(snn_->OutDegree(p) - 1), s.weight});
+        }
+        // Composite holon wiring: parent drives its micro-circuit, children pool back
+        for (const auto& ch : all[post]->GetChildren()) {
+            auto it = index.find(ch.get());
+            if (it == index.end()) continue;
+            const uint32_t c = it->second, par = static_cast<uint32_t>(post);
+            const float g = config_.composite_child_mix * kSnnConductanceScale * 2.0f;
+            if (!snn_inhib_[par]) snn_->Connect(par, c, g, 1.0f, false);
+            if (!snn_inhib_[c]) snn_->Connect(c, par, g, 1.0f, false);
+        }
+    }
+
+    snn_rate_hz_.assign(all.size(), 0.0f);
+    // Cell-to-cell heterogeneity (stable per neuron id): real neurons differ in
+    // input resistance/rheobase, which turns uniform drive into a skewed rate distribution.
+    snn_excitability_.resize(all.size());
+    for (size_t i = 0; i < all.size(); ++i) {
+        std::mt19937 g(static_cast<uint32_t>(all[i]->GetId() * 2654435761u + 17u));
+        snn_excitability_[i] = std::normal_distribution<float>(0.0f, 1.2f)(g);
+    }
+    snn_sig_neurons_ = all.size();
+    snn_sig_synapses_ = syn_total;
+}
+
+void BrainEngine::StepSpiking(float bio_ms) {
+    const auto t0 = std::chrono::high_resolution_clock::now();
+
+    // Topology changed (neurogenesis / synaptogenesis / pruning / load) -> recompile
+    size_t n_now = 0, s_now = 0;
+    for (const auto& n : FlattenAllNeurons()) { ++n_now; s_now += n->GetSynapses().size(); }
+    if (!snn_ || n_now != snn_sig_neurons_ || s_now != snn_sig_synapses_) RebuildSpikingNetwork();
+
+    if (sustained_ticks_remaining_ > 0) {
+        InjectSensoryPulses(sustained_pulses_);
+        --sustained_ticks_remaining_;
+    }
+
+    // Weights edited outside the substrate (reward backprop, REST, load) flow in
+    for (auto& L : snn_links_) {
+        if (L.graph->weight != L.written) {
+            snn_->GetSynapseMutable(L.pre, L.k).weight =
+                std::clamp(std::fabs(L.graph->weight) * kSnnConductanceScale, 0.0f, snn_->Config().w_max);
+            L.written = L.graph->weight;
+        }
+    }
+
+    // Phasic dopamine (above tonic baseline) gates the three-factor rule
+    snn_->SetDopamine(2.0f * (endocrine_.dopamine - endocrine_.tonic_dopamine));
+
+    const size_t N = snn_neurons_.size();
+    const float dt = snn_->Config().dt_ms;
+    const int sub = static_cast<int>(std::round(1.0f / dt));
+    const float rate_decay = std::exp(-dt / 100.0f);  // 100 ms rate window
+    const float rate_kick = 1000.0f / 100.0f;         // Hz per spike
+    // Endocrine state as membrane bias: fear depolarises, fatigue hyperpolarises
+    const float mod_bias = 1.5f * endocrine_.fear - 2.0f * endocrine_.fatigue;
+    const float noise_sd = 2.0f + 2.0f * endocrine_.curiosity;  // synaptic bombardment
+    std::normal_distribution<float> noise(0.0f, 1.0f);
+    std::vector<uint8_t> spiked(N, 0);
+
+    const int total_ms = std::max(1, static_cast<int>(bio_ms));
+    for (int ms = 0; ms < total_ms; ++ms) {
+        for (size_t i = 0; i < N; ++i) {
+            const Neuron* n = snn_neurons_[i];
+            float I = snn_excitability_[i] + mod_bias + noise_sd * noise(rng_);
+            // Thalamic relay cells are quiet at rest and driven by their sensory input;
+            // cortical cells carry their learned bias as tonic depolarisation.
+            if (n->GetRole() == NeuronRole::RootSensory) I += snn_->Config().sensory_gain * n->GetExternalInput() - 1.0f;
+            else I += 2.0f * n->GetBias();
+            snn_->SetInputCurrent(static_cast<uint32_t>(i), I);
+        }
+        for (int s = 0; s < sub; ++s) {
+            for (size_t i = 0; i < N; ++i) snn_rate_hz_[i] *= rate_decay;
+            for (uint32_t f : snn_->Step()) {
+                snn_rate_hz_[f] += rate_kick;
+                spiked[f] = 1;
+            }
+        }
+    }
+
+    // Write back: firing rate -> activation, learned conductance -> graph weight
+    float total_act = 0.0f, max_act = 0.0f;
+    last_spike_ids_.clear();
+    for (size_t i = 0; i < N; ++i) {
+        const float a = 1.0f - std::exp(-snn_rate_hz_[i] / 25.0f);
+        Neuron* n = snn_neurons_[i];
+        n->SetPrevActivation(n->GetActivation());
+        n->SetActivation(a);
+        n->SetMembranePotential(snn_->V(static_cast<uint32_t>(i)));
+        n->SetAgeTicks(n->GetAgeTicks() + 1);
+        total_act += a;
+        max_act = std::max(max_act, a);
+        if (spiked[i]) last_spike_ids_.push_back(n->GetId());
+    }
+    for (auto& L : snn_links_) {
+        const auto& s = snn_->GetSynapse(L.pre, L.k);
+        const float sign = (L.graph->weight < 0.0f) ? -1.0f : 1.0f;  // keep the graph's own sign
+        const float w = sign * s.weight / kSnnConductanceScale;
+        L.graph->last_delta_weight = w - L.graph->weight;
+        L.graph->eligibility_trace = s.eligibility;
+        L.graph->weight = w;
+        L.written = w;
+    }
+    snn_->ClearSpikeLog();
+
+    const float mean_act = N ? total_act / static_cast<float>(N) : 0.0f;
+    endocrine_.StepHomeostasis(mean_act);
+    for (auto& r : root_neurons_) r->ClearExternalInput();
+    ++tick_;
+    RecordTelemetrySample(mean_act, max_act);
+    arena_.compiled = false;
+
+    const auto t1 = std::chrono::high_resolution_clock::now();
+    last_step_us_ = std::chrono::duration<double, std::micro>(t1 - t0).count();
+}
+
 } // namespace metabrain
