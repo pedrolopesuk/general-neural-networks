@@ -71,6 +71,10 @@ struct SpikingConfig {
     // Sensory input is clamped to the validated range until short-term depression
     // (Phase 2) gives the relay a saturating response. See docs/PHASE1_NOTES.md.
     float max_sensory_input = 0.9f;
+    // Per-cell input normalisation (engine bridge): each cell's summed incoming graph
+    // weight maps to this total conductance, relative weights preserved (homeostatic
+    // set point). 0 = legacy single global graph->conductance scale.
+    float input_conductance_target = 0.0f;
 };
 
 // Slow afterhyperpolarisation (Ca2+-activated K+, sAHP): conductance added per spike.

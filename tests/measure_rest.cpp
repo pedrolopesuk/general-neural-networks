@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <map>
 #include <string>
 #include <unordered_map>
@@ -39,6 +40,19 @@ int main(int argc, char** argv) {
     const bool ue = argc > 1 && std::string(argv[1]) == "ue";
     if (ue) BuildUeBrain(brain); else brain.BuildCorticalArchitecture(8, 18, 4, 3, 42);
     std::printf("brain: %s\n", ue ? "UE pretrained (seed 777)" : "test network (seed 42)");
+    if (argc > 2) { spiking::SpikingConfig sc; sc.input_conductance_target = static_cast<float>(std::atof(argv[2])); brain.SetSpikingConfig(sc); }
+    {
+        std::unordered_map<uint64_t, float> out_sum;
+        size_t exc_syn = 0, inh_syn = 0;
+        for (const auto& n : brain.FlattenAllNeurons())
+            for (const auto& syn : n->GetSynapses())
+                if (auto src = syn.source.lock()) { out_sum[src->GetId()] += syn.weight; (syn.weight < 0 ? inh_syn : exc_syn)++; }
+        size_t inh = 0, total = brain.FlattenAllNeurons().size();
+        for (const auto& n : brain.FlattenAllNeurons())
+            if (n->GetRole() != NeuronRole::RootSensory && out_sum[n->GetId()] < 0.0f) ++inh;
+        std::printf("inhibitory cells (Dale, net outgoing < 0): %zu / %zu (%.0f%%) | synapses exc %zu, inh-signed %zu\n",
+                    inh, total, 100.0 * inh / total, exc_syn, inh_syn);
+    }
     brain.SetSpikingMode(true);
     for (int i = 0; i < 500; ++i) brain.StepSpiking(1.0f);  // 0.5 s settle
 

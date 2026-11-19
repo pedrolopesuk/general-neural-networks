@@ -363,7 +363,7 @@ private:
     std::unique_ptr<spiking::SpikingNetwork> snn_;
     std::vector<Neuron*> snn_neurons_;            // snn index -> graph neuron
     std::vector<uint8_t> snn_inhib_;              // Dale's law sign per neuron
-    struct SnnSynLink { Synapse* graph; uint32_t pre; uint32_t k; float written; };
+    struct SnnSynLink { Synapse* graph; uint32_t pre; uint32_t k; float written; float scale; };
     std::vector<SnnSynLink> snn_links_;
     std::vector<float> snn_rate_hz_;
     std::vector<float> snn_excitability_;          // per-cell intrinsic offset -> lognormal-like rate spread              // exponential firing-rate estimate

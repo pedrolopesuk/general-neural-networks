@@ -1059,7 +1059,8 @@ void BrainEngine::RebuildSpikingNetwork() {
     // loses transient membrane state, never memory.
     auto all = FlattenAllNeurons();
     spiking::SpikingConfig cfg = snn_base_cfg_;
-    cfg.w_max = config_.weight_clip * kSnnConductanceScale;
+    // Conductance ceiling: legacy = clip in global units; normalised = ~5 mV unitary EPSP
+    cfg.w_max = cfg.input_conductance_target > 0.0f ? 0.15f : config_.weight_clip * kSnnConductanceScale;
     snn_ = std::make_unique<spiking::SpikingNetwork>(cfg);
     snn_neurons_.clear();
     snn_inhib_.clear();
@@ -1107,15 +1108,21 @@ void BrainEngine::RebuildSpikingNetwork() {
     };
 
     for (size_t post = 0; post < all.size(); ++post) {
+        float scale = kSnnConductanceScale;
+        if (cfg.input_conductance_target > 0.0f) {
+            float sum_abs = 0.0f;
+            for (const auto& s : all[post]->GetSynapses()) sum_abs += std::fabs(s.weight);
+            scale = cfg.input_conductance_target / std::max(sum_abs, 1.0f);
+        }
         for (auto& s : all[post]->GetSynapsesMutable()) {
             auto pre = s.source.lock();
             if (!pre) continue;
             auto it = index.find(pre.get());
             if (it == index.end()) continue;
             const uint32_t p = it->second;
-            snn_->Connect(p, static_cast<uint32_t>(post), std::fabs(s.weight) * kSnnConductanceScale,
+            snn_->Connect(p, static_cast<uint32_t>(post), std::fabs(s.weight) * scale,
                           delay_ms(pre.get(), all[post].get()), true);
-            snn_links_.push_back({&s, p, static_cast<uint32_t>(snn_->OutDegree(p) - 1), s.weight});
+            snn_links_.push_back({&s, p, static_cast<uint32_t>(snn_->OutDegree(p) - 1), s.weight, scale});
         }
         // Composite holon wiring: parent drives its micro-circuit, children pool back
         for (const auto& ch : all[post]->GetChildren()) {
@@ -1157,7 +1164,7 @@ void BrainEngine::StepSpiking(float bio_ms) {
     for (auto& L : snn_links_) {
         if (L.graph->weight != L.written) {
             snn_->GetSynapseMutable(L.pre, L.k).weight =
-                std::clamp(std::fabs(L.graph->weight) * kSnnConductanceScale, 0.0f, snn_->Config().w_max);
+                std::clamp(std::fabs(L.graph->weight) * L.scale, 0.0f, snn_->Config().w_max);
             L.written = L.graph->weight;
         }
     }
@@ -1214,7 +1221,7 @@ void BrainEngine::StepSpiking(float bio_ms) {
     for (auto& L : snn_links_) {
         const auto& s = snn_->GetSynapse(L.pre, L.k);
         const float sign = (L.graph->weight < 0.0f) ? -1.0f : 1.0f;  // keep the graph's own sign
-        const float w = sign * s.weight / kSnnConductanceScale;
+        const float w = sign * s.weight / L.scale;
         L.graph->last_delta_weight = w - L.graph->weight;
         L.graph->eligibility_trace = s.eligibility;
         L.graph->weight = w;
