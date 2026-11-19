@@ -713,6 +713,13 @@ void BrainEngine::ApplyRewardPunish(float valence,
         endocrine_.dopamine = std::clamp(endocrine_.dopamine - 0.35f * mag, -0.5f, 2.0f);
     }
 
+    // Spiking engine: no backprop. The dopamine burst/dip above is the third factor; it
+    // commits (or reverses) the STDP eligibility of whatever was recently active
+    // during the following StepSpiking calls (distal reward, Izhikevich 2007).
+    if (spiking_mode_) {
+        return;
+    }
+
     // 2. Recursive Error Backpropagation + Eligibility Trace Credit Assignment
     auto all = FlattenAllNeurons();
     for (auto& n : all) {
@@ -1214,7 +1221,10 @@ void BrainEngine::StepSpiking(float bio_ms) {
     snn_->ClearSpikeLog();
 
     const float mean_act = N ? total_act / static_cast<float>(N) : 0.0f;
-    endocrine_.StepHomeostasis(mean_act);
+    // Endocrine relaxation in biological time (fear tau ~1 s, dopamine ~0.75 s), independent
+    // of tick size. The legacy per-tick rule assumed ~55 ms ticks; metabolic load is scaled to match.
+    const float bio = static_cast<float>(total_ms);
+    endocrine_.StepHomeostasis(mean_act * bio / 55.6f, 1.0f - std::exp(-bio / 1000.0f));
     for (auto& r : root_neurons_) r->ClearExternalInput();
     ++tick_;
     RecordTelemetrySample(mean_act, max_act);
