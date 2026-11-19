@@ -46,6 +46,7 @@ uint32_t SpikingNetwork::AddNeuron(CellType type) {
     g_gabaa_.push_back(0.0f);
     g_gabab_.push_back(0.0f);
     g_ahp_.push_back(0.0f);
+    refr_left_.push_back(0);
     ahp_inc_.push_back(AhpIncrementFor(type, cfg_));
     x_pre_.push_back(0.0f);
     y_post_.push_back(0.0f);
@@ -132,8 +133,13 @@ const std::vector<uint32_t>& SpikingNetwork::Step() {
 
         float vn = v + dt * (0.04f * v * v + 5.0f * v + 140.0f - u_[i] + I);
         float un = u_[i] + dt * p.a * (p.b * v - u_[i]);
+        if (refr_left_[i] > 0) {  // absolute refractory: membrane clamped at reset
+            --refr_left_[i];
+            vn = p.c;
+        }
 
         if (vn >= cfg_.spike_peak_mv) {
+            refr_left_[i] = static_cast<uint16_t>(std::lround(cfg_.refractory_ms / dt));
             vn = p.c;
             un += p.d;
             fired_.push_back(static_cast<uint32_t>(i));

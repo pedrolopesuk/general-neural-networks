@@ -61,6 +61,7 @@ struct SpikingConfig {
     float w_max = 1.0f;
 
     float spike_peak_mv = 30.0f;
+    float refractory_ms = 2.0f;  // absolute refractory period (Na+ channel inactivation)
 
     // Spike-frequency adaptation current
     float tau_ahp = 100.0f, E_k = -90.0f;
@@ -146,6 +147,7 @@ private:
     std::vector<float> v_, u_, I_ext_;
     std::vector<float> g_ampa_, g_nmda_, g_gabaa_, g_gabab_;
     std::vector<float> g_ahp_, ahp_inc_;
+    std::vector<uint16_t> refr_left_;
     std::vector<float> x_pre_;   // presynaptic STDP trace (per neuron)
     std::vector<float> y_post_;  // postsynaptic STDP trace (per neuron)
     std::vector<std::vector<double>> spike_log_;
