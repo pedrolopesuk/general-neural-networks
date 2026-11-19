@@ -236,6 +236,16 @@ public:
     void SetSpikingConfig(const spiking::SpikingConfig& c) { snn_base_cfg_ = c; snn_.reset(); }
     [[nodiscard]] const spiking::SpikingConfig& GetSpikingConfig() const noexcept { return snn_base_cfg_; }
     void SeedRng(uint32_t seed) { rng_.seed(seed); }
+
+    /**
+     * Reward prediction error (Schultz 1997; Fremaux & Gerstner 2016). Delivers
+     * reward r in [0..1] for the current stimulus context: phasic dopamine is
+     * (r - expected_r[context]), then the expectation moves toward r. Unspecific
+     * STDP drift cancels on average; only timing that predicts reward survives.
+     * Returns the prediction error.
+     */
+    float DeliverReward(float reward);
+    [[nodiscard]] float ExpectedReward() const;
     [[nodiscard]] bool IsSpikingMode() const noexcept { return spiking_mode_; }
     /// Neuron ids (graph ids) that emitted at least one spike during the last StepSpiking.
     [[nodiscard]] const std::vector<uint64_t>& GetLastSpikes() const noexcept { return last_spike_ids_; }
@@ -347,6 +357,8 @@ private:
 
     // ---- Spiking substrate state ----
     bool spiking_mode_ = false;
+    std::unordered_map<uint64_t, float> expected_reward_;  // critic: per stimulus context
+    [[nodiscard]] uint64_t StimulusContextKey() const;
     spiking::SpikingConfig snn_base_cfg_;
     std::unique_ptr<spiking::SpikingNetwork> snn_;
     std::vector<Neuron*> snn_neurons_;            // snn index -> graph neuron

@@ -59,3 +59,6 @@ target_link_libraries(measure_rest PRIVATE metabrain_core)
 
 add_executable(sweep_ahp tests/sweep_ahp.cpp)
 target_link_libraries(sweep_ahp PRIVATE metabrain_core)
+
+add_executable(learn_discrim tests/learn_discrim.cpp)
+target_link_libraries(learn_discrim PRIVATE metabrain_core)

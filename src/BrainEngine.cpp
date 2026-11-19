@@ -717,6 +717,8 @@ void BrainEngine::ApplyRewardPunish(float valence,
     // commits (or reverses) the STDP eligibility of whatever was recently active
     // during the following StepSpiking calls (distal reward, Izhikevich 2007).
     if (spiking_mode_) {
+        // Valence [-1.5..1.5] -> reward [0..1]; dopamine = prediction error, not raw reward
+        DeliverReward(std::clamp(0.5f + valence / 3.0f, 0.0f, 1.0f));
         return;
     }
 
@@ -1232,6 +1234,35 @@ void BrainEngine::StepSpiking(float bio_ms) {
 
     const auto t1 = std::chrono::high_resolution_clock::now();
     last_step_us_ = std::chrono::duration<double, std::micro>(t1 - t0).count();
+}
+
+
+// ---- Reward prediction error (critic) ----
+uint64_t BrainEngine::StimulusContextKey() const {
+    // Quantised last sensory pattern; all-silent input maps to one "no stimulus" context
+    uint64_t h = 1469598103934665603ull;
+    for (float v : last_sensory_pulses_) {
+        h ^= static_cast<uint64_t>(std::lround(std::clamp(v, 0.0f, 1.0f) * 8.0f));
+        h *= 1099511628211ull;
+    }
+    return h;
+}
+
+float BrainEngine::ExpectedReward() const {
+    auto it = expected_reward_.find(StimulusContextKey());
+    return it == expected_reward_.end() ? 0.0f : it->second;
+}
+
+float BrainEngine::DeliverReward(float reward) {
+    reward = std::clamp(reward, 0.0f, 1.0f);
+    float& expected = expected_reward_.try_emplace(StimulusContextKey(), 0.0f).first->second;
+    const float rpe = reward - expected;
+    expected += 0.1f * rpe;  // critic learning rate
+    endocrine_.dopamine = std::clamp(endocrine_.tonic_dopamine + 0.65f * 1.2f * rpe, -0.5f, 2.0f);
+    if (rpe < 0.0f) {
+        endocrine_.fear = std::clamp(endocrine_.fear + 0.2f * -rpe, 0.0f, 1.0f);
+    }
+    return rpe;
 }
 
 } // namespace metabrain
