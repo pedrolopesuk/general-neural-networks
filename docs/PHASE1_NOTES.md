@@ -68,6 +68,23 @@ Once short-term depression lands, test the shape of the curve, not one number. M
 
 When this passes, replace the fixed 100 Hz ceiling and remove `max_sensory_input`, the interim 0.9 input clamp in `SpikingConfig`.
 
+## The brain UE loads (`build2/measure_rest.exe ue`)
+UE pretrains with the rate engine (seed 777, 65 epochs, then 4 forced growths) and then runs live on the spiking engine. That is 97 neurons at rest over 20 s:
+
+| Check | Band | Measured |
+|---|---|---|
+| Median | 0.5–3 Hz | 1.80 Hz ✅ |
+| Mean > median | yes | 3.85 Hz ✅ |
+| Silent cells | 5–40% | 7% ✅ (near the lower edge) |
+| Max | ≤ 50 Hz | 22 Hz ✅ |
+| Thalamic median | 3–20 Hz | 6.7 Hz ✅ |
+
+The rate-trained weights transfer without re-tuning.
+
+## Learning in live play
+- **What runs:** in spiking mode, learning is STDP into the eligibility trace, then dopamine commits it, all on real spike times. The old Hebbian rule is not called.
+- **What is still rate-based:** `ApplyRewardPunish` (`/api/feedback`) still runs supervised backprop on activation values. Phase 2 replaces it with dopamine-only credit assignment: reward sets phasic dopamine and STDP eligibility does the rest.
+
 ## Known limits
 - 0.03 was tuned against the band; the sweep above shows how much room it has.
 - The spike stream is not yet sent to UE (Phase 1, step 3).

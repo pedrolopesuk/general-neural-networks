@@ -4,14 +4,41 @@
 #include <algorithm>
 #include <cstdio>
 #include <map>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
 using namespace metabrain;
 
-int main() {
+// Mirrors FMetaBrainSimBridge::InitializeDefaultBrain (the brain UE actually loads)
+static void BuildUeBrain(BrainEngine& e) {
+    e.BuildCorticalArchitecture(8, 20, 4, 3, 777);
+    e.GetConfig().learning_rate = 0.0018f;
+    e.GetConfig().backprop_learning_rate = 0.11f;
+    const auto A = BrainEngine::EncodeTextToPulses("HARMONY_REWARD_EXPLORE_SIGNAL", 8);
+    const auto B = BrainEngine::EncodeTextToPulses("HAZARD_PREDATOR_FREEZE_ALARM", 8);
+    const std::vector<float> TA = {0.20f, 0.02f, 0.98f, 0.02f}, TB = {0.02f, 0.98f, 0.02f, 0.20f};
+    for (int ep = 0; ep < 65; ++ep) {
+        e.ResetTransientActivity();
+        for (int s = 0; s < 3; ++s) { e.InjectSensoryPulses(A); e.StepRecursiveOOP(true, false); }
+        e.ApplyRewardPunish(1.2f, TA);
+        e.ResetTransientActivity();
+        for (int s = 0; s < 3; ++s) { e.InjectSensoryPulses(B); e.StepRecursiveOOP(true, false); }
+        e.ApplyRewardPunish(1.2f, TB);
+    }
+    auto& en = e.GetEndocrine();
+    en.curiosity = en.tonic_curiosity = 0.50f;
+    en.fear = en.tonic_fear = 0.12f;
+    en.dopamine = en.tonic_dopamine = 0.25f;
+    en.fatigue = en.tonic_fatigue = 0.08f;
+    for (int k = 0; k < 4; ++k) e.StepNeurogenesis(true);
+}
+
+int main(int argc, char** argv) {
     BrainEngine brain;
-    brain.BuildCorticalArchitecture(8, 18, 4, 3, 42);
+    const bool ue = argc > 1 && std::string(argv[1]) == "ue";
+    if (ue) BuildUeBrain(brain); else brain.BuildCorticalArchitecture(8, 18, 4, 3, 42);
+    std::printf("brain: %s\n", ue ? "UE pretrained (seed 777)" : "test network (seed 42)");
     brain.SetSpikingMode(true);
     for (int i = 0; i < 500; ++i) brain.StepSpiking(1.0f);  // 0.5 s settle
 
