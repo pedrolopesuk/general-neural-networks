@@ -1,0 +1,151 @@
+{
+ "hp": {
+  "kwta": 4,
+  "shrinkage": 0.01,
+  "cov_src": "labelled",
+  "rule": "kmeans"
+ },
+ "background_final_acc": 0.444,
+ "grid": [
+  {
+   "kwta": 1,
+   "shrinkage": 0.01,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.01,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.1,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.1,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.3,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.3,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.5,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.5,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.7,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.7,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.9,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.9,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.99,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 1,
+   "shrinkage": 0.99,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.01,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.01,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.1,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.1,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.3,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.3,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.5,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.5,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.7,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.7,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.9,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.9,
+   "cov_src": "labelled"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.99,
+   "cov_src": "exposure"
+  },
+  {
+   "kwta": 4,
+   "shrinkage": 0.99,
+   "cov_src": "labelled"
+  }
+ ]
+}

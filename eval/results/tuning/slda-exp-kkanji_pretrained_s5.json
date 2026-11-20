@@ -1,0 +1,32 @@
+{
+ "hp": {
+  "shrinkage": 0.7
+ },
+ "background_final_acc": 0.6113333333333333,
+ "grid": [
+  {
+   "shrinkage": 0.0001
+  },
+  {
+   "shrinkage": 0.01
+  },
+  {
+   "shrinkage": 0.1
+  },
+  {
+   "shrinkage": 0.3
+  },
+  {
+   "shrinkage": 0.5
+  },
+  {
+   "shrinkage": 0.7
+  },
+  {
+   "shrinkage": 0.9
+  },
+  {
+   "shrinkage": 0.99
+  }
+ ]
+}

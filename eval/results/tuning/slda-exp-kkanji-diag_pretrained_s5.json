@@ -1,0 +1,74 @@
+{
+ "hp": {
+  "shrinkage": 0.1,
+  "enc_norm": false,
+  "target": "diag"
+ },
+ "background_final_acc": 0.6126666666666667,
+ "grid": [
+  {
+   "shrinkage": 0.0001,
+   "enc_norm": false
+  },
+  {
+   "shrinkage": 0.0001,
+   "enc_norm": true
+  },
+  {
+   "shrinkage": 0.01,
+   "enc_norm": false
+  },
+  {
+   "shrinkage": 0.01,
+   "enc_norm": true
+  },
+  {
+   "shrinkage": 0.1,
+   "enc_norm": false
+  },
+  {
+   "shrinkage": 0.1,
+   "enc_norm": true
+  },
+  {
+   "shrinkage": 0.3,
+   "enc_norm": false
+  },
+  {
+   "shrinkage": 0.3,
+   "enc_norm": true
+  },
+  {
+   "shrinkage": 0.5,
+   "enc_norm": false
+  },
+  {
+   "shrinkage": 0.5,
+   "enc_norm": true
+  },
+  {
+   "shrinkage": 0.7,
+   "enc_norm": false
+  },
+  {
+   "shrinkage": 0.7,
+   "enc_norm": true
+  },
+  {
+   "shrinkage": 0.9,
+   "enc_norm": false
+  },
+  {
+   "shrinkage": 0.9,
+   "enc_norm": true
+  },
+  {
+   "shrinkage": 0.99,
+   "enc_norm": false
+  },
+  {
+   "shrinkage": 0.99,
+   "enc_norm": true
+  }
+ ]
+}

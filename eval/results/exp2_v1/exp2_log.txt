@@ -1,0 +1,413 @@
+﻿===== --dataset kkanji --track pretrained --exposure --learner hebbian --tune
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure'}: final 0.439
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled'}: final 0.445
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure'}: final 0.369
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled'}: final 0.369
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure'}: final 0.356
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled'}: final 0.358
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure'}: final 0.352
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled'}: final 0.352
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure'}: final 0.350
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled'}: final 0.350
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure'}: final 0.348
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled'}: final 0.348
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure'}: final 0.348
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled'}: final 0.348
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure'}: final 0.424
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled'}: final 0.428
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure'}: final 0.366
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled'}: final 0.369
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure'}: final 0.357
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled'}: final 0.357
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure'}: final 0.354
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled'}: final 0.356
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure'}: final 0.353
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled'}: final 0.353
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure'}: final 0.352
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled'}: final 0.352
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure'}: final 0.351
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled'}: final 0.351
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure'}: final 0.437
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled'}: final 0.442
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure'}: final 0.368
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled'}: final 0.370
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure'}: final 0.355
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled'}: final 0.356
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure'}: final 0.350
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled'}: final 0.351
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure'}: final 0.347
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled'}: final 0.348
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure'}: final 0.347
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled'}: final 0.347
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure'}: final 0.347
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled'}: final 0.347
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure'}: final 0.410
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled'}: final 0.419
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure'}: final 0.362
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled'}: final 0.364
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure'}: final 0.356
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled'}: final 0.357
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure'}: final 0.354
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled'}: final 0.354
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure'}: final 0.352
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled'}: final 0.352
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure'}: final 0.351
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled'}: final 0.351
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure'}: final 0.351
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled'}: final 0.351
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure'}: final 0.364
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled'}: final 0.381
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure'}: final 0.333
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled'}: final 0.339
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure'}: final 0.326
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled'}: final 0.329
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure'}: final 0.322
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled'}: final 0.325
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure'}: final 0.320
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled'}: final 0.321
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure'}: final 0.321
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled'}: final 0.321
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure'}: final 0.321
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled'}: final 0.321
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure'}: final 0.226
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled'}: final 0.231
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure'}: final 0.215
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled'}: final 0.228
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure'}: final 0.205
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled'}: final 0.218
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure'}: final 0.201
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled'}: final 0.208
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure'}: final 0.198
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled'}: final 0.205
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure'}: final 0.198
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled'}: final 0.198
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure'}: final 0.196
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled'}: final 0.197
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure'}: final 0.245
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled'}: final 0.223
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure'}: final 0.215
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled'}: final 0.211
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure'}: final 0.211
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled'}: final 0.208
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure'}: final 0.209
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled'}: final 0.208
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure'}: final 0.208
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled'}: final 0.207
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure'}: final 0.207
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled'}: final 0.207
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure'}: final 0.206
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled'}: final 0.206
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure'}: final 0.146
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled'}: final 0.147
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure'}: final 0.132
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled'}: final 0.142
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure'}: final 0.126
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled'}: final 0.129
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure'}: final 0.122
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled'}: final 0.125
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure'}: final 0.120
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled'}: final 0.122
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure'}: final 0.120
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled'}: final 0.120
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure'}: final 0.120
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled'}: final 0.120
+seed 0: final 0.439  forgetting +0.104  new@1/3/5 0.132/0.425/0.543  10s
+seed 1: final 0.439  forgetting +0.100  new@1/3/5 0.130/0.415/0.539  9s
+seed 2: final 0.451  forgetting +0.100  new@1/3/5 0.140/0.427/0.551  8s
+seed 3: final 0.428  forgetting +0.098  new@1/3/5 0.125/0.400/0.526  11s
+seed 4: final 0.427  forgetting +0.101  new@1/3/5 0.139/0.408/0.527  8s
+{"learner": "hebbian", "track": "pretrained", "final_acc": [0.4368666666666666, 0.01000937831840656], "forgetting": [0.10042222222222223, 0.0022776422723921473], "omniglot_retention": [0.7247333333333333, 0.008593566356062508], "g_mean": [0.5003327773393162, 0.0003117915037854272], "g_surprise_corr": [0.9762769131887573, 0.00850194343842197], "acc_new_k1": [0.1331111111111111, 0.0062622719026497065], "acc_new_k3": [0.41484444444444446, 0.011278352475778585], "acc_new_k5": [0.5373555555555555, 0.010785621429923677]}
+===== --dataset kkanji --track pretrained --exposure --learner hebbian --hp {\"eta\":0} --variant randinit --tune
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure'}: final 0.439
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled'}: final 0.445
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure'}: final 0.369
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled'}: final 0.369
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure'}: final 0.356
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled'}: final 0.358
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure'}: final 0.352
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled'}: final 0.352
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure'}: final 0.350
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled'}: final 0.350
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure'}: final 0.348
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled'}: final 0.348
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure'}: final 0.348
+  tune hebbian {'eta': 0, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled'}: final 0.348
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure'}: final 0.424
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled'}: final 0.428
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure'}: final 0.366
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled'}: final 0.369
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure'}: final 0.357
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled'}: final 0.357
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure'}: final 0.354
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled'}: final 0.356
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure'}: final 0.353
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled'}: final 0.353
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure'}: final 0.352
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled'}: final 0.352
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure'}: final 0.351
+  tune hebbian {'eta': 0, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled'}: final 0.351
+seed 0: final 0.439  forgetting +0.104  new@1/3/5 0.132/0.425/0.543  8s
+seed 1: final 0.439  forgetting +0.100  new@1/3/5 0.130/0.415/0.539  10s
+seed 2: final 0.451  forgetting +0.100  new@1/3/5 0.140/0.427/0.551  9s
+seed 3: final 0.428  forgetting +0.098  new@1/3/5 0.125/0.400/0.526  8s
+seed 4: final 0.427  forgetting +0.101  new@1/3/5 0.139/0.408/0.527  8s
+{"learner": "hebbian", "track": "pretrained", "final_acc": [0.4368666666666666, 0.01000937831840656], "forgetting": [0.10042222222222223, 0.0022776422723921473], "omniglot_retention": [0.7247333333333333, 0.008593566356062508], "g_mean": [0.5003327773393162, 0.0003117915037854272], "g_surprise_corr": [0.9762769131887573, 0.00850194343842197], "acc_new_k1": [0.1331111111111111, 0.0062622719026497065], "acc_new_k3": [0.41484444444444446, 0.011278352475778585], "acc_new_k5": [0.5373555555555555, 0.010785621429923677]}
+===== --dataset kkanji --track pretrained --exposure --learner hebbian --hp {\"gate\":\"one\"} --variant g1 --tune
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure', 'gate': 'one'}: final 0.435
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled', 'gate': 'one'}: final 0.440
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure', 'gate': 'one'}: final 0.366
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled', 'gate': 'one'}: final 0.368
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure', 'gate': 'one'}: final 0.354
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled', 'gate': 'one'}: final 0.356
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure', 'gate': 'one'}: final 0.351
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled', 'gate': 'one'}: final 0.352
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure', 'gate': 'one'}: final 0.350
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled', 'gate': 'one'}: final 0.350
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure', 'gate': 'one'}: final 0.348
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled', 'gate': 'one'}: final 0.349
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure', 'gate': 'one'}: final 0.349
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled', 'gate': 'one'}: final 0.349
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure', 'gate': 'one'}: final 0.384
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled', 'gate': 'one'}: final 0.397
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure', 'gate': 'one'}: final 0.351
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled', 'gate': 'one'}: final 0.355
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure', 'gate': 'one'}: final 0.347
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled', 'gate': 'one'}: final 0.347
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure', 'gate': 'one'}: final 0.344
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled', 'gate': 'one'}: final 0.344
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure', 'gate': 'one'}: final 0.344
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled', 'gate': 'one'}: final 0.344
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure', 'gate': 'one'}: final 0.342
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled', 'gate': 'one'}: final 0.343
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure', 'gate': 'one'}: final 0.342
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled', 'gate': 'one'}: final 0.342
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure', 'gate': 'one'}: final 0.288
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled', 'gate': 'one'}: final 0.301
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure', 'gate': 'one'}: final 0.281
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled', 'gate': 'one'}: final 0.284
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure', 'gate': 'one'}: final 0.273
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled', 'gate': 'one'}: final 0.277
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure', 'gate': 'one'}: final 0.272
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled', 'gate': 'one'}: final 0.275
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure', 'gate': 'one'}: final 0.270
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled', 'gate': 'one'}: final 0.271
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure', 'gate': 'one'}: final 0.270
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled', 'gate': 'one'}: final 0.270
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure', 'gate': 'one'}: final 0.270
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled', 'gate': 'one'}: final 0.270
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure', 'gate': 'one'}: final 0.179
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled', 'gate': 'one'}: final 0.182
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure', 'gate': 'one'}: final 0.172
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled', 'gate': 'one'}: final 0.174
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure', 'gate': 'one'}: final 0.166
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled', 'gate': 'one'}: final 0.170
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure', 'gate': 'one'}: final 0.163
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled', 'gate': 'one'}: final 0.166
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure', 'gate': 'one'}: final 0.160
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled', 'gate': 'one'}: final 0.161
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure', 'gate': 'one'}: final 0.161
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled', 'gate': 'one'}: final 0.160
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure', 'gate': 'one'}: final 0.159
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled', 'gate': 'one'}: final 0.159
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure', 'gate': 'one'}: final 0.270
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled', 'gate': 'one'}: final 0.306
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure', 'gate': 'one'}: final 0.233
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled', 'gate': 'one'}: final 0.242
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure', 'gate': 'one'}: final 0.228
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled', 'gate': 'one'}: final 0.230
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure', 'gate': 'one'}: final 0.226
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled', 'gate': 'one'}: final 0.227
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure', 'gate': 'one'}: final 0.226
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled', 'gate': 'one'}: final 0.226
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure', 'gate': 'one'}: final 0.225
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled', 'gate': 'one'}: final 0.225
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure', 'gate': 'one'}: final 0.225
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled', 'gate': 'one'}: final 0.225
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure', 'gate': 'one'}: final 0.126
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled', 'gate': 'one'}: final 0.125
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure', 'gate': 'one'}: final 0.114
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled', 'gate': 'one'}: final 0.119
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure', 'gate': 'one'}: final 0.110
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled', 'gate': 'one'}: final 0.114
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure', 'gate': 'one'}: final 0.110
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled', 'gate': 'one'}: final 0.112
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure', 'gate': 'one'}: final 0.110
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled', 'gate': 'one'}: final 0.110
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure', 'gate': 'one'}: final 0.110
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled', 'gate': 'one'}: final 0.110
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure', 'gate': 'one'}: final 0.110
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled', 'gate': 'one'}: final 0.110
+seed 0: final 0.434  forgetting +0.107  new@1/3/5 0.123/0.418/0.541  17s
+seed 1: final 0.439  forgetting +0.101  new@1/3/5 0.119/0.409/0.539  17s
+seed 2: final 0.449  forgetting +0.101  new@1/3/5 0.129/0.420/0.550  11s
+seed 3: final 0.423  forgetting +0.101  new@1/3/5 0.113/0.395/0.525  11s
+seed 4: final 0.425  forgetting +0.102  new@1/3/5 0.129/0.400/0.527  11s
+{"learner": "hebbian", "track": "pretrained", "final_acc": [0.4338666666666667, 0.010606718113337528], "forgetting": [0.10246666666666666, 0.002534210374499766], "omniglot_retention": [0.7227777777777777, 0.007617799170202045], "g_mean": [1.0, 0.0], "g_surprise_corr": [NaN, NaN], "acc_new_k1": [0.12257777777777779, 0.006816102937842071], "acc_new_k3": [0.4083333333333334, 0.010920871398325588], "acc_new_k5": [0.5363555555555556, 0.010497912784906643]}
+===== --dataset kkanji --track pretrained --exposure --learner hebbian --hp {\"rule\":\"kmeans\"} --variant kmeans --tune
+  tune hebbian {'kwta': 1, 'shrinkage': 0.01, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.283
+  tune hebbian {'kwta': 1, 'shrinkage': 0.01, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.299
+  tune hebbian {'kwta': 1, 'shrinkage': 0.1, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.199
+  tune hebbian {'kwta': 1, 'shrinkage': 0.1, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.204
+  tune hebbian {'kwta': 1, 'shrinkage': 0.3, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.189
+  tune hebbian {'kwta': 1, 'shrinkage': 0.3, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.191
+  tune hebbian {'kwta': 1, 'shrinkage': 0.5, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.187
+  tune hebbian {'kwta': 1, 'shrinkage': 0.5, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.187
+  tune hebbian {'kwta': 1, 'shrinkage': 0.7, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.186
+  tune hebbian {'kwta': 1, 'shrinkage': 0.7, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.186
+  tune hebbian {'kwta': 1, 'shrinkage': 0.9, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.186
+  tune hebbian {'kwta': 1, 'shrinkage': 0.9, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.186
+  tune hebbian {'kwta': 1, 'shrinkage': 0.99, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.186
+  tune hebbian {'kwta': 1, 'shrinkage': 0.99, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.186
+  tune hebbian {'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.438
+  tune hebbian {'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.444
+  tune hebbian {'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.368
+  tune hebbian {'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.372
+  tune hebbian {'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.347
+  tune hebbian {'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.355
+  tune hebbian {'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.342
+  tune hebbian {'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.346
+  tune hebbian {'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.340
+  tune hebbian {'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.343
+  tune hebbian {'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.338
+  tune hebbian {'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.340
+  tune hebbian {'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure', 'rule': 'kmeans'}: final 0.338
+  tune hebbian {'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled', 'rule': 'kmeans'}: final 0.338
+seed 0: final 0.447  forgetting +0.102  new@1/3/5 0.177/0.450/0.549  13s
+seed 1: final 0.442  forgetting +0.104  new@1/3/5 0.171/0.441/0.545  13s
+seed 2: final 0.461  forgetting +0.096  new@1/3/5 0.197/0.458/0.556  14s
+seed 3: final 0.432  forgetting +0.099  new@1/3/5 0.173/0.426/0.531  16s
+seed 4: final 0.147  forgetting +0.099  new@1/3/5 0.083/0.189/0.245  15s
+{"learner": "hebbian", "track": "pretrained", "final_acc": [0.38555555555555554, 0.13401266754202154], "forgetting": [0.09984444444444444, 0.0029737534996268924], "omniglot_retention": [0.7121777777777777, 0.03203678441347626], "g_mean": [0.4958697611750065, 0.0008173508625372776], "g_surprise_corr": [0.9809750527285781, 0.0027043349847643166], "acc_new_k1": [0.1604222222222222, 0.04429965303768484], "acc_new_k3": [0.3927777777777777, 0.11447593957133846], "acc_new_k5": [0.4853777777777778, 0.13449582581066902]}
+===== --dataset kkanji --track pretrained --exposure --learner hebbian --hp {\"stream_plastic\":true} --variant streamplastic --tune
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.438
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.442
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.369
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.373
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.353
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.356
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.350
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.350
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.0, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.423
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.427
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.366
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.367
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.357
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.359
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.355
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.355
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.352
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.352
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.351
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.351
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.350
+  tune hebbian {'eta': 0.0, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.350
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.438
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.443
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.365
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.367
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.354
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.355
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.351
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.352
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.350
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.349
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.001, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.404
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.414
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.362
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.365
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.352
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.353
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.349
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.350
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.347
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.348
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.347
+  tune hebbian {'eta': 0.001, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.347
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.187
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.206
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.193
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.195
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.193
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.194
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.191
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.191
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.191
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.191
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.190
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.191
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.190
+  tune hebbian {'eta': 0.01, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.190
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.076
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.101
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.071
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.076
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.068
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.071
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.068
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.069
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.068
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.068
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.068
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.068
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.068
+  tune hebbian {'eta': 0.01, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.068
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.029
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.01, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.039
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.028
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.1, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.030
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.027
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.3, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.028
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.027
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.5, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.028
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.027
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.7, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.027
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.027
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.9, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.027
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.027
+  tune hebbian {'eta': 0.1, 'kwta': 4, 'shrinkage': 0.99, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.027
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.044
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.01, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.055
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.040
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.1, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.044
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.039
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.3, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.041
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.039
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.5, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.040
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.040
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.7, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.040
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.040
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.9, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.039
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'exposure', 'stream_plastic': True}: final 0.039
+  tune hebbian {'eta': 0.1, 'kwta': 32, 'shrinkage': 0.99, 'cov_src': 'labelled', 'stream_plastic': True}: final 0.039
+seed 0: final 0.437  forgetting +0.106  new@1/3/5 0.127/0.420/0.543  24s
+seed 1: final 0.438  forgetting +0.103  new@1/3/5 0.125/0.413/0.540  24s
+seed 2: final 0.453  forgetting +0.098  new@1/3/5 0.133/0.421/0.551  22s
+seed 3: final 0.429  forgetting +0.097  new@1/3/5 0.116/0.398/0.526  24s
+seed 4: final 0.426  forgetting +0.102  new@1/3/5 0.134/0.406/0.528  16s
+{"learner": "hebbian", "track": "pretrained", "final_acc": [0.4363777777777778, 0.010467055902175126], "forgetting": [0.1012, 0.0038740988597748315], "omniglot_retention": [0.7240888888888889, 0.006845472505763252], "g_mean": [0.4945401552166744, 0.0006114428949337779], "g_surprise_corr": [0.967019675432064, 0.010531001741523738], "acc_new_k1": [0.12682222222222223, 0.00722376051993577], "acc_new_k3": [0.4116888888888889, 0.009664239797531813], "acc_new_k5": [0.5376, 0.010477960408447232]}
+===== --dataset kkanji --track pretrained --exposure --learner hebbian --hp {\"shrinkage\":0.01,\"gate\":\"const\",\"kwta\":4,\"gate_from\":\"C:\\Users\\main\\Documents\\metabrain-agi\\eval\\results\\omniglot\\hebbian-exp-kkanji_pretrained_default_c600_s5.json\",\"eta\":0.0} --variant const
+seed 0: final 0.432  forgetting +0.101  new@1/3/5 0.128/0.415/0.533  14s
+seed 1: final 0.435  forgetting +0.098  new@1/3/5 0.126/0.409/0.534  17s
+seed 2: final 0.444  forgetting +0.100  new@1/3/5 0.136/0.419/0.544  17s
+seed 3: final 0.418  forgetting +0.099  new@1/3/5 0.120/0.390/0.517  17s
+seed 4: final 0.421  forgetting +0.100  new@1/3/5 0.135/0.401/0.521  18s
+{"learner": "hebbian", "track": "pretrained", "final_acc": [0.43006666666666665, 0.010686497769049574], "forgetting": [0.09953333333333333, 0.0009209495904489884], "omniglot_retention": [0.7247333333333333, 0.008593566356062508], "g_mean": [0.5003327945594125, 0.0003117992539089157], "g_surprise_corr": [NaN, NaN], "acc_new_k1": [0.12917777777777778, 0.00670295678261688], "acc_new_k3": [0.40700000000000003, 0.011509791859194303], "acc_new_k5": [0.5296222222222223, 0.010679274955737745]}
+===== --dataset kkanji --track pretrained --exposure --learner hebbian --hp {\"shrinkage\":0.01,\"gate\":\"shuffled\",\"kwta\":4,\"gate_from\":\"C:\\Users\\main\\Documents\\metabrain-agi\\eval\\results\\omniglot\\hebbian-exp-kkanji_pretrained_default_c600_s5.json\",\"eta\":0.0} --variant shuffled
+seed 0: final 0.432  forgetting +0.101  new@1/3/5 0.128/0.415/0.533  12s
+seed 1: final 0.435  forgetting +0.098  new@1/3/5 0.126/0.409/0.534  11s
+seed 2: final 0.444  forgetting +0.100  new@1/3/5 0.136/0.419/0.544  15s
+seed 3: final 0.418  forgetting +0.099  new@1/3/5 0.120/0.390/0.517  16s
+seed 4: final 0.421  forgetting +0.100  new@1/3/5 0.135/0.401/0.521  16s
+{"learner": "hebbian", "track": "pretrained", "final_acc": [0.43006666666666665, 0.010686497769049574], "forgetting": [0.09953333333333333, 0.0009209495904489884], "omniglot_retention": [0.7247333333333333, 0.008593566356062508], "g_mean": [0.5003327945594125, 0.00031179925390891416], "g_surprise_corr": [-0.005059256815064911, 0.011309903449402633], "acc_new_k1": [0.12917777777777778, 0.00670295678261688], "acc_new_k3": [0.40700000000000003, 0.011509791859194303], "acc_new_k5": [0.5296222222222223, 0.010679274955737745]}

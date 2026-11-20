@@ -35,6 +35,9 @@ class Learner:
         with torch.no_grad():
             return self.enc(x)
 
+    def expose(self, x) -> None:  # Benchmark 1c: one unlabelled image; default learners ignore it
+        pass
+
     def end_of_task(self, n_seen: int) -> None:  # optional hook every `task_size` classes
         pass
 
@@ -211,6 +214,17 @@ class Replay(OnlineMLP):
         return 6 * self.n_params() * self.steps * (1 + self.rb)
 
 
+class _Norm(nn.Module):
+    """L2-normalised encoder output (the enc_norm preprocessing knob)."""
+
+    def __init__(self, enc):
+        super().__init__()
+        self.enc, self.out_dim = enc, enc.out_dim
+
+    def forward(self, x):
+        return F.normalize(self.enc(x), dim=1)
+
+
 class SLDA(Learner):
     """Deep Streaming LDA (Hayes & Kanan 2020): class means + one shared covariance,
     both updated online; prediction with a shrinkage-regularised precision matrix.
@@ -218,14 +232,30 @@ class SLDA(Learner):
     total update count n/(n+1) and class means starting at zero."""
     name = "slda"
 
-    def __init__(self, n_max, device, encoder=None, shrinkage=1e-4):
+    def __init__(self, n_max, device, encoder=None, shrinkage=1e-4, target="identity", enc_norm=False):
+        # target: identity = original (scale-dependent); diag = shrink toward diag(cov), scale-free per feature
+        assert target in ("identity", "diag")
+        if enc_norm:
+            encoder = _Norm(encoder)
         super().__init__(n_max, device, encoder)
+        self.target = target
         d = self.enc.out_dim
         self.mu = torch.zeros(n_max, d, device=device)
         self.cnt = torch.zeros(n_max, device=device)
         self.cov = torch.zeros(d, d, device=device)
         self.n = 0
         self.eps = shrinkage
+        self.prec = None
+        self.g_mu, self.g_n = torch.zeros(d, device=device), 0
+
+    def expose(self, x):
+        """Unlabelled: streaming covariance around the running global mean (no class means touched)."""
+        f = self.feats(x)[0]
+        dlt = (f - self.g_mu)[:, None]
+        self.cov = (self.n * self.cov + (dlt @ dlt.T) * self.n / (self.n + 1)) / (self.n + 1)
+        self.g_mu += dlt[:, 0] / (self.g_n + 1)
+        self.g_n += 1
+        self.n += 1
         self.prec = None
 
     def observe(self, x, y):
@@ -241,7 +271,13 @@ class SLDA(Learner):
     def logits(self, x, n_seen):
         if self.prec is None:
             d = self.cov.shape[0]
-            self.prec = torch.linalg.inv((1 - self.eps) * self.cov + self.eps * torch.eye(d, device=self.device))
+            if self.target == "diag":
+                dg = self.cov.diagonal()
+                dg = dg.clamp(min=1e-6 * float(dg.mean()) + 1e-12)  # dead units (zero variance) stay invertible
+                tgt = torch.diag(dg)
+            else:
+                tgt = torch.eye(d, device=self.device)
+            self.prec = torch.linalg.inv((1 - self.eps) * self.cov + self.eps * tgt)
         mu = self.mu[:n_seen]
         w = mu @ self.prec
         b = -0.5 * (w * mu).sum(1)
@@ -413,4 +449,99 @@ class ReplayFull(Learner):
         return int(ENC_FLOPS_FWD_BWD * (1 + self.rb))
 
 
-REGISTRY = {c.name: c for c in (NCM, OnlineMLP, OnlineEWC, OnlineViT, Replay, SLDA, Linear, NeuromodEncoder, ReplayFull)}
+class _Concat(nn.Module):
+    """[frozen encoder features (L2-normalised), sparse plastic-layer responses]."""
+
+    def __init__(self, enc, heb, enc_norm=True):
+        super().__init__()
+        self.enc, self.heb, self.enc_norm = enc, heb, enc_norm
+        self.out_dim = enc.out_dim + heb.K
+
+    def forward(self, x):
+        raw = self.enc(x)
+        f = F.normalize(raw, dim=1)  # the plastic layer always sees the normalised input (cosine units)
+        return torch.cat([f if self.enc_norm else raw, self.heb.respond(f)], 1)
+
+
+class Hebbian(Learner):
+    """Experiment 2: plastic layer of K units on the frozen encoder, learned WITHOUT labels and
+    without backprop: competitive (k-WTA) Hebbian learning with Oja normalisation and homeostatic
+    thresholds, gated by novelty g = sigmoid(kg * (novelty - running mean)), novelty = 1 - max cos.
+    Readout: SLDA on [encoder, plastic] (unlabelled exposure also feeds SLDA's covariance).
+    rule: oja | kmeans (online sequential k-means, competitor) ; gate: gated | one | const | shuffled.
+    eta = 0 keeps the random init frozen (sanity row = random-init ablation)."""
+    name = "hebbian"
+
+    def __init__(self, n_max, device, encoder=None, K=512, eta=1e-2, kwta=4, kg=5.0, rho=1e-3,
+                 shrinkage=0.9, rule="oja", gate="gated", gate_seq=None, stream_plastic=False, cov_src="exposure",
+                 target="identity", enc_norm=True):
+        assert encoder is not None and cov_src in ("exposure", "labelled")
+        self.cov_src = cov_src
+        super().__init__(n_max, device, encoder)
+        d = self.enc.out_dim
+        gen = torch.Generator(device="cpu").manual_seed(12345)
+        self.W = F.normalize(torch.randn(K, d, generator=gen), dim=1).to(device)
+        self.b = torch.zeros(K, device=device)
+        self.cnt_k = torch.zeros(K, device=device)
+        self.K, self.eta, self.kwta, self.kg, self.rho = K, eta, kwta, kg, rho
+        self.rule, self.gate, self.gate_seq, self.stream_plastic = rule, gate, gate_seq, stream_plastic
+        self.nov_mean, self.t = 0.5, 0
+        self.g_log, self.s_log = [], []
+        self.enc_norm = enc_norm
+        self.slda = SLDA(n_max, device, encoder=_Concat(self.enc, self, enc_norm), shrinkage=shrinkage, target=target)
+
+    def respond(self, f):
+        a = f @ self.W.T - self.b
+        top = a.topk(self.kwta, dim=1)
+        return torch.zeros_like(a).scatter_(1, top.indices, top.values.clamp(min=0))
+
+    @torch.no_grad()
+    def _plastic(self, x):
+        f = F.normalize(self.enc(x), dim=1)[0]
+        a = self.W @ f
+        nov = 1 - a.max().item()
+        g_gated = 1 / (1 + math.exp(-self.kg * (nov - self.nov_mean)))
+        self.nov_mean += (nov - self.nov_mean) / (self.t + 2)
+        g = g_gated if self.gate == "gated" else 1.0 if self.gate == "one" else float(self.gate_seq[self.t])
+        self.g_log.append(g); self.s_log.append(nov)
+        self.t += 1
+        win = (a - self.b).topk(self.kwta).indices
+        if self.rule == "kmeans":  # sequential k-means: winner moves to its running mean
+            self.cnt_k[win] += 1
+            self.W[win] += (f - self.W[win]) / self.cnt_k[win, None]
+        elif self.eta > 0:
+            y = a[win].clamp(min=0)[:, None]
+            self.W[win] += self.eta * g * y * (f[None] - y * self.W[win])  # Oja: Hebbian growth, self-normalising
+        hit = torch.zeros(self.K, device=self.device); hit[win] = 1
+        self.b += self.rho * (hit - self.kwta / self.K)  # homeostasis: busy units raise their threshold
+
+    def expose(self, x):
+        self._plastic(x)
+        self.slda.expose(x)  # always accumulated; end_exposure() discards it if cov_src == "labelled"
+
+    def end_exposure(self):
+        """cov_src (tuned): "exposure" keeps the unlabelled covariance; "labelled" resets SLDA so its
+        covariance comes from labelled within-class spread only. The plastic layer is unaffected."""
+        if self.cov_src == "labelled":
+            s = self.slda
+            s.cov.zero_(); s.g_mu.zero_(); s.n = 0; s.g_n = 0; s.prec = None
+
+    def observe(self, x, y):
+        if self.stream_plastic:
+            self._plastic(x)
+        self.slda.observe(x, y)
+
+    def logits(self, x, n_seen):
+        return self.slda.logits(x, n_seen)
+
+    def adapted_encoder(self):
+        return _Concat(self.enc, self)
+
+    def n_params(self):
+        return self.W.numel() + self.slda.n_params()
+
+    def flops_per_example(self):
+        return int(2 * self.enc.out_dim * self.K * 2 + self.slda.flops_per_example())
+
+
+REGISTRY = {c.name: c for c in (NCM, OnlineMLP, OnlineEWC, OnlineViT, Replay, SLDA, Linear, NeuromodEncoder, ReplayFull, Hebbian)}

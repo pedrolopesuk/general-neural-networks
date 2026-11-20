@@ -1,0 +1,119 @@
+﻿===== --dataset kkanji --track pretrained --learner slda --hp {\"target\":\"diag\"} --variant diag --tune
+  tune slda {'shrinkage': 0.0001, 'enc_norm': False, 'target': 'diag'}: final 0.590
+  tune slda {'shrinkage': 0.0001, 'enc_norm': True, 'target': 'diag'}: final 0.557
+  tune slda {'shrinkage': 0.01, 'enc_norm': False, 'target': 'diag'}: final 0.626
+  tune slda {'shrinkage': 0.01, 'enc_norm': True, 'target': 'diag'}: final 0.594
+  tune slda {'shrinkage': 0.1, 'enc_norm': False, 'target': 'diag'}: final 0.630
+  tune slda {'shrinkage': 0.1, 'enc_norm': True, 'target': 'diag'}: final 0.609
+  tune slda {'shrinkage': 0.3, 'enc_norm': False, 'target': 'diag'}: final 0.598
+  tune slda {'shrinkage': 0.3, 'enc_norm': True, 'target': 'diag'}: final 0.585
+  tune slda {'shrinkage': 0.5, 'enc_norm': False, 'target': 'diag'}: final 0.560
+  tune slda {'shrinkage': 0.5, 'enc_norm': True, 'target': 'diag'}: final 0.556
+  tune slda {'shrinkage': 0.7, 'enc_norm': False, 'target': 'diag'}: final 0.524
+  tune slda {'shrinkage': 0.7, 'enc_norm': True, 'target': 'diag'}: final 0.517
+  tune slda {'shrinkage': 0.9, 'enc_norm': False, 'target': 'diag'}: final 0.463
+  tune slda {'shrinkage': 0.9, 'enc_norm': True, 'target': 'diag'}: final 0.456
+  tune slda {'shrinkage': 0.99, 'enc_norm': False, 'target': 'diag'}: final 0.401
+  tune slda {'shrinkage': 0.99, 'enc_norm': True, 'target': 'diag'}: final 0.390
+seed 0: final 0.602  forgetting +0.078  new@1/3/5 0.105/0.506/0.680  7s
+seed 1: final 0.612  forgetting +0.080  new@1/3/5 0.105/0.513/0.692  8s
+seed 2: final 0.613  forgetting +0.081  new@1/3/5 0.121/0.519/0.694  8s
+seed 3: final 0.598  forgetting +0.079  new@1/3/5 0.096/0.489/0.677  8s
+seed 4: final 0.596  forgetting +0.083  new@1/3/5 0.107/0.493/0.679  8s
+{"learner": "slda", "track": "pretrained", "final_acc": [0.6040666666666666, 0.007791495838887881], "forgetting": [0.08033333333333334, 0.0018206632897971012], "acc_new_k1": [0.10684444444444444, 0.008874154454591752], "acc_new_k3": [0.5040666666666668, 0.012769707596447346], "acc_new_k5": [0.6844444444444445, 0.007945804079458281]}
+===== --dataset kkanji --track pretrained --learner slda --exposure --hp {\"target\":\"diag\"} --variant diag --tune
+  tune slda {'shrinkage': 0.0001, 'enc_norm': False, 'target': 'diag'}: final 0.560
+  tune slda {'shrinkage': 0.0001, 'enc_norm': True, 'target': 'diag'}: final 0.532
+  tune slda {'shrinkage': 0.01, 'enc_norm': False, 'target': 'diag'}: final 0.592
+  tune slda {'shrinkage': 0.01, 'enc_norm': True, 'target': 'diag'}: final 0.559
+  tune slda {'shrinkage': 0.1, 'enc_norm': False, 'target': 'diag'}: final 0.613
+  tune slda {'shrinkage': 0.1, 'enc_norm': True, 'target': 'diag'}: final 0.587
+  tune slda {'shrinkage': 0.3, 'enc_norm': False, 'target': 'diag'}: final 0.606
+  tune slda {'shrinkage': 0.3, 'enc_norm': True, 'target': 'diag'}: final 0.583
+  tune slda {'shrinkage': 0.5, 'enc_norm': False, 'target': 'diag'}: final 0.588
+  tune slda {'shrinkage': 0.5, 'enc_norm': True, 'target': 'diag'}: final 0.568
+  tune slda {'shrinkage': 0.7, 'enc_norm': False, 'target': 'diag'}: final 0.553
+  tune slda {'shrinkage': 0.7, 'enc_norm': True, 'target': 'diag'}: final 0.541
+  tune slda {'shrinkage': 0.9, 'enc_norm': False, 'target': 'diag'}: final 0.503
+  tune slda {'shrinkage': 0.9, 'enc_norm': True, 'target': 'diag'}: final 0.487
+  tune slda {'shrinkage': 0.99, 'enc_norm': False, 'target': 'diag'}: final 0.416
+  tune slda {'shrinkage': 0.99, 'enc_norm': True, 'target': 'diag'}: final 0.407
+seed 0: final 0.573  forgetting +0.076  new@1/3/5 0.058/0.435/0.649  10s
+seed 1: final 0.590  forgetting +0.073  new@1/3/5 0.054/0.453/0.663  7s
+seed 2: final 0.587  forgetting +0.076  new@1/3/5 0.060/0.457/0.663  9s
+seed 3: final 0.572  forgetting +0.073  new@1/3/5 0.047/0.410/0.645  9s
+seed 4: final 0.568  forgetting +0.079  new@1/3/5 0.058/0.424/0.647  12s
+{"learner": "slda", "track": "pretrained", "final_acc": [0.578111111111111, 0.009883581597031784], "forgetting": [0.07537777777777777, 0.002502591249677619], "acc_new_k1": [0.05531111111111111, 0.004875233454365837], "acc_new_k3": [0.4357333333333334, 0.019713785362870644], "acc_new_k5": [0.6535111111111112, 0.009161311567108149]}
+===== enc_norm (from bar tuning) = False
+powershell : Get-History : Cannot bind parameter 'Id'. Cannot convert the "System.Collections.Hashtable" value of type 
+At line:1 char:344
++ ... abrain-agi; powershell -NoProfile -ExecutionPolicy Bypass -File eval\ ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Get-History : C... value of type :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+"System.Collections.Hashtable" to type "System.Int64".
+At C:\Users\main\Documents\metabrain-agi\eval\run_exp2.ps1:22 char:27
++ Run ($base + @("--hp", (H @{}), "--tune"))                            ...
++                           ~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-History], ParameterBindingException
+    + FullyQualifiedErrorId : CannotConvertArgumentNoMessage,Microsoft.PowerShell.Commands.GetHistoryCommand
+ 
+Get-Content : Cannot find path 
+'C:\Users\main\Documents\metabrain-agi\eval\results\tuning\hebbian-exp-kkanji_pretrained_s5.json' because it does not 
+exist.
+At C:\Users\main\Documents\metabrain-agi\eval\run_exp2.ps1:23 char:10
++ $best = (Get-Content "$res\tuning\hebbian-exp-kkanji_pretrained_s5.js ...
++          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (C:\Users\main\D...trained_s5.json:String) [Get-Content], ItemNotFoundEx 
+   ception
+    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-History : Cannot bind parameter 'Id'. Cannot convert the "System.Collections.Hashtable" value of type 
+"System.Collections.Hashtable" to type "System.Int64".
+At C:\Users\main\Documents\metabrain-agi\eval\run_exp2.ps1:24 char:27
++ Run ($base + @("--hp", (H @{eta = 0.0}), "--variant", "randinit", "-- ...
++                           ~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-History], ParameterBindingException
+    + FullyQualifiedErrorId : CannotConvertArgumentNoMessage,Microsoft.PowerShell.Commands.GetHistoryCommand
+ 
+Get-History : Cannot bind parameter 'Id'. Cannot convert the "System.Collections.Hashtable" value of type 
+"System.Collections.Hashtable" to type "System.Int64".
+At C:\Users\main\Documents\metabrain-agi\eval\run_exp2.ps1:25 char:27
++ Run ($base + @("--hp", (H @{gate = "one"}), "--variant", "g1", "--tun ...
++                           ~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-History], ParameterBindingException
+    + FullyQualifiedErrorId : CannotConvertArgumentNoMessage,Microsoft.PowerShell.Commands.GetHistoryCommand
+ 
+Get-History : Cannot bind parameter 'Id'. Cannot convert the "System.Collections.Hashtable" value of type 
+"System.Collections.Hashtable" to type "System.Int64".
+At C:\Users\main\Documents\metabrain-agi\eval\run_exp2.ps1:26 char:27
++ Run ($base + @("--hp", (H @{rule = "kmeans"}), "--variant", "kmeans", ...
++                           ~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-History], ParameterBindingException
+    + FullyQualifiedErrorId : CannotConvertArgumentNoMessage,Microsoft.PowerShell.Commands.GetHistoryCommand
+ 
+Get-History : Cannot bind parameter 'Id'. Cannot convert the "System.Collections.Hashtable" value of type 
+"System.Collections.Hashtable" to type "System.Int64".
+At C:\Users\main\Documents\metabrain-agi\eval\run_exp2.ps1:27 char:27
++ Run ($base + @("--hp", (H @{stream_plastic = $true}), "--variant", "s ...
++                           ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-History], ParameterBindingException
+    + FullyQualifiedErrorId : CannotConvertArgumentNoMessage,Microsoft.PowerShell.Commands.GetHistoryCommand
+ 
+Get-History : Cannot bind parameter 'Id'. Cannot convert the "System.Collections.Hashtable" value of type 
+"System.Collections.Hashtable" to type "System.Int64".
+At C:\Users\main\Documents\metabrain-agi\eval\run_exp2.ps1:31 char:31
++     Run ($base + @("--hp", (H $h), "--variant", $mode))
++                               ~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-History], ParameterBindingException
+    + FullyQualifiedErrorId : CannotConvertArgumentNoMessage,Microsoft.PowerShell.Commands.GetHistoryCommand
+ 
+Get-History : Cannot bind parameter 'Id'. Cannot convert the "System.Collections.Hashtable" value of type 
+"System.Collections.Hashtable" to type "System.Int64".
+At C:\Users\main\Documents\metabrain-agi\eval\run_exp2.ps1:31 char:31
++     Run ($base + @("--hp", (H $h), "--variant", $mode))
++                               ~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-History], ParameterBindingException
+    + FullyQualifiedErrorId : CannotConvertArgumentNoMessage,Microsoft.PowerShell.Commands.GetHistoryCommand
+ 

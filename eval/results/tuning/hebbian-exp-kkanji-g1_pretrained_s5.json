@@ -1,0 +1,590 @@
+{
+ "hp": {
+  "eta": 0.1,
+  "kwta": 4,
+  "shrinkage": 0.01,
+  "cov_src": "exposure",
+  "gate": "one",
+  "enc_norm": false,
+  "target": "diag"
+ },
+ "background_final_acc": 0.47933333333333333,
+ "grid": [
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.0001,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.0001,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.01,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.01,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.1,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.1,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.3,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.3,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.5,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.5,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.7,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.7,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.9,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.9,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.99,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 4,
+   "shrinkage": 0.99,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.0001,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.0001,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.01,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.01,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.1,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.1,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.3,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.3,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.5,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.5,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.7,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.7,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.9,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.9,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.99,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.001,
+   "kwta": 32,
+   "shrinkage": 0.99,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.0001,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.0001,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.01,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.01,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.1,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.1,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.3,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.3,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.5,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.5,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.7,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.7,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.9,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.9,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.99,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 4,
+   "shrinkage": 0.99,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.0001,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.0001,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.01,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.01,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.1,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.1,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.3,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.3,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.5,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.5,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.7,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.7,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.9,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.9,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.99,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.01,
+   "kwta": 32,
+   "shrinkage": 0.99,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.0001,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.0001,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.01,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.01,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.1,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.1,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.3,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.3,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.5,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.5,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.7,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.7,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.9,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.9,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.99,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 4,
+   "shrinkage": 0.99,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.0001,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.0001,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.01,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.01,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.1,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.1,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.3,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.3,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.5,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.5,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.7,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.7,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.9,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.9,
+   "cov_src": "labelled"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.99,
+   "cov_src": "exposure"
+  },
+  {
+   "eta": 0.1,
+   "kwta": 32,
+   "shrinkage": 0.99,
+   "cov_src": "labelled"
+  }
+ ]
+}

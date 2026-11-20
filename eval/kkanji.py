@@ -92,6 +92,33 @@ def tuning_set(device="cpu"):
     return torch.tensor(x, dtype=torch.float32, device=device).unsqueeze(1), torch.tensor(y, dtype=torch.long, device=device)
 
 
+EXPOSURE_CACHE = DATA / "kkanji_exposure.npz"
+
+
+def exposure_set(device="cpu", with_labels=False):
+    """Benchmark 1c unlabelled exposure: ONE fixed set shared by tuning and test, disjoint from both
+    streams: every drawing of (a) tuning-pool classes outside the 600-class tuning stream and
+    (b) classes with < 10 drawings (in neither pool). Fixed order. Labels only for the oracle row."""
+    if not EXPOSURE_CACHE.exists():
+        from PIL import Image
+        names = np.load(CACHE)["names"]
+        _, tune_c = split()
+        dirs = [SRC / names[c] for c in tune_c[600:]]
+        dirs += [d for d in sorted(SRC.iterdir()) if d.is_dir() and len(list(d.glob("*.png"))) < 10]
+        xs, ys = [], []
+        for i, d in enumerate(dirs):
+            for f in sorted(d.glob("*.png")):
+                xs.append(np.asarray(Image.open(f).convert("L").resize((28, 28), Image.BILINEAR), dtype=np.uint8))
+                ys.append(i)
+        order = np.random.default_rng(7).permutation(len(xs))
+        np.savez_compressed(EXPOSURE_CACHE, x=np.stack(xs)[order], y=np.array(ys)[order])
+    z = np.load(EXPOSURE_CACHE)
+    x = torch.tensor(z["x"].astype(np.float32) / 255.0, device=device).unsqueeze(1)
+    if not with_labels:
+        return x
+    return x, torch.tensor(np.unique(z["y"], return_inverse=True)[1], dtype=torch.long, device=device)
+
+
 if __name__ == "__main__":
     xx, yy = _load()
     a, b = split()

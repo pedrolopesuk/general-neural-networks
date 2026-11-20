@@ -1,4 +1,4 @@
-"""Benchmark 1: continual few-shot classification on Omniglot.
+﻿"""Benchmark 1: continual few-shot classification on Omniglot.
 
 One command per run:
     python eval/run_bench.py --learner ncm --track scratch
@@ -24,6 +24,7 @@ Hyper-parameters are selected (--tune) on a stream built from background alphabe
 from __future__ import annotations
 
 import argparse
+import copy
 import itertools
 import json
 import time
@@ -42,6 +43,7 @@ from omniglot import TUNE_CLASSES, background_set
 DATASETS = {"omniglot": omniglot.make_stream, "kkanji": kkanji.make_stream}
 
 ENC_STEPS, ENC_BATCH, ENC_DIM = 3000, 256, 256
+SHRINK = (1e-4, 1e-2, 1e-1, 0.3, 0.5, 0.7, 0.9, 0.99)
 GRIDS = {
     "ncm": [{}],
     "mlp_sgd": [{"lr": lr} for lr in (1e-4, 3e-4, 1e-3, 3e-3, 1e-2)],
@@ -53,6 +55,11 @@ GRIDS = {
                  for t in (10.0, 30.0, 100.0) for k in (5.0, 20.0) for b in (0.0, 0.5)],
     "neuromod_one": [{"lr": lr, "tau": t} for lr in (0.0, 1e-6, 3e-6, 1e-5, 3e-5, 1e-4, 3e-4) for t in (10.0, 30.0, 100.0)],
     "replay_full": [{"lr": lr} for lr in (1e-5, 3e-5, 1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2)],
+    "hebbian": [{"eta": eta, "kwta": k, "shrinkage": sh, "cov_src": cs} for eta in (0.0, 1e-3, 1e-2, 1e-1)
+                for k in (4, 32) for sh in SHRINK for cs in ("exposure", "labelled")],
+    "hebbian_kmeans": [{"kwta": k, "shrinkage": sh, "cov_src": cs} for k in (1, 4)
+                       for sh in SHRINK for cs in ("exposure", "labelled")],
+    "slda_diag": [{"shrinkage": e, "enc_norm": n} for e in SHRINK for n in (False, True)],  # 1c bar, scale-free target
     "slda": [{"shrinkage": e} for e in (1e-4, 1e-2, 1e-1, 0.3, 0.5, 0.7, 0.9, 0.99)],  # 0.99 ~ NCM limit
 }
 
@@ -72,14 +79,16 @@ class ConvEncoder(nn.Module):
 def pretrained_encoder(seed: int, device, source: str = "omniglot") -> nn.Module:
     """source=omniglot: the shared v1 encoder. source=kkanji: headroom oracle, same architecture and
     budget, trained i.i.d. on the Kuzushiji-Kanji TUNING pool (disjoint from the test pool)."""
-    path = DATA / (f"encoder_v1_s{seed}_{ENC_STEPS}x{ENC_BATCH}.pt" if source == "omniglot"
-                   else f"encoder_kk_s{seed}_{ENC_STEPS}x{ENC_BATCH}.pt")
+    path = DATA / {"omniglot": f"encoder_v1_s{seed}_{ENC_STEPS}x{ENC_BATCH}.pt",
+                   "kkanji": f"encoder_kk_s{seed}_{ENC_STEPS}x{ENC_BATCH}.pt",
+                   "exposure": f"encoder_exp_s{seed}_{ENC_STEPS}x{ENC_BATCH}.pt"}[source]
     enc = ConvEncoder().to(device)
     if path.exists():
         enc.load_state_dict(torch.load(path, map_location=device))
         return enc.eval()
     seed_all(seed)
-    x, y = background_set(device) if source == "omniglot" else kkanji.tuning_set(device)
+    x, y = {"omniglot": lambda: background_set(device), "kkanji": lambda: kkanji.tuning_set(device),
+            "exposure": lambda: kkanji.exposure_set(device, with_labels=True)}[source]()
     head = nn.Linear(ENC_DIM, int(y.max()) + 1).to(device)
     opt = torch.optim.Adam(list(enc.parameters()) + list(head.parameters()), lr=1e-3)
     enc.train()
@@ -91,6 +100,20 @@ def pretrained_encoder(seed: int, device, source: str = "omniglot") -> nn.Module
         opt.step()
     torch.save(enc.state_dict(), path)
     return enc.eval()
+
+
+_EXPOSURE = {}
+
+
+def expose_all(learner, device):
+    """Benchmark 1c exposure phase: every image of the shared exposure set, once, fixed order, no labels."""
+    if "x" not in _EXPOSURE:
+        _EXPOSURE["x"] = kkanji.exposure_set(device)
+    x = _EXPOSURE["x"]
+    for i in range(len(x)):
+        learner.expose(x[i:i + 1])
+    if hasattr(learner, "end_exposure"):
+        learner.end_exposure()
 
 
 STREAM_ENC_STEPS = 500  # x ENC_BATCH: ~43 passes over the 3,000 stream shots
@@ -170,7 +193,8 @@ def run_iid(learner, st, epochs, seed):
 
 def build(name, track, seed, device, n_max, hp):
     enc = (pretrained_encoder(seed, device) if track == "pretrained"
-           else pretrained_encoder(seed, device, "kkanji") if track == "kkanji_enc" else None)
+           else pretrained_encoder(seed, device, "kkanji") if track == "kkanji_enc"
+           else pretrained_encoder(seed, device, "exposure") if track == "exposure_enc" else None)
     if name == "vit_online" and track == "pretrained":
         raise SystemExit("vit_online runs on pixels: scratch track only")
     return REGISTRY[name](n_max, device, encoder=enc, **hp)
@@ -179,14 +203,39 @@ def build(name, track, seed, device, n_max, hp):
 def tune(name, track, device, args, fixed, hp_file):
     best = None
     grid = GRIDS["neuromod_one"] if name == "neuromod" and fixed.get("gate") == "one" else GRIDS[name]
+    if name == "slda" and fixed.get("target") == "diag":
+        grid = GRIDS["slda_diag"]
+    if name == "hebbian" and fixed.get("rule") == "kmeans":
+        grid = GRIDS["hebbian_kmeans"]
+    if name == "hebbian" and fixed.get("eta") == 0.0:
+        grid = [g for g in grid if g["eta"] == 0.0]  # frozen random init: tunes its own kwta + shrinkage
+    if name == "hebbian" and fixed.get("gate") == "one":
+        grid = [g for g in grid if g["eta"] > 0]
     if name == "neuromod" and fixed.get("beta") == 0.0:
         grid = [g for g in grid if g["beta"] == 0.0]
+    exposed = {}  # hebbian: the plastic layer after exposure does not depend on the readout knobs -> cache it
+    readout = ("shrinkage", "cov_src")
     for hp in grid:
         hp = {**hp, **fixed}
         seed_all(0)
         st = DATASETS[args.dataset](0, n_classes=args.tune_classes, shots=args.shots, device=device, background=True, shift=args.shift)
-        lr_ = build(name, track, 0, device, st.n_classes, hp)
-        # tune for the task actually run: i.i.d. ceilings are tuned i.i.d.
+        key = tuple(sorted((k, str(v)) for k, v in hp.items() if k not in readout))
+        if args.exposure and name == "hebbian" and key in exposed:
+            lr_ = copy.deepcopy(exposed[key])  # exposure-cov state included; readout knobs set below
+            lr_.slda.eps, lr_.cov_src = hp["shrinkage"], hp["cov_src"]
+            lr_.end_exposure()
+        else:
+            lr_ = build(name, track, 0, device, st.n_classes, hp)
+            # tune for the task actually run: i.i.d. ceilings are tuned i.i.d.
+            if args.exposure:
+                if name == "hebbian":
+                    lr_.cov_src, cs = "exposure", lr_.cov_src  # cache the exposure-cov version
+                    expose_all(lr_, device)
+                    exposed[key] = copy.deepcopy(lr_)
+                    lr_.cov_src = cs
+                    lr_.end_exposure()
+                else:
+                    expose_all(lr_, device)
         r = run_iid(lr_, st, args.iid, 0) if args.iid else run_stream(lr_, st, eval_every=args.tune_classes)
         print(f"  tune {name} {hp}: final {r['final_acc']:.3f}")
         if best is None or r["final_acc"] > best[1]:
@@ -198,7 +247,7 @@ def tune(name, track, device, args, fixed, hp_file):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--learner", required=True, choices=sorted(REGISTRY))
-    ap.add_argument("--track", default="scratch", choices=["scratch", "pretrained", "kkanji_enc", "stream_enc"],
+    ap.add_argument("--track", default="scratch", choices=["scratch", "pretrained", "kkanji_enc", "stream_enc", "exposure_enc"],
                     help="kkanji_enc = headroom oracle encoder (Benchmark 1b only; tune on the TEST stream is not allowed, use --hp)")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--classes", type=int, default=600)
@@ -212,6 +261,8 @@ def main():
                     help="anml = Beaulieu et al. 2020 meta-test: 600 classes, 15 shots, 5 held out")
     ap.add_argument("--dataset", default="omniglot", choices=sorted(DATASETS),
                     help="kkanji = Benchmark 1b (Kuzushiji-Kanji, length-matched tuning stream)")
+    ap.add_argument("--exposure", action="store_true",
+                    help="Benchmark 1c: unlabelled exposure phase (kkanji.exposure_set) before the stream, tuning included")
     ap.add_argument("--shift", default="none", choices=["none", "rot90", "rot180", "invert"],
                     help="domain shift: rotate every stream image (test, train and tuning)")
     ap.add_argument("--iid", type=int, default=0, metavar="EPOCHS",
@@ -219,14 +270,16 @@ def main():
     args = ap.parse_args()
     if args.protocol == "anml":
         args.classes, args.shots, args.test_per_class = 600, 15, 5
-    if args.track in ("kkanji_enc", "stream_enc") and args.tune:
+    if args.track in ("kkanji_enc", "stream_enc", "exposure_enc") and args.tune:
         raise SystemExit("kkanji_enc: the tuning pool trained this encoder, so tuning on it is biased; pass fixed --hp")
     if args.dataset == "kkanji" and args.tune_classes == 100:
         args.tune_classes = args.classes  # length-matched tuning stream
     device = require_gpu()
 
     fixed = json.loads(args.hp)
-    vtag = (f"-{args.dataset}" if args.dataset != "omniglot" else "") + (f"-{args.variant}" if args.variant else "") + (f"-{args.shift}" if args.shift != "none" else "")
+    if args.exposure:
+        assert args.dataset == "kkanji", "--exposure is Benchmark 1c (kkanji)"
+    vtag = ("-exp" if args.exposure else "") + (f"-{args.dataset}" if args.dataset != "omniglot" else "") + (f"-{args.variant}" if args.variant else "") + (f"-{args.shift}" if args.shift != "none" else "")
     hp_file = RESULTS / "tuning" / (f"{args.learner}{vtag}_{args.track}_s{args.shots}" + (f"_iid{args.iid}" if args.iid else "") + ".json")
     hp = tune(args.learner, args.track, device, args, fixed, hp_file) if args.tune else (
         json.loads(hp_file.read_text())["hp"] if hp_file.exists() else {})
@@ -246,6 +299,8 @@ def main():
             learner = REGISTRY[args.learner](st.n_classes, device, encoder=stream_encoder(seed, st, device, hp_l.pop("enc_steps", STREAM_ENC_STEPS)), **hp_l)
         else:
             learner = build(args.learner, args.track, seed, device, st.n_classes, hp_l)
+        if args.exposure:
+            r_exp_t = time.time(); expose_all(learner, device)
         r = run_iid(learner, st, args.iid, seed) if args.iid else run_stream(learner, st)
         if hasattr(learner, "g_log"):
             r["g_log"] = [round(g, 5) for g in learner.g_log]
@@ -281,7 +336,7 @@ def main():
         "classes": args.classes, "shots": args.shots, "seeds": args.seeds,
         "params": learner.n_params(), "hp": {k: v for k, v in hp.items()}, "flops_per_example": learner.flops_per_example(),
         "encoder_budget": f"{ENC_STEPS}x{ENC_BATCH} on background minus {TUNE_CLASSES} tuning classes (v1)" if args.track == "pretrained" else None,
-        "dataset": args.dataset,
+        "dataset": args.dataset, "exposure": (f"{len(kkanji.exposure_set())} unlabelled kkanji images (shared, disjoint)" if args.exposure else None),
         "tuning": (f"{args.tune_classes} disjoint kkanji tuning-pool classes (length-matched), seed 0" if args.dataset == "kkanji"
                    else f"{TUNE_CLASSES} held-out background classes, seed 0"),
         "shift": args.shift, "summary": summary, "runs": runs,
